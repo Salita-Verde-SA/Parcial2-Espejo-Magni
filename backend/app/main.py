@@ -55,7 +55,6 @@ async def websocket_pedidos(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
-            # Mantenemos la conexión abierta esperando mensajes (aunque no esperamos ninguno específico del cliente)
             data = await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket)

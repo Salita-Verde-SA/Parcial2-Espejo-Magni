@@ -1,10 +1,3 @@
-"""
-Seed — carga datos iniciales (idempotente).
-
-Uso:
-    python -m app.db.seed
-"""
-
 from decimal import Decimal
 
 from sqlmodel import Session, select
@@ -200,7 +193,6 @@ def run() -> None:
                 unid_ids[u["simbolo"]] = existing.id
                 print(f"  [=] {u['nombre']} ({u['simbolo']})")
         
-        # Obtener ID de unidad "u" (pieza) como default
         unidad_default_id = unid_ids.get("u", 1)
 
         print("\n[Categorias]")

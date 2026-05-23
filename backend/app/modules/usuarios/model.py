@@ -21,8 +21,6 @@ class Usuario(SQLModel, table=True):
     deleted_at: Optional[datetime] = Field(default=None)
 
 
-# ─── Schemas ─────────────────────────────────────────────────────────────────
-
 class UserRegister(SQLModel):
     nombre: str = Field(min_length=1, max_length=100)
     apellido: str = Field(min_length=1, max_length=100)

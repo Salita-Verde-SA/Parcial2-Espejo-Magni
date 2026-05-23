@@ -1,19 +1,3 @@
-"""
-Migración: Agregar tabla unidad_medida y migrar producto_ingrediente.
-
-Uso:
-    python -m app.db.migrations.add_unidad_medida
-
-Este script:
-  1. Crea la tabla unidad_medida si no existe
-  2. Inserta las 7 unidades de medida (idempotente)
-  3. Actualiza producto_ingrediente: agrega columna unidad_medida_id
-  4. Asigna unidad default "u" a registros existentes con NULL
-
-IMPORTANT: Ejecutar ANTES del seed la primera vez en una BD existente.
-           Si es una BD nueva, el seed se encarga de todo.
-"""
-
 from sqlmodel import SQLModel, Session, text, select
 
 from app.core.database import engine
@@ -25,7 +9,6 @@ def run() -> None:
 
     with Session(engine) as session:
 
-        # ── 1. Verificar si la tabla unidad_medida ya existe ──────────────────
         result = session.exec(
             text("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'unidad_medida');")
         )
@@ -38,7 +21,6 @@ def run() -> None:
         else:
             print("[1/3] Tabla unidad_medida ya existe. OK.\n")
 
-        # ── 2. Insertar unidades si no están ─────────────────────────────────
         print("[2/3] Insertando unidades de medida...")
 
         UNIDADES = [
@@ -63,7 +45,6 @@ def run() -> None:
 
         session.flush()
 
-        # Obtener ID de la unidad "u" como default
         unidad_default = session.exec(
             select(UnidadMedida).where(UnidadMedida.simbolo == "u")
         ).first()
@@ -76,10 +57,8 @@ def run() -> None:
         unidad_default_id = unidad_default.id
         print(f"  [OK] Unidad default: 'u' (id={unidad_default_id})\n")
 
-        # ── 3. Migrar producto_ingrediente ────────────────────────────────────
         print("[3/3] Migrando producto_ingrediente...")
 
-        # 3a. Agregar columna unidad_medida_id si no existe
         col_result = session.exec(
             text("""
                 SELECT EXISTS (
@@ -90,11 +69,8 @@ def run() -> None:
             """)
         )
         col_existe = col_result.scalar()
-
         if not col_existe:
-            # Modificar columna cantidad de INTEGER a NUMERIC(10,3)
             session.exec(text("ALTER TABLE producto_ingrediente ALTER COLUMN cantidad TYPE NUMERIC(10,3);"))
-            # Agregar columna FK
             session.exec(
                 text("ALTER TABLE producto_ingrediente ADD COLUMN unidad_medida_id INTEGER NOT NULL DEFAULT :default_id;"),
                 {"default_id": unidad_default_id}
@@ -107,7 +83,6 @@ def run() -> None:
         else:
             print("  [=] Columna unidad_medida_id ya existe. OK.")
 
-        # 3b. Asignar unidad default a registros con NULL (por si quedó alguno)
         result_nulls = session.exec(
             text("SELECT COUNT(*) FROM producto_ingrediente WHERE unidad_medida_id IS NULL;")
         )
@@ -123,7 +98,6 @@ def run() -> None:
         else:
             print("  [=] No hay registros con unidad_medida_id NULL. OK.")
 
-        # 3c. Agregar DEFAULT a columna cantidad si es INTEGER
         try:
             session.exec(text("ALTER TABLE producto_ingrediente ALTER COLUMN cantidad SET DEFAULT '1';"))
             print("  [+] DEFAULT en columna cantidad actualizado a '1'.")

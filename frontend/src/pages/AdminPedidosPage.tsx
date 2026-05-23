@@ -6,22 +6,19 @@ import type { PedidoPublic, PaginatedPedidos } from '../types'
 
 export default function AdminPedidosPage() {
   const queryClient = useQueryClient()
-  usePedidosWebSocket() // Escucha eventos en tiempo real
+  usePedidosWebSocket()
   
   const [page, setPage] = useState(1)
   const [estadoFiltro, setEstadoFiltro] = useState('')
   const [selectedPedido, setSelectedPedido] = useState<PedidoPublic | null>(null)
   const [errorMsg, setErrorMsg] = useState('')
 
-  // Obtener todos los pedidos del sistema
   const { data: response, isLoading } = useQuery<PaginatedPedidos>({
     queryKey: ['admin-pedidos', estadoFiltro, page],
     queryFn: () => fetchPedidos(estadoFiltro, page, 8),
     placeholderData: (prev) => prev,
-    // Eliminado refetchInterval ya que ahora usamos WebSockets
   })
 
-  // Sincronizar el pedido seleccionado con los datos más recientes cuando llegan por WS
   useEffect(() => {
     if (response && selectedPedido) {
       const updated = response.items.find((p) => p.id === selectedPedido.id)
@@ -31,7 +28,6 @@ export default function AdminPedidosPage() {
     }
   }, [response, selectedPedido])
 
-  // Mutación para actualizar el estado del pedido
   const stateMutation = useMutation({
     mutationFn: ({ id, nuevoEstado }: { id: number; nuevoEstado: string }) =>
       patchPedidoEstado(id, nuevoEstado),
@@ -80,7 +76,6 @@ export default function AdminPedidosPage() {
     }
   }
 
-  // Genera los botones de transición válidos según el estado actual
   const renderBotonesFsm = (p: PedidoPublic) => {
     switch (p.estado_codigo) {
       case 'PENDIENTE':
@@ -160,7 +155,7 @@ export default function AdminPedidosPage() {
           </div>
         )
       default:
-        return null // Estados terminales (ENTREGADO, CANCELADO) no tienen acciones
+        return null
     }
   }
 
@@ -172,12 +167,10 @@ export default function AdminPedidosPage() {
 
       <div className="page-wrapper" style={{ display: 'grid', gridTemplateColumns: '1fr 420px', gap: 24, alignItems: 'start' }}>
         
-        {/* Lado Izquierdo: Lista de todos los pedidos */}
         <div className="card" style={{ padding: 24 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h3 style={{ margin: 0, fontSize: 18 }}>Pedidos del Sistema</h3>
             
-            {/* Filtro por estado */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <label style={{ fontSize: 12, fontWeight: 600 }}>Filtrar Estado:</label>
               <select
@@ -251,7 +244,6 @@ export default function AdminPedidosPage() {
                 </tbody>
               </table>
 
-              {/* Paginación */}
               {response.total > response.page_size && (
                 <div className="pagination" style={{ marginTop: 16 }}>
                   <button
@@ -273,7 +265,6 @@ export default function AdminPedidosPage() {
           )}
         </div>
 
-        {/* Lado Derecho: Detalle del Pedido Seleccionado y FSM */}
         <div className="card" style={{ padding: 24, position: 'sticky', top: 24 }}>
           {selectedPedido ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -284,13 +275,11 @@ export default function AdminPedidosPage() {
                 </span>
               </div>
 
-              {/* Información del Cliente */}
               <div>
                 <strong style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>CLIENTE</strong>
                 <div style={{ fontSize: 14 }}>{selectedPedido.usuario_nombre}</div>
               </div>
 
-              {/* Items del Pedido */}
               <div>
                 <strong style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 8 }}>PRODUCTOS</strong>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -303,7 +292,6 @@ export default function AdminPedidosPage() {
                 </div>
               </div>
 
-              {/* Dirección de Entrega */}
               {selectedPedido.direccion && (
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
                   <strong style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>DIRECCIÓN DE ENTREGA</strong>
@@ -316,7 +304,6 @@ export default function AdminPedidosPage() {
                 </div>
               )}
 
-              {/* Pago y Total */}
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
                   <span style={{ color: 'var(--text-muted)' }}>Forma de Pago</span>
@@ -328,7 +315,6 @@ export default function AdminPedidosPage() {
                 </div>
               </div>
 
-              {/* Historial / Audit Trail */}
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
                 <strong style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 8 }}>AUDIT TRAIL / HISTORIAL</strong>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12 }}>
@@ -343,7 +329,6 @@ export default function AdminPedidosPage() {
                 </div>
               </div>
 
-              {/* Máquina de Estados / Botones de Acción */}
               {renderBotonesFsm(selectedPedido) && (
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
                   <strong style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 8 }}>AVANZAR ESTADO</strong>

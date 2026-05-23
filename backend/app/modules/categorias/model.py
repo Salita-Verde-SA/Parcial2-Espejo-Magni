@@ -18,8 +18,6 @@ class Categoria(SQLModel, table=True):
     deleted_at: Optional[datetime] = Field(default=None)
 
 
-# ─── Schemas ─────────────────────────────────────────────────────────────────
-
 class CategoriaCreate(SQLModel):
     nombre: str = Field(min_length=1, max_length=100)
     descripcion: Optional[str] = Field(default=None, max_length=500)

@@ -1,9 +1,3 @@
-"""
-Modelo de UnidadMedida — tabla 'unidad_medida' en PostgreSQL.
-
-Catálogo de unidades de medida para productos e ingredientes de recetas.
- CRUD protegido: lectura para usuarios autenticados, escritura solo admin.
-"""
 
 from datetime import datetime
 from typing import Optional
@@ -21,11 +15,9 @@ class UnidadMedida(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     nombre: str = Field(index=True, unique=True, max_length=50)
     simbolo: str = Field(index=True, unique=True, max_length=10)
-    tipo: str = Field(max_length=20)  # masa, volumen, unidad, area
+    tipo: str = Field(max_length=20)
     created_at: datetime = Field(default_factory=_utcnow)
 
-
-# ─── Esquemas Pydantic ────────────────────────────────────────────────────────
 
 class UnidadMedidaCreate(SQLModel):
     nombre: str = Field(min_length=1, max_length=50)

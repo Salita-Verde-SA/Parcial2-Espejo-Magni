@@ -1,14 +1,3 @@
-"""
-Service de Ingrediente — lógica de negocio.
-
-CRUD completo con soft-delete y exportación a Excel.
-Escritura restringida a admin; lectura para cualquier usuario autenticado.
-
-Capa: Service
-Conoce a: UoW, Repository (indirectamente)
-NO conoce a: Router
-"""
-
 import io
 import math
 from datetime import datetime
@@ -52,7 +41,6 @@ class IngredienteService:
         )
 
     def list_all(self) -> PaginatedIngredientes:
-        """List all ingredientes including deleted ones (for admin management)."""
         items = self.uow.ingredientes.get_all()
         public_items = [
             IngredientePublic(
@@ -125,7 +113,6 @@ class IngredienteService:
     def soft_delete(self, ingrediente_id: int) -> None:
         ingrediente = self.uow.ingredientes.get_active_by_id(ingrediente_id)
         if not ingrediente:
-            # Verificar si existe pero ya está eliminado
             existente = self.uow.ingredientes.get_by_id(ingrediente_id)
             if existente and existente.deleted_at is not None:
                 raise HTTPException(
@@ -139,7 +126,6 @@ class IngredienteService:
         self.uow.ingredientes.soft_delete(ingrediente)
 
     def activate(self, ingrediente_id: int) -> Ingrediente:
-        """Reactiva un ingrediente previamente desactivado."""
         ingrediente = self.uow.ingredientes.get_by_id(ingrediente_id)
         if not ingrediente:
             raise HTTPException(

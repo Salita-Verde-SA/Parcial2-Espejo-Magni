@@ -43,10 +43,7 @@ class ProductoIngrediente(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_utcnow)
 
 
-# ─── Schemas ─────────────────────────────────────────────────────────────────
-
 class IngredienteCantidadInput(SQLModel):
-    """Schema para especificar cantidad de ingrediente en un producto"""
     ingrediente_id: int
     cantidad: Decimal = Decimal("1")
     unidad_medida_id: int
@@ -89,7 +86,7 @@ class IngredienteResumen(SQLModel):
     unidad_medida_id: int
     simbolo: str
     es_removible: bool
-    stock_insumo: int = 0  # Stock actual del ingrediente en inventario
+    stock_insumo: int = 0
 
 
 class ProductoPublic(SQLModel):

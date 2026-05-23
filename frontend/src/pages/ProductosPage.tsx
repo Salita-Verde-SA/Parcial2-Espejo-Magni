@@ -1,13 +1,3 @@
-// ─── pages/ProductosPage.tsx ───────────────────────────────────────────────────
-// Página de gestión de Productos. Solo accesible con rol ADMIN.
-// Permite: ver, filtrar, paginar, crear, editar y dar de baja productos.
-// Exportar la lista a Excel.
-//
-// Estructura visual:
-//   Topbar → Card [ CardHeader (acciones) → FiltrosBar → Tabla → Paginación ]
-//   + Modal crear/editar (condicional)
-//   + Dialog de confirmación de baja (condicional)
-
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -24,7 +14,6 @@ import ProductoStockModal from '../components/ProductoStockModal'
 import ConfirmDialog from '../components/ConfirmDialog'
 import type { Producto, FiltrosProducto } from '../types'
 
-// Estado inicial de los filtros: todos los productos, página 1
 const DEFAULT_FILTROS: FiltrosProducto = {
   nombre: '',
   categoria_id: null,
@@ -33,9 +22,6 @@ const DEFAULT_FILTROS: FiltrosProducto = {
   page_size: 10,
 }
 
-// ─── formatCurrency ───────────────────────────────────────────────────────────
-// Convierte un string de precio (decimal) a formato moneda argentina
-// Si tiene unidad, muestra: "S/. 12.50 / kg"
 function formatCurrency(precio: string, unidadSimbolo?: string) {
   const num = parseFloat(precio)
   const formatted = new Intl.NumberFormat('es-AR', {
@@ -48,7 +34,6 @@ function formatCurrency(precio: string, unidadSimbolo?: string) {
   return formatted
 }
 
-// ─── formatFecha ──────────────────────────────────────────────────────────────
 function formatFecha(iso: string) {
   return new Date(iso).toLocaleDateString('es-AR', {
     day: '2-digit',
@@ -57,17 +42,14 @@ function formatFecha(iso: string) {
   })
 }
 
-// ─── ProductosPage ───────────────────────────────────────────────────────────
 export default function ProductosPage() {
   const isAdmin = useAuthStore((s) => s.isAdmin())
   const isStock = useAuthStore((s) => s.hasRole('STOCK'))
   const qc = useQueryClient()
 
-  // ── Estado de filtros ───────────────────────────────────────────────────────
   const [filtros, setFiltros] = useState<FiltrosProducto>(DEFAULT_FILTROS)
   const [filtrosDraft, setFiltrosDraft] = useState<FiltrosProducto>(DEFAULT_FILTROS)
 
-  // ── Estado de modales ────────────────────────────────────────────────────────
   const [modalOpen, setModalOpen] = useState(false)
   const [stockModalOpen, setStockModalOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Producto | null>(null)
@@ -75,30 +57,25 @@ export default function ProductosPage() {
   const [exporting, setExporting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  // ── useQuery: carga la lista de productos (todos, incluyendo eliminados) ────────
   const { data, isLoading, isError } = useQuery({
     queryKey: ['productos-all'],
     queryFn: () => fetchProductosAll(),
   })
 
-  // ── useQuery: carga categorías para el filtro ────────────────────────────────
   const { data: categoriasData } = useQuery({
     queryKey: ['categorias-all'],
     queryFn: () => fetchCategorias(),
   })
 
-  // ── useMutation: delete ─────────────────────────────────────────────────────
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteProducto(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['productos-all'] })
-      // Invalidar también el catálogo
       qc.invalidateQueries({ queryKey: ['productos'] })
       setDeleteTarget(null)
     },
   })
 
-  // ── useMutation: activate ─────────────────────────────────────────────────────
   const activateMutation = useMutation({
     mutationFn: async (id: number) => {
       try {
@@ -110,15 +87,12 @@ export default function ProductosPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['productos-all'] })
-      // Invalidar también el catálogo
       qc.invalidateQueries({ queryKey: ['productos'] })
     },
     onError: (error: Error) => {
       setErrorMessage(error.message)
     },
   })
-
-  // ── Handlers ────────────────────────────────────────────────────────────────
 
   function handleSearch() {
     setFiltros({ ...filtrosDraft, page: 1 })
@@ -134,7 +108,6 @@ export default function ProductosPage() {
   }
 
   function handleEdit(prod: Producto) {
-    // Cargar producto completo con categorías e ingredientes
     fetchProducto(prod.id).then(fullProducto => {
       setEditTarget(fullProducto)
       setModalOpen(true)
@@ -170,22 +143,17 @@ export default function ProductosPage() {
     }
   }
 
-  // ── Cálculos de paginación ────────────────────────────────────────────────
   const totalPages = data?.pages ?? 1
   const currentPage = filtros.page
 
-  // Filtrar localmente
   const filteredItems = data?.items
     ? data.items.filter((prod) => {
-        // Filtro por nombre
         if (filtros.nombre && !prod.nombre.toLowerCase().includes(filtros.nombre.toLowerCase())) {
           return false
         }
-        // Filtro por categoría
         if (filtros.categoria_id && !prod.categorias.includes(filtros.categoria_id)) {
           return false
         }
-        // Filtro por disponibilidad
         if (filtros.disponible !== '' && prod.disponible !== (filtros.disponible === 'true')) {
           return false
         }
@@ -193,7 +161,6 @@ export default function ProductosPage() {
       })
     : []
 
-  // Ordenar: activos primero, inactivos al final
   const sortedItems = [...filteredItems].sort((a, b) => {
     if (a.deleted_at && !b.deleted_at) return 1
     if (!a.deleted_at && b.deleted_at) return -1
@@ -221,12 +188,10 @@ export default function ProductosPage() {
   const inicio = totalItems > 0 ? (filtros.page - 1) * filtros.page_size + 1 : 0
   const fin = Math.min(filtros.page * filtros.page_size, totalItems)
   
-  // Items de la página actual
   const start = (filtros.page - 1) * filtros.page_size
   const end = start + filtros.page_size
   const paginatedItems = sortedItems.slice(start, end)
 
-  // Map categorias for filter
   const categorias = categoriasData ?? []
 
   return (
