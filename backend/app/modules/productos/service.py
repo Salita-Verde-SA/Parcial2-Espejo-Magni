@@ -20,27 +20,13 @@ from app.modules.productos.model import (
 
 
 def calcular_stock_producto(producto_id: int, uow: UnitOfWork) -> int:
-    """
-    Calcula el stock de un producto usando la fórmula:
-    stock_producto = min(floor(stock_ingrediente / cantidad_necesaria))
-    
-    IMPORTANTE: Esta función debe llamarse DENTRO de un contexto 'with uow:'
-    para evitar errores de sesiones de SQLAlchemy.
-    
-    - Si no tiene ingredientes, retorna 0
-    - Si un ingrediente tiene stock 0 o null, el resultado será 0
-    - Si cantidad es null o 0, usa default = 1
-    """
-    # Ya no hace 'with uow' - debe llamarse dentro de un contexto existente
     stocks_data = uow.productos.get_ingrediente_stocks(producto_id)
     if not stocks_data:
         return 0
     
-    # Calcular: min(floor(stock_ingrediente / cantidad_necesaria))
     max_products = []
     for _, stock, cantidad_necesaria in stocks_data:
         if stock is None or stock <= 0 or cantidad_necesaria is None or cantidad_necesaria <= 0:
-            # Si algún ingrediente no tiene stock o cantidad inválida, no se puede producir nada
             max_products.append(0)
         else:
             productos_posibles = int(stock // cantidad_necesaria)
@@ -50,23 +36,11 @@ def calcular_stock_producto(producto_id: int, uow: UnitOfWork) -> int:
 
 
 def validar_stock_ingredientes(ingredientes: list, uow: UnitOfWork) -> None:
-    """
-    Valida que cada ingrediente tenga stock suficiente para la cantidad necesaria.
-    Lanza HTTPException si algún ingrediente no tiene stock suficiente.
-    
-    IMPORTANTE: Esta función debe llamarse DENTRO de un contexto 'with uow:'
-    para evitar errores de sesiones de SQLAlchemy.
-    
-    ingredientes: lista de dicts con keys: ingrediente_id, cantidad
-    """
     if not ingredientes:
         return
     
-    # Obtener IDs de ingredientes a validar
     ing_ids = [ing.ingrediente_id for ing in ingredientes]
     
-    # Ya no hace 'with uow' - debe llamarse dentro de un contexto existente
-    # Obtener stock de los ingredientes
     from app.modules.ingredientes.model import Ingrediente
     from sqlmodel import select
     stmt = select(Ingrediente.id, Ingrediente.nombre, Ingrediente.stock_cantidad).where(
@@ -75,7 +49,6 @@ def validar_stock_ingredientes(ingredientes: list, uow: UnitOfWork) -> None:
     )
     ingredientes_db = {i.id: (i.nombre, i.stock_cantidad or 0) for i in uow.session.exec(stmt).all()}
 
-    # Validar cada ingrediente
     errores = []
     for ing in ingredientes:
         ing_id = ing.ingrediente_id
@@ -103,10 +76,8 @@ def _enrich(producto: Producto, uow: UnitOfWork) -> ProductoPublic:
     cats = uow.productos.get_categoria_ids(producto.id)
     ings_raw = uow.productos.get_ingredientes(producto.id)
     ings = [IngredienteResumen(**i) for i in ings_raw]
-    # Stock calculado como mínimo de los ingredientes
     stock_calculado = calcular_stock_producto(producto.id, uow)
     
-    # Obtener unidad de venta si existe
     unidad_venta = None
     if producto.unidad_venta_id:
         unid = uow.unidades.get_by_id(producto.unidad_venta_id)
@@ -117,8 +88,6 @@ def _enrich(producto: Producto, uow: UnitOfWork) -> ProductoPublic:
                 simbolo=unid.simbolo,
             )
     
-    # Si el stock calculado es 0, forzar disponible=False
-    # Si stock > 0, mantener el valor original de disponible
     disponible_final = producto.disponible if stock_calculado > 0 else False
     
     return ProductoPublic(
@@ -154,7 +123,6 @@ def list_productos(
 
 
 def list_productos_all(uow: UnitOfWork) -> PaginatedProductos:
-    """List all productos including deleted ones (for admin management)."""
     with uow:
         items = uow.productos.get_all()
         enriched = [_enrich(p, uow) for p in items]
@@ -171,7 +139,6 @@ def get_producto(producto_id: int, uow: UnitOfWork) -> ProductoPublic:
 
 def create_producto(data: ProductoCreate, uow: UnitOfWork) -> ProductoPublic:
     with uow:
-        # Validar stock de ingredientes antes de crear el producto
         if data.ingredientes:
             validar_stock_ingredientes(data.ingredientes, uow)
         
@@ -187,7 +154,6 @@ def create_producto(data: ProductoCreate, uow: UnitOfWork) -> ProductoPublic:
         if data.categoria_ids:
             uow.productos.set_categorias(saved.id, data.categoria_ids)
         if data.ingredientes:
-            # Convertir lista de IngredienteCantidadInput a lista de dicts
             ingredientes_list = [
                 {
                     "ingrediente_id": ing.ingrediente_id,
@@ -207,7 +173,6 @@ def update_producto(producto_id: int, data: ProductoUpdate, uow: UnitOfWork) -> 
         if not p:
             raise HTTPException(status_code=404, detail="Producto no encontrado")
         
-        # Validar stock de ingredientes si se están modificando
         if data.ingredientes is not None:
             validar_stock_ingredientes(data.ingredientes, uow)
         
@@ -228,7 +193,6 @@ def update_producto(producto_id: int, data: ProductoUpdate, uow: UnitOfWork) -> 
         if data.categoria_ids is not None:
             uow.productos.set_categorias(saved.id, data.categoria_ids)
         if data.ingredientes is not None:
-            # Convertir lista de IngredienteCantidadInput a lista de dicts
             ingredientes_list = [
                 {
                     "ingrediente_id": ing.ingrediente_id,
@@ -269,7 +233,6 @@ def delete_producto(producto_id: int, uow: UnitOfWork) -> None:
     with uow:
         p = uow.productos.get_by_id_active(producto_id)
         if not p:
-            # Verificar si existe pero ya está eliminado
             existente = uow.productos.get_by_id(producto_id)
             if existente and existente.deleted_at is not None:
                 raise HTTPException(status_code=400, detail="El producto ya está inactivo")
@@ -278,7 +241,6 @@ def delete_producto(producto_id: int, uow: UnitOfWork) -> None:
 
 
 def activate_producto(producto_id: int, uow: UnitOfWork) -> ProductoPublic:
-    """Reactiva un producto previamente desactivado."""
     with uow:
         p = uow.productos.get_by_id(producto_id)
         if not p:
@@ -286,7 +248,6 @@ def activate_producto(producto_id: int, uow: UnitOfWork) -> ProductoPublic:
         if p.deleted_at is None:
             raise HTTPException(status_code=400, detail="El producto ya está activo")
         
-        # Verificar que las categorías asociadas estén activas
         categoria_ids = uow.productos.get_categoria_ids(producto_id)
         for cat_id in categoria_ids:
             cat = uow.categorias.get_by_id(cat_id)

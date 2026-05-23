@@ -1,14 +1,3 @@
-"""
-Repositorio de Ingrediente.
-
-Queries con soft-delete, filtros y paginación.
-Hereda de BaseRepository[Ingrediente] y agrega queries específicas.
-
-Capa: Repository
-Conoce a: Model (Ingrediente), Session
-NO conoce a: Service, Router
-"""
-
 from datetime import datetime
 from typing import Optional
 
@@ -31,7 +20,6 @@ class IngredienteRepository(BaseRepository[Ingrediente]):
         page:        int,
         page_size:   int,
     ) -> tuple[list[Ingrediente], int]:
-        """Lista paginada con filtros, excluyendo soft-deleted."""
         stmt = select(Ingrediente).where(Ingrediente.deleted_at == None)  # noqa: E711
 
         if nombre:
@@ -87,17 +75,14 @@ class IngredienteRepository(BaseRepository[Ingrediente]):
         ).all())
 
     def get_all(self) -> list[Ingrediente]:
-        """Get ALL ingredientes including deleted ones (for admin view)."""
         return list(self.session.exec(
             select(Ingrediente).order_by(Ingrediente.nombre)
         ).all())
 
     def get_by_id(self, entity_id: int) -> Optional[Ingrediente]:
-        """Get ingrediente by ID without filtering by deleted_at."""
         return self.session.get(Ingrediente, entity_id)
 
     def activate(self, ingrediente: Ingrediente) -> Ingrediente:
-        """Reactiva un ingrediente previamente desactivado."""
         ingrediente.deleted_at = None
         self.session.add(ingrediente)
         self.session.flush()

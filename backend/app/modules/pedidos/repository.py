@@ -26,8 +26,6 @@ class DireccionRepository(BaseRepository[DireccionEntrega]):
         return self.session.exec(stmt).first()
 
     def get_all_active_by_user(self, usuario_id: int) -> List[DireccionEntrega]:
-
-        # Note: Order by principal descending so true is first.
         stmt = (
             select(DireccionEntrega)
             .where(DireccionEntrega.usuario_id == usuario_id)
@@ -101,7 +99,6 @@ class PedidoRepository(BaseRepository[Pedido]):
         if estado_codigo:
             stmt = stmt.where(Pedido.estado_codigo == estado_codigo)
         
-        # Ordenar por fecha de creación descendente (más nuevos primero)
         stmt = stmt.order_by(Pedido.fecha.desc())
 
         all_items = list(self.session.exec(stmt).all())

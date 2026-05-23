@@ -47,7 +47,6 @@ def list_categorias(
 
 
 def list_categorias_all(uow: UnitOfWork) -> list[CategoriaPublic]:
-    """List all categorias including deleted ones (for admin management)."""
     with uow:
         return [_to_public(c, uow) for c in uow.categorias.get_all()]
 
@@ -109,7 +108,6 @@ def delete_categoria(cat_id: int, uow: UnitOfWork) -> None:
     with uow:
         cat = uow.categorias.get_by_id_active(cat_id)
         if not cat:
-            # Verificar si existe pero ya está eliminada
             existente = uow.categorias.get_by_id(cat_id)
             if existente and existente.deleted_at is not None:
                 raise HTTPException(status_code=400, detail="La categoría ya está inactiva")
@@ -123,7 +121,6 @@ def delete_categoria(cat_id: int, uow: UnitOfWork) -> None:
 
 
 def activate_categoria(cat_id: int, uow: UnitOfWork) -> CategoriaPublic:
-    """Reactiva una categoría previamente desactivada."""
     with uow:
         cat = uow.categorias.get_by_id(cat_id)
         if not cat:

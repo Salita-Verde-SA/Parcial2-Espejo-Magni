@@ -1,10 +1,3 @@
-"""
-Modelo de Ingrediente — tabla 'ingrediente' en PostgreSQL.
-
-Gestión de insumos con soft-delete y flag de alérgeno.
-CRUD protegido: lectura para usuarios autenticados, escritura solo admin.
-"""
-
 import math
 from datetime import datetime
 from typing import Optional
@@ -26,8 +19,6 @@ class Ingrediente(SQLModel, table=True):
     updated_at:  datetime      = Field(default_factory=_utcnow)
     deleted_at:  Optional[datetime] = Field(default=None)
 
-
-# ─── Esquemas Pydantic ────────────────────────────────────────────────────────
 
 class IngredienteCreate(SQLModel):
     nombre:      str            = Field(min_length=1, max_length=100)

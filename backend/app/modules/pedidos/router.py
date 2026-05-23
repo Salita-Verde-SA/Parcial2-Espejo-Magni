@@ -29,8 +29,6 @@ from app.core.websockets import manager
 router = APIRouter(tags=["pedidos"])
 
 
-# ─── Endpoints de Direcciones de Entrega ──────────────────────────────────────
-
 @router.get("/api/v1/direcciones/", response_model=list[DireccionPublic])
 def list_dirs(
     ctx: Annotated[tuple, Depends(get_current_active_user)],
@@ -74,8 +72,6 @@ def delete_dir(
     user, _ = ctx
     delete_direccion(direccion_id, user.id, uow)
 
-
-# ─── Endpoints de Pedidos ────────────────────────────────────────────────────
 
 @router.post(
     "/api/v1/pedidos/",

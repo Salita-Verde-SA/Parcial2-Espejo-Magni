@@ -6,21 +6,18 @@ import type { PedidoPublic, PaginatedPedidos } from '../types'
 
 export default function MisPedidosPage() {
   const queryClient = useQueryClient()
-  usePedidosWebSocket() // Escucha eventos en tiempo real
+  usePedidosWebSocket()
 
   const [page, setPage] = useState(1)
   const [selectedPedido, setSelectedPedido] = useState<PedidoPublic | null>(null)
   const [errorMsg, setErrorMsg] = useState('')
 
-  // Obtener pedidos del cliente
   const { data: response, isLoading } = useQuery<PaginatedPedidos>({
     queryKey: ['pedidos', page],
     queryFn: () => fetchPedidos('', page, 5),
     placeholderData: (prev) => prev,
-    // Eliminado refetchInterval ya que ahora usamos WebSockets
   })
 
-  // Sincronizar el pedido seleccionado con los datos más recientes cuando llegan por WS
   useEffect(() => {
     if (response && selectedPedido) {
       const updated = response.items.find((p) => p.id === selectedPedido.id)
@@ -30,12 +27,10 @@ export default function MisPedidosPage() {
     }
   }, [response, selectedPedido])
 
-  // Mutación para cancelar pedido
   const cancelMutation = useMutation({
     mutationFn: cancelarPedido,
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ['pedidos'] })
-      // Actualizar el pedido seleccionado
       setSelectedPedido(updated)
     },
     onError: (err: any) => {
@@ -86,7 +81,6 @@ export default function MisPedidosPage() {
 
       <div className="page-wrapper" style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: 24, alignItems: 'start' }}>
         
-        {/* Lado Izquierdo: Lista de Pedidos */}
         <div className="card" style={{ padding: 24 }}>
           <h3 style={{ margin: '0 0 16px 0', fontSize: 18 }}>📜 Historial de Compras</h3>
 
@@ -140,7 +134,6 @@ export default function MisPedidosPage() {
                 </div>
               ))}
 
-              {/* Paginación */}
               {response.total > response.page_size && (
                 <div className="pagination" style={{ marginTop: 16 }}>
                   <button
@@ -162,7 +155,6 @@ export default function MisPedidosPage() {
           )}
         </div>
 
-        {/* Lado Derecho: Detalle del Pedido Seleccionado */}
         <div className="card" style={{ padding: 24, position: 'sticky', top: 24 }}>
           {selectedPedido ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -173,7 +165,6 @@ export default function MisPedidosPage() {
                 </span>
               </div>
 
-              {/* Items Comprados */}
               <div>
                 <strong style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 8 }}>PRODUCTOS</strong>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -186,7 +177,6 @@ export default function MisPedidosPage() {
                 </div>
               </div>
 
-              {/* Dirección */}
               {selectedPedido.direccion && (
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
                   <strong style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>DIRECCIÓN DE ENTREGA</strong>
@@ -199,7 +189,6 @@ export default function MisPedidosPage() {
                 </div>
               )}
 
-              {/* Pago y Total */}
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
                   <span style={{ color: 'var(--text-muted)' }}>Forma de Pago</span>
@@ -211,7 +200,6 @@ export default function MisPedidosPage() {
                 </div>
               </div>
 
-              {/* Historial / Audit Trail */}
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
                 <strong style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 8 }}>HISTORIAL DE ESTADOS</strong>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12 }}>
@@ -226,7 +214,6 @@ export default function MisPedidosPage() {
                 </div>
               </div>
 
-              {/* Acciones de Cliente: Cancelar */}
               {['PENDIENTE', 'CONFIRMADO'].includes(selectedPedido.estado_codigo) && (
                 <button
                   className="btn btn-danger"

@@ -1,6 +1,3 @@
-# Kept minimal — auth logic moved to app.modules.auth.service
-# This module handles user management operations
-
 from fastapi import HTTPException
 
 from app.core.uow import UnitOfWork

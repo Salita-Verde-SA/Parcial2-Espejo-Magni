@@ -1,13 +1,3 @@
-// ─── pages/IngredientesPage.tsx ───────────────────────────────────────────────
-// Página de gestión de Insumos (ingredientes). Solo accesible con rol ADMIN.
-// Permite: ver, filtrar, paginar, crear, editar y dar de baja insumos.
-// Exportar la lista a Excel.
-//
-// Estructura visual:
-//   Topbar → Card [ CardHeader (acciones) → FiltrosBar → Tabla → Paginación ]
-//   + Modal crear/editar (condicional)
-//   + Dialog de confirmación de baja (condicional)
-
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -21,7 +11,6 @@ import IngredienteModal from '../components/IngredienteModal'
 import ConfirmDialog from '../components/ConfirmDialog'
 import type { Ingrediente, FiltrosIngrediente } from '../types'
 
-// Estado inicial de los filtros: todos los ingredientes, página 1
 const DEFAULT_FILTROS: FiltrosIngrediente = {
   nombre: '',
   es_alergeno: '',
@@ -29,9 +18,6 @@ const DEFAULT_FILTROS: FiltrosIngrediente = {
   page_size: 10,
 }
 
-// ─── formatFecha ──────────────────────────────────────────────────────────────
-// Convierte una fecha ISO 8601 a formato legible en español argentino.
-// Ej: "2025-03-15T10:30:00Z" → "15/03/2025"
 function formatFecha(iso: string) {
   return new Date(iso).toLocaleDateString('es-AR', {
     day: '2-digit',
@@ -40,39 +26,32 @@ function formatFecha(iso: string) {
   })
 }
 
-// ─── IngredientesPage ─────────────────────────────────────────────────────────
 export default function IngredientesPage() {
   const isAdmin = useAuthStore((s) => s.isAdmin())
   const isStock = useAuthStore((s) => s.hasRole('STOCK'))
   const qc = useQueryClient()
 
-  // ── Estado de filtros (mismo patrón draft/confirmado que CatalogoPage) ──────
   const [filtros, setFiltros]             = useState<FiltrosIngrediente>(DEFAULT_FILTROS)
   const [filtrosDraft, setFiltrosDraft]   = useState<FiltrosIngrediente>(DEFAULT_FILTROS)
 
-  // ── Estado de modales ────────────────────────────────────────────────────────
-  const [modalOpen, setModalOpen]         = useState(false)           // modal crear/editar
-  const [editTarget, setEditTarget]       = useState<Ingrediente | null>(null)  // ingrediente a editar
-  const [deleteTarget, setDeleteTarget]   = useState<Ingrediente | null>(null)  // ingrediente a eliminar
-  const [exporting, setExporting]         = useState(false)           // spinner del botón Exportar
+  const [modalOpen, setModalOpen]         = useState(false)
+  const [editTarget, setEditTarget]       = useState<Ingrediente | null>(null)
+  const [deleteTarget, setDeleteTarget]   = useState<Ingrediente | null>(null)
+  const [exporting, setExporting]         = useState(false)
 
-// ── useQuery: carga la lista de ingredientes (todos, incluyendo eliminados) ─────
   const { data, isLoading, isError } = useQuery({
     queryKey: ['ingredientes', 'all'],
     queryFn: () => fetchIngredientesAll(),
   })
 
-  // ── useMutation: baja lógica de un ingrediente ───────────────────────────────
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteIngrediente(id),
     onSuccess: () => {
-      // Invalida el caché de ingredientes → la tabla se recarga automáticamente
       qc.invalidateQueries({ queryKey: ['ingredientes'] })
-      setDeleteTarget(null)   // cierra el diálogo de confirmación
+      setDeleteTarget(null)
     },
   })
 
-  // ── useMutation: activar ingrediente ─────────────────────────────────────────
   const activateMutation = useMutation({
     mutationFn: (id: number) => activateIngrediente(id),
     onSuccess: () => {
@@ -80,43 +59,34 @@ export default function IngredientesPage() {
     },
   })
 
-  // ── Handlers ─────────────────────────────────────────────────────────────────
-
-  // Aplica los filtros del draft y vuelve a la primera página
   function handleSearch() {
     setFiltros({ ...filtrosDraft, page: 1 })
   }
 
-  // Resetea tanto el draft como los filtros aplicados
   function handleReset() {
     setFiltrosDraft(DEFAULT_FILTROS)
     setFiltros(DEFAULT_FILTROS)
   }
 
-  // Cambia a la página indicada manteniendo los filtros actuales
   function handlePage(p: number) {
     setFiltros((prev) => ({ ...prev, page: p }))
   }
 
-  // Abre el modal en modo edición con los datos del ingrediente seleccionado
   function handleEdit(ing: Ingrediente) {
     setEditTarget(ing)
     setModalOpen(true)
   }
 
-  // Abre el modal en modo creación (sin datos previos)
   function handleNew() {
     setEditTarget(null)
     setModalOpen(true)
   }
 
-  // Cierra el modal y limpia el ingrediente en edición
   function handleModalClose() {
     setModalOpen(false)
     setEditTarget(null)
   }
 
-  // Lanza la descarga del Excel y maneja el estado de carga del botón
   async function handleExport() {
     setExporting(true)
     try {
@@ -126,15 +96,10 @@ export default function IngredientesPage() {
     }
   }
 
-  // ── Cálculos de paginación ────────────────────────────────────────────────
-  // Los datos vienen del endpoint "all" que devuelve todos los registros
-  // Por lo tanto calculamos las páginas basado en los datos locales filtrados
   const currentPage = filtros.page
 
-  // Filtrar localmente
   const filteredItems = data?.items
     ? data.items.filter((ing) => {
-        // Filtro por nombre
         if (filtros.nombre && !ing.nombre.toLowerCase().includes(filtros.nombre.toLowerCase())) {
           return false
         }
@@ -142,30 +107,24 @@ export default function IngredientesPage() {
       })
     : []
 
-  // Ordenar: activos primero, inactivos al final
   const sortedItems = [...filteredItems].sort((a, b) => {
     if (a.deleted_at && !b.deleted_at) return 1
     if (!a.deleted_at && b.deleted_at) return -1
     return a.id - b.id
   })
 
-  // Calcular totalPages ANTES de renderPageButtons
   const totalItems = sortedItems.length
   const totalPages = Math.ceil(totalItems / filtros.page_size) || 1
 
-  // ─── renderPageButtons ──────────────────────────────────────────────────────
-  // Genera los botones numéricos de paginación con elipsis ("…") para
-  // no mostrar todas las páginas cuando hay muchas.
-  // Muestra: primera, última, y las páginas cercanas a la actual (±2).
   function renderPageButtons() {
     const buttons: React.ReactNode[] = []
-    const range = 2   // cuántas páginas mostrar a cada lado de la actual
+    const range = 2
 
     for (let i = 1; i <= totalPages; i++) {
       if (
-        i === 1 ||          // siempre muestra la primera
-        i === totalPages || // siempre muestra la última
-        (i >= currentPage - range && i <= currentPage + range)  // páginas cercanas
+        i === 1 ||
+        i === totalPages ||
+        (i >= currentPage - range && i <= currentPage + range)
       ) {
         buttons.push(
           <button
@@ -177,7 +136,6 @@ export default function IngredientesPage() {
           </button>
         )
       } else if (
-        // Si el gap es exactamente 1, agrega el "…" una sola vez
         i === currentPage - range - 1 ||
         i === currentPage + range + 1
       ) {
@@ -191,31 +149,25 @@ export default function IngredientesPage() {
     return buttons
   }
 
-  // Rango de registros visibles en la tabla (para el texto "Mostrando X–Y de Z")
   const inicio = totalItems > 0 ? (filtros.page - 1) * filtros.page_size + 1 : 0
   const fin = Math.min(filtros.page * filtros.page_size, totalItems)
 
-  // Items de la página actual
   const start = (filtros.page - 1) * filtros.page_size
   const end = start + filtros.page_size
   const paginatedItems = sortedItems.slice(start, end)
 
   return (
     <>
-      {/* Barra de título de la página */}
       <header className="topbar">
         <span className="topbar-title">Gestión de Insumos</span>
       </header>
 
       <div className="page-wrapper">
-        {/* Todo el contenido de la página dentro de una card */}
         <div className="card">
 
-          {/* ── Encabezado de la card: título + botones de acción ─────────── */}
           <div className="card-header">
             <span className="card-title">
               Insumos registrados
-              {/* Muestra el total entre paréntesis cuando los datos cargaron */}
               {data && (
                 <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>
                   ({data.total} total)
@@ -230,7 +182,6 @@ export default function IngredientesPage() {
               >
                 {exporting ? <span className="spinner" /> : null} Exportar Excel
               </button>
-              {/* Solo el ADMIN puede crear nuevos insumos */}
               {isAdmin && (
                 <button className="btn btn-primary" onClick={handleNew}>
                   Nuevo insumo
@@ -239,7 +190,6 @@ export default function IngredientesPage() {
             </div>
           </div>
 
-          {/* ── Barra de filtros ──────────────────────────────────────────── */}
           <div className="filtros-bar">
             <div className="filtro-group">
               <label className="filtro-label">Nombre</label>
@@ -270,7 +220,6 @@ export default function IngredientesPage() {
               </select>
             </div>
 
-            {/* Selector de cantidad de resultados por página */}
             <div className="filtro-group">
               <label className="filtro-label">Resultados / pág.</label>
               <select
@@ -297,7 +246,6 @@ export default function IngredientesPage() {
             </div>
           </div>
 
-          {/* ── Tabla de insumos ──────────────────────────────────────────── */}
           <div className="table-wrapper">
             <table>
               <thead>
@@ -309,13 +257,11 @@ export default function IngredientesPage() {
                   <th style={{ width: 110 }}>Alérgeno</th>
                   <th style={{ width: 100 }}>Estado</th>
                   <th style={{ width: 110 }}>Alta</th>
-                  {/* La columna Acciones existe para admins y stock */}
                   {(isAdmin || isStock) && <th style={{ width: 130 }}>Acciones</th>}
                 </tr>
               </thead>
               <tbody>
 
-                {/* Estado: cargando */}
                 {isLoading && (
                   <tr className="loading-row">
                     <td colSpan={(isAdmin || isStock) ? 8 : 7}>
@@ -324,7 +270,6 @@ export default function IngredientesPage() {
                   </tr>
                 )}
 
-                {/* Estado: error de red o del servidor */}
                 {isError && (
                   <tr>
                     <td colSpan={(isAdmin || isStock) ? 8 : 7}
@@ -334,7 +279,6 @@ export default function IngredientesPage() {
                   </tr>
                 )}
 
-                {/* Estado: sin resultados con los filtros aplicados */}
                 {!isLoading && !isError && data?.items.length === 0 && (
                   <tr>
                     <td colSpan={(isAdmin || isStock) ? 8 : 7}>
@@ -346,7 +290,6 @@ export default function IngredientesPage() {
                   </tr>
                 )}
 
-                {/* Estado: datos cargados → renderiza una fila por ingrediente */}
                 {!isLoading &&
                   paginatedItems.map((ing) => (
                     <tr 
@@ -359,7 +302,6 @@ export default function IngredientesPage() {
                     >
                       <td className="col-id">#{ing.id}</td>
                       <td><strong>{ing.nombre}</strong></td>
-                      {/* col-desc: trunca con "..." si el texto es muy largo */}
                       <td className="col-desc" title={ing.descripcion ?? ''}>
                         {ing.descripcion || (
                           <span style={{ color: 'var(--border)' }}>—</span>
@@ -374,7 +316,6 @@ export default function IngredientesPage() {
                         </span>
                       </td>
                       <td>
-                        {/* Badge verde/rojo según si es o no alérgeno */}
                         {ing.es_alergeno ? (
                           <span className="badge badge-danger">Alérgeno</span>
                         ) : (
@@ -391,7 +332,6 @@ export default function IngredientesPage() {
                       <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>
                         {formatFecha(ing.created_at)}
                       </td>
-                      {/* Columna de acciones: para admins y stock */}
                       {(isAdmin || isStock) && (
                         <td>
                           <div className="td-actions">
@@ -438,14 +378,12 @@ export default function IngredientesPage() {
             </table>
           </div>
 
-          {/* ── Paginación completa (solo cuando hay datos y hay más de una página) ───────────────── */}
           {data && totalItems > 0 && (
             <div className="pagination">
               <span className="pagination-info">
                 Mostrando {inicio}–{fin} de {totalItems} insumos
               </span>
               <div className="pagination-controls">
-                {/* Primera página */}
                 <button 
                   className="page-btn" 
                   disabled={currentPage === 1}
@@ -453,7 +391,6 @@ export default function IngredientesPage() {
                   title="Primera página">
                   «
                 </button>
-                {/* Página anterior */}
                 <button 
                   className="page-btn" 
                   disabled={currentPage === 1}
@@ -462,10 +399,8 @@ export default function IngredientesPage() {
                   ‹
                 </button>
 
-                {/* Botones numéricos con elipsis */}
                 {renderPageButtons()}
 
-                {/* Página siguiente */}
                 <button 
                   className="page-btn" 
                   disabled={currentPage === totalPages}
@@ -473,7 +408,6 @@ export default function IngredientesPage() {
                   title="Siguiente">
                   ›
                 </button>
-                {/* Última página */}
                 <button 
                   className="page-btn" 
                   disabled={currentPage === totalPages}
@@ -487,7 +421,6 @@ export default function IngredientesPage() {
         </div>
       </div>
 
-      {/* ── Modal crear/editar (se monta solo cuando modalOpen=true) ──────── */}
       {modalOpen && (
         <IngredienteModal
           ingrediente={editTarget}
@@ -495,7 +428,6 @@ export default function IngredientesPage() {
         />
       )}
 
-      {/* ── Diálogo de confirmación de baja (se monta cuando hay deleteTarget) */}
       {deleteTarget && (
         <ConfirmDialog
           message={

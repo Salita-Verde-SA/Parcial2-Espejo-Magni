@@ -79,8 +79,6 @@ class HistorialEstadoPedido(SQLModel, table=True):
     usuario_id: int = Field(foreign_key="usuario.id")
 
 
-# ─── Schemas de Entrada / Salida (Pydantic / SQLModel) ──────────────────────────
-
 class DireccionCreate(SQLModel):
     calle: str = Field(min_length=1, max_length=200)
     numero: str = Field(min_length=1, max_length=50)
@@ -143,18 +141,18 @@ class HistorialEstadoPedidoPublic(SQLModel):
     estado_nuevo_codigo: str
     fecha: datetime
     usuario_id: int
-    usuario_nombre: Optional[str] = None  # Enriquecido
+    usuario_nombre: Optional[str] = None
 
 
 class PedidoPublic(SQLModel):
     id: int
     usuario_id: int
-    usuario_nombre: Optional[str] = None  # Enriquecido (nombre + apellido)
+    usuario_nombre: Optional[str] = None
     fecha: datetime
     estado_codigo: str
     forma_pago_codigo: str
     direccion_id: Optional[int]
-    direccion: Optional[DireccionPublic] = None  # Enriquecido
+    direccion: Optional[DireccionPublic] = None
     total: Decimal
     created_at: datetime
     updated_at: datetime

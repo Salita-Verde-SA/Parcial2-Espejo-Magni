@@ -15,7 +15,6 @@ export default function CheckoutPage() {
   const [formaPago, setFormaPago] = useState<string>('EFECTIVO')
   const [errorMsg, setErrorMsg] = useState<string>('')
 
-  // Formulario de nueva dirección
   const [showNewDirForm, setShowNewDirForm] = useState(false)
   const [newDir, setNewDir] = useState<DireccionCreate>({
     calle: '',
@@ -27,7 +26,6 @@ export default function CheckoutPage() {
     principal: false,
   })
 
-  // Obtener direcciones del usuario
   const { data: direcciones, isLoading: loadingDirs } = useQuery<DireccionPublic[]>({
     queryKey: ['direcciones'],
     queryFn: fetchDirecciones,
@@ -44,7 +42,6 @@ export default function CheckoutPage() {
     }
   }, [direcciones, selectedDirId])
 
-  // Mutación para crear dirección
   const createDirMutation = useMutation({
     mutationFn: createDireccion,
     onSuccess: (data) => {
@@ -66,7 +63,6 @@ export default function CheckoutPage() {
     },
   })
 
-  // Mutación para crear pedido
   const createPedidoMutation = useMutation({
     mutationFn: createPedido,
     onSuccess: () => {
@@ -137,17 +133,14 @@ export default function CheckoutPage() {
 
       <div className="page-wrapper" style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 24, alignItems: 'start' }}>
         
-        {/* Lado Izquierdo: Direcciones y Pago */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           
-          {/* Mensaje de Error */}
           {errorMsg && (
             <div className="badge badge-danger" style={{ padding: 12, borderRadius: 8, fontSize: 13, display: 'block', textAlign: 'left' }}>
               ⚠️ {errorMsg}
             </div>
           )}
 
-          {/* Sección 1: Dirección de Entrega */}
           <div className="card" style={{ padding: 24 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h3 style={{ margin: 0, fontSize: 18 }}>📍 Dirección de Entrega</h3>
@@ -305,7 +298,6 @@ export default function CheckoutPage() {
             )}
           </div>
 
-          {/* Sección 2: Forma de Pago */}
           <div className="card" style={{ padding: 24 }}>
             <h3 style={{ margin: '0 0 16px 0', fontSize: 18 }}>💵 Forma de Pago</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -369,7 +361,6 @@ export default function CheckoutPage() {
 
         </div>
 
-        {/* Lado Derecho: Resumen del Carrito */}
         <div className="card" style={{ padding: 24, position: 'sticky', top: 24 }}>
           <h3 style={{ margin: '0 0 16px 0', fontSize: 18 }}>🛒 Resumen del Pedido</h3>
           

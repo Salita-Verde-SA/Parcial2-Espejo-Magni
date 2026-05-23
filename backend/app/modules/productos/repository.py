@@ -57,7 +57,6 @@ class ProductoRepository(BaseRepository[Producto]):
         )
 
     def get_all(self) -> list[Producto]:
-        """Get ALL productos including deleted ones (for admin view)."""
         return list(self.session.exec(select(Producto)).all())
 
     def get_categoria_ids(self, producto_id: int) -> list[int]:
@@ -67,7 +66,6 @@ class ProductoRepository(BaseRepository[Producto]):
         return list(self.session.exec(stmt).all())
 
     def get_ingredientes(self, producto_id: int) -> list[dict]:
-        # Obtener todas las relaciones producto_ingrediente
         pi_stmt = select(ProductoIngrediente).where(
             ProductoIngrediente.producto_id == producto_id
         )
@@ -76,7 +74,6 @@ class ProductoRepository(BaseRepository[Producto]):
         if not relaciones:
             return []
         
-        # Obtener ingredientes
         ing_ids = [r.ingrediente_id for r in relaciones]
         ing_stmt = select(Ingrediente).where(
             Ingrediente.id.in_(ing_ids),
@@ -84,7 +81,6 @@ class ProductoRepository(BaseRepository[Producto]):
         )
         ingredientes = {i.id: i for i in self.session.exec(ing_stmt).all()}
         
-        # Obtener unidades
         from app.modules.unidades.model import UnidadMedida
         unidad_ids = list(set(r.unidad_medida_id for r in relaciones if r.unidad_medida_id))
         unidades = {}
@@ -97,7 +93,6 @@ class ProductoRepository(BaseRepository[Producto]):
         for rel in relaciones:
             ing = ingredientes.get(rel.ingrediente_id)
             if ing:
-                # Obtener cantidad (default 1 si es null o 0)
                 cantidad = rel.cantidad
                 cantidad_val = float(cantidad) if cantidad and float(cantidad) > 0 else 1.0
                 result.append({
@@ -108,7 +103,7 @@ class ProductoRepository(BaseRepository[Producto]):
                     "unidad_medida_id": rel.unidad_medida_id,
                     "simbolo": unidades.get(rel.unidad_medida_id, ""),
                     "es_removible": rel.es_removible,
-                    "stock_insumo": ing.stock_cantidad or 0,  # Stock actual del ingrediente
+                    "stock_insumo": ing.stock_cantidad or 0,
                 })
         
         return result
@@ -131,10 +126,6 @@ class ProductoRepository(BaseRepository[Producto]):
     def set_ingredientes(
         self, producto_id: int, ingredientes: list[dict]
     ) -> None:
-        """
-        Set ingredientes for a product.
-        ingredientes: list of dicts with keys: ingrediente_id, cantidad, unidad_medida_id, es_removible
-        """
         existing = self.session.exec(
             select(ProductoIngrediente).where(
                 ProductoIngrediente.producto_id == producto_id
@@ -161,21 +152,14 @@ class ProductoRepository(BaseRepository[Producto]):
         self.session.flush()
 
     def get_by_id(self, producto_id: int) -> Producto | None:
-        """Get producto by ID without filtering by deleted_at."""
         return self.session.get(Producto, producto_id)
 
     def activate(self, producto: Producto) -> None:
-        """Reactiva un producto previamente desactivado."""
         producto.deleted_at = None
         self.session.add(producto)
         self.session.flush()
 
     def get_ingrediente_stocks(self, producto_id: int) -> list[tuple[int, int, float]]:
-        """
-        Obtiene los stocks y cantidades de los ingredientes de un producto.
-        Retorna lista de tuplas (ingrediente_id, stock_cantidad, cantidad_necesaria).
-        Si cantidad es null, usa default = 1.
-        """
         stmt = (
             select(Ingrediente.id, Ingrediente.stock_cantidad, ProductoIngrediente.cantidad)
             .join(
@@ -186,7 +170,6 @@ class ProductoRepository(BaseRepository[Producto]):
             .where(Ingrediente.deleted_at.is_(None))
         )
         rows = self.session.exec(stmt).all()
-        # Si cantidad es None o 0, usar 1 por defecto
         result = []
         for ing_id, stock, cantidad in rows:
             if ing_id is not None:

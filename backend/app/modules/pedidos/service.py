@@ -27,8 +27,6 @@ from app.modules.productos.model import Producto, ProductoIngrediente
 from app.modules.ingredientes.model import Ingrediente
 
 
-# ─── Auxiliares de Conversión / Enriquecimiento ──────────────────────────────
-
 def _to_direccion_public(d: DireccionEntrega) -> DireccionPublic:
     return DireccionPublic(
         id=d.id,
@@ -47,18 +45,15 @@ def _to_direccion_public(d: DireccionEntrega) -> DireccionPublic:
 
 
 def _enrich_pedido(p: Pedido, uow: UnitOfWork) -> PedidoPublic:
-    # Obtener el usuario del pedido
     user = uow.usuarios.get_by_id(p.usuario_id)
     usuario_nombre = f"{user.nombre} {user.apellido}" if user else "Usuario Desconocido"
 
-    # Obtener dirección si aplica
     direccion = None
     if p.direccion_id:
         d = uow.direcciones.get_by_id(p.direccion_id)
         if d:
             direccion = _to_direccion_public(d)
 
-    # Obtener detalles
     detalles = uow.pedidos.get_detalles(p.id)
     items_public = [
         DetallePedidoPublic(
@@ -72,7 +67,6 @@ def _enrich_pedido(p: Pedido, uow: UnitOfWork) -> PedidoPublic:
         for d in detalles
     ]
 
-    # Obtener historial
     historial = uow.pedidos.get_historial(p.id)
     historial_public = []
     for h in historial:
@@ -108,8 +102,6 @@ def _enrich_pedido(p: Pedido, uow: UnitOfWork) -> PedidoPublic:
     )
 
 
-# ─── Lógica de Direcciones de Entrega ────────────────────────────────────────
-
 def list_direcciones(usuario_id: int, uow: UnitOfWork) -> List[DireccionPublic]:
     with uow:
         items = uow.direcciones.get_all_active_by_user(usuario_id)
@@ -118,7 +110,6 @@ def list_direcciones(usuario_id: int, uow: UnitOfWork) -> List[DireccionPublic]:
 
 def create_direccion(usuario_id: int, data: DireccionCreate, uow: UnitOfWork) -> DireccionPublic:
     with uow:
-        # Si es la primera dirección o se especifica como principal, limpiar otras principales
         existing = uow.direcciones.get_all_active_by_user(usuario_id)
         es_principal = data.principal or len(existing) == 0
 
@@ -183,7 +174,6 @@ def delete_direccion(direccion_id: int, usuario_id: int, uow: UnitOfWork) -> Non
         was_principal = d.principal
         uow.direcciones.soft_delete(d)
 
-        # Si era la principal, reasignar principalidad a otra activa si existe
         if was_principal:
             restantes = uow.direcciones.get_all_active_by_user(usuario_id)
             if restantes:
@@ -192,13 +182,9 @@ def delete_direccion(direccion_id: int, usuario_id: int, uow: UnitOfWork) -> Non
                 uow.direcciones.update(nueva_p)
 
 
-# ─── Lógica de Pedidos ───────────────────────────────────────────────────────
-
 def _deduct_stock_ingredientes(pedido_id: int, uow: UnitOfWork) -> None:
-    """Descuenta del inventario los ingredientes requeridos para los productos del pedido."""
     detalles = uow.pedidos.get_detalles(pedido_id)
     for d in detalles:
-        # Obtener los ingredientes asociados al producto
         stmt = select(ProductoIngrediente).where(ProductoIngrediente.producto_id == d.producto_id)
         prod_ings = uow.session.exec(stmt).all()
         for pi in prod_ings:
@@ -207,7 +193,6 @@ def _deduct_stock_ingredientes(pedido_id: int, uow: UnitOfWork) -> None:
                 cantidad_necesaria = float(pi.cantidad) if pi.cantidad and float(pi.cantidad) > 0 else 1.0
                 total_descuento = cantidad_necesaria * d.cantidad
                 if ing.stock_cantidad is not None:
-                    # Validamos stock para evitar números negativos
                     if ing.stock_cantidad < total_descuento:
                         raise HTTPException(
                             status_code=400,
@@ -219,7 +204,6 @@ def _deduct_stock_ingredientes(pedido_id: int, uow: UnitOfWork) -> None:
 
 
 def _restore_stock_ingredientes(pedido_id: int, uow: UnitOfWork) -> None:
-    """Devuelve al inventario los ingredientes de un pedido cancelado."""
     detalles = uow.pedidos.get_detalles(pedido_id)
     for d in detalles:
         stmt = select(ProductoIngrediente).where(ProductoIngrediente.producto_id == d.producto_id)
@@ -237,18 +221,15 @@ def _restore_stock_ingredientes(pedido_id: int, uow: UnitOfWork) -> None:
 
 def create_pedido(usuario_id: int, data: PedidoCreate, uow: UnitOfWork) -> PedidoPublic:
     with uow:
-        # Validar dirección
         if data.direccion_id:
             d = uow.direcciones.get_by_id_active(data.direccion_id, usuario_id)
             if not d:
                 raise HTTPException(status_code=400, detail="Dirección de entrega inválida o inactiva")
         
-        # Validar forma de pago
         fp = uow.formas_pago.get_by_id(data.forma_pago_codigo)
         if not fp:
             raise HTTPException(status_code=400, detail="Forma de pago inválida")
 
-        # Validar stock de ingredientes y calcular total
         total = Decimal("0.00")
         items_a_crear = []
         
@@ -260,11 +241,9 @@ def create_pedido(usuario_id: int, data: PedidoCreate, uow: UnitOfWork) -> Pedid
                     detail=f"Producto con ID {item.producto_id} no encontrado o inactivo",
                 )
             
-            # Obtener ingredientes del producto
             stmt = select(ProductoIngrediente).where(ProductoIngrediente.producto_id == prod.id)
             relaciones = uow.session.exec(stmt).all()
             
-            # Validar stock de ingredientes usando el servicio de productos
             validar_stock_ingredientes(
                 [
                     type(
@@ -289,7 +268,6 @@ def create_pedido(usuario_id: int, data: PedidoCreate, uow: UnitOfWork) -> Pedid
                 }
             )
 
-        # Crear el pedido (estado inicial: PENDIENTE)
         p = Pedido(
             usuario_id=usuario_id,
             estado_codigo="PENDIENTE",
@@ -299,7 +277,6 @@ def create_pedido(usuario_id: int, data: PedidoCreate, uow: UnitOfWork) -> Pedid
         )
         uow.pedidos.add(p)
 
-        # Crear los detalles
         for item_data in items_a_crear:
             dp = DetallePedido(
                 pedido_id=p.id,
@@ -311,7 +288,6 @@ def create_pedido(usuario_id: int, data: PedidoCreate, uow: UnitOfWork) -> Pedid
             uow.session.add(dp)
         uow.session.flush()
 
-        # Registrar historial inicial
         hist = HistorialEstadoPedido(
             pedido_id=p.id,
             estado_anterior_codigo=None,
@@ -329,7 +305,6 @@ def get_pedido(pedido_id: int, usuario_id: int, roles: List[str], uow: UnitOfWor
         if not p:
             raise HTTPException(status_code=404, detail="Pedido no encontrado")
         
-        # Verificar permisos: cliente solo ve sus propios pedidos
         is_staff = any(r in ["ADMIN", "PEDIDOS"] for r in roles)
         if not is_staff and p.usuario_id != usuario_id:
             raise HTTPException(status_code=403, detail="Acceso denegado a este pedido")
@@ -373,12 +348,6 @@ def update_pedido_estado(
         if estado_anterior == nuevo_estado:
             return _enrich_pedido(p, uow)
 
-        # Validar transiciones de la máquina de estados
-        # PENDIENTE -> CONFIRMADO | CANCELADO
-        # CONFIRMADO -> EN_PREP | CANCELADO
-        # EN_PREP -> EN_CAMINO | CANCELADO
-        # EN_CAMINO -> ENTREGADO | CANCELADO
-        # ENTREGADO / CANCELADO son estados finales
         validas = {
             "PENDIENTE": ["CONFIRMADO", "CANCELADO"],
             "CONFIRMADO": ["EN_PREP", "CANCELADO"],
@@ -394,22 +363,16 @@ def update_pedido_estado(
                 detail=f"Transición de estado inválida: no se puede pasar de {estado_anterior} a {nuevo_estado}",
             )
 
-        # Lógica de Stock
-        # Descontar stock al confirmarse (transición a CONFIRMADO, o si entra directo)
         if nuevo_estado == "CONFIRMADO":
             _deduct_stock_ingredientes(p.id, uow)
         
-        # Devolver stock si se cancela un pedido que ya había descontado stock
-        # (es decir, estaba en CONFIRMADO, EN_PREP, o EN_CAMINO)
         if nuevo_estado == "CANCELADO" and estado_anterior in ["CONFIRMADO", "EN_PREP", "EN_CAMINO"]:
             _restore_stock_ingredientes(p.id, uow)
 
-        # Actualizar estado
         p.estado_codigo = nuevo_estado
         p.updated_at = datetime.now(timezone.utc)
         uow.pedidos.update(p)
 
-        # Registrar en Historial
         hist = HistorialEstadoPedido(
             pedido_id=p.id,
             estado_anterior_codigo=estado_anterior,
@@ -430,7 +393,6 @@ def cancelar_pedido_cliente(pedido_id: int, usuario_id: int, uow: UnitOfWork) ->
         if p.usuario_id != usuario_id:
             raise HTTPException(status_code=403, detail="No puedes cancelar este pedido")
         
-        # Clientes solo pueden cancelar en PENDIENTE o CONFIRMADO
         if p.estado_codigo not in ["PENDIENTE", "CONFIRMADO"]:
             raise HTTPException(
                 status_code=400,

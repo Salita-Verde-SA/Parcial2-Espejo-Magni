@@ -1,7 +1,3 @@
-// ─── pages/CategoriasPage.tsx ────────────────────────────────────────────────
-// Página de gestión de Categorías. Solo accesible con rol ADMIN.
-// Permite: ver, filtrar, paginar, crear, editar y dar de baja categorías.
-
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchCategoriasAll, fetchCategoriasTree, deleteCategoria, activateCategoria } from '../api/categorias'
@@ -11,7 +7,6 @@ import CategoriaModal from '../components/CategoriaModal'
 import ConfirmDialog from '../components/ConfirmDialog'
 import type { Categoria, CategoriaTree } from '../types'
 
-// Filtros para categorías (solo nombre)
 interface FiltrosCategorias {
   nombre: string
   page: number
@@ -45,19 +40,16 @@ export default function CategoriasPage() {
   const [treeModalOpen, setTreeModalOpen] = useState(false)
   const [selectedCategoria, setSelectedCategoria] = useState<CategoriaTree | null>(null)
 
-  // Fetch categorias - including deleted ones for admin management
   const { data: allCategorias = [], isLoading, isError } = useQuery({
     queryKey: ['categorias-all'],
     queryFn: () => fetchCategoriasAll(),
   })
 
-  // Fetch tree data for the tree modal
   const { data: treeData = [] } = useQuery({
     queryKey: ['categorias-tree'],
     queryFn: () => fetchCategoriasTree(),
   })
 
-  // Filter locally
   const filteredCategorias = allCategorias.filter(cat => {
     if (filtros.nombre && !cat.nombre.toLowerCase().includes(filtros.nombre.toLowerCase())) {
       return false
@@ -65,21 +57,18 @@ export default function CategoriasPage() {
     return true
   })
 
-  // Ordenar: activos primero, inactivos al final
   const sortedCategorias = [...filteredCategorias].sort((a, b) => {
     if (a.deleted_at && !b.deleted_at) return 1
     if (!a.deleted_at && b.deleted_at) return -1
     return a.id - b.id
   })
 
-  // Pagination
   const total = sortedCategorias.length
   const totalPages = Math.ceil(total / filtros.page_size)
   const start = (filtros.page - 1) * filtros.page_size
   const end = start + filtros.page_size
   const paginatedCategorias = sortedCategorias.slice(start, end)
 
-  // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteCategoria(id),
     onSuccess: () => {
@@ -89,7 +78,6 @@ export default function CategoriasPage() {
     },
   })
 
-  // Activate mutation
   const activateMutation = useMutation({
     mutationFn: (id: number) => activateCategoria(id),
     onSuccess: () => {
@@ -127,9 +115,7 @@ export default function CategoriasPage() {
   }
 
   function handleOpenTreeModal(cat: Categoria) {
-    // Encontrar la categoría en treeData para pasarla con sus hijos
     const treeNode = findInTree(treeData, cat.id)
-    // Solo abrir si tiene relaciones (ya validado antes con hasTreeRelations)
     if (treeNode) {
       setSelectedCategoria(treeNode)
       setTreeModalOpen(true)
@@ -141,7 +127,6 @@ export default function CategoriasPage() {
     setSelectedCategoria(null)
   }
 
-  // Función para encontrar un nodo en el árbol
   function findInTree(nodes: CategoriaTree[], id: number): CategoriaTree | null {
     for (const node of nodes) {
       if (node.id === id) return node
@@ -153,16 +138,12 @@ export default function CategoriasPage() {
     return null
   }
 
-  // Verificar si una categoría tiene relaciones (padre o hijos)
   function hasTreeRelations(cat: Categoria): boolean {
-    // Tiene padre
     if (cat.parent_id) return true
     
-    // Tiene hijos (buscar en treeData O en allCategorias)
     const treeNode = findInTree(treeData, cat.id)
     if (treeNode && treeNode.hijos && treeNode.hijos.length > 0) return true
     
-    // Verificar si alguna categoría tiene a esta como padre (usando lista plana)
     return allCategorias.some(c => c.parent_id === cat.id)
   }
 
@@ -186,7 +167,6 @@ export default function CategoriasPage() {
   const inicio = total > 0 ? start + 1 : 0
   const fin = Math.min(end, total)
 
-  // Build parent map for display
   const parentMap = new Map<number | null, string>()
   parentMap.set(null, '—')
   allCategorias.forEach(cat => parentMap.set(cat.id, cat.nombre))
@@ -248,7 +228,6 @@ export default function CategoriasPage() {
             </div>
           </div>
 
-          {/* Tabla de categorías */}
           <div className="table-wrapper">
             <table>
               <thead>
@@ -349,7 +328,6 @@ export default function CategoriasPage() {
             </table>
           </div>
 
-          {/* Paginación */}
           {total > 0 && (
             <div className="pagination">
               <span className="pagination-info">
