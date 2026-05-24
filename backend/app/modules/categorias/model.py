@@ -1,7 +1,12 @@
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, Relationship
+
+from app.modules.productos.model import ProductoCategoria
+
+if TYPE_CHECKING:
+    from app.modules.productos.model import Producto
 
 
 def _utcnow() -> datetime:
@@ -16,6 +21,11 @@ class Categoria(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_utcnow)
     updated_at: datetime = Field(default_factory=_utcnow)
     deleted_at: Optional[datetime] = Field(default=None)
+
+    # ORM Relationships
+    parent: Optional["Categoria"] = Relationship(back_populates="children", sa_relationship_kwargs={"remote_side": "Categoria.id"})
+    children: list["Categoria"] = Relationship(back_populates="parent")
+    productos: list["Producto"] = Relationship(back_populates="categorias_rel", link_model=ProductoCategoria)
 
 
 class CategoriaCreate(SQLModel):

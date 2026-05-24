@@ -23,17 +23,6 @@ def _to_public(u: Usuario, roles: list[str]) -> UserPublic:
     )
 
 
-@router.get(
-    "/",
-    response_model=list[UserPublic],
-    dependencies=[Depends(require_roles(["ADMIN"]))],
-)
-def list_users(uow: Annotated[UnitOfWork, Depends(get_uow)]):
-    with uow:
-        users = uow.session.exec(
-            select(Usuario).where(Usuario.deleted_at.is_(None))
-        ).all()
-        return [_to_public(u, uow.usuarios.get_roles(u.id)) for u in users]
 
 
 @router.patch("/me", response_model=UserPublic)
@@ -57,29 +46,3 @@ def update_me(
         return _to_public(u, roles)
 
 
-@router.post(
-    "/{user_id}/roles/{rol_codigo}",
-    dependencies=[Depends(require_roles(["ADMIN"]))],
-    status_code=status.HTTP_204_NO_CONTENT,
-)
-def assign_role(
-    user_id: int,
-    rol_codigo: str,
-    uow: Annotated[UnitOfWork, Depends(get_uow)],
-):
-    with uow:
-        uow.usuarios.assign_role(user_id, rol_codigo)
-
-
-@router.delete(
-    "/{user_id}/roles/{rol_codigo}",
-    dependencies=[Depends(require_roles(["ADMIN"]))],
-    status_code=status.HTTP_204_NO_CONTENT,
-)
-def remove_role(
-    user_id: int,
-    rol_codigo: str,
-    uow: Annotated[UnitOfWork, Depends(get_uow)],
-):
-    with uow:
-        uow.usuarios.remove_role(user_id, rol_codigo)

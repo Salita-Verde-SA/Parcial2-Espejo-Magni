@@ -1,8 +1,12 @@
+from app.modules.pedidos.model import Pedido
+from app.modules.pedidos.model import DireccionEntrega
 from datetime import datetime, timezone
 from typing import Optional
 
 from pydantic import EmailStr
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, Relationship
+
+from app.modules.roles.model import Rol, UsuarioRol
 
 
 def _utcnow() -> datetime:
@@ -19,6 +23,11 @@ class Usuario(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_utcnow)
     updated_at: datetime = Field(default_factory=_utcnow)
     deleted_at: Optional[datetime] = Field(default=None)
+
+    # ORM Relationships
+    roles: list[Rol] = Relationship(back_populates="usuarios", link_model=UsuarioRol)
+    direcciones: list["DireccionEntrega"] = Relationship(back_populates="usuario")
+    pedidos: list["Pedido"] = Relationship(back_populates="usuario")
 
 
 class UserRegister(SQLModel):
@@ -58,3 +67,11 @@ class Token(SQLModel):
 
 class TokenRefresh(SQLModel):
     refresh_token: str
+
+
+class PaginatedUsuarios(SQLModel):
+    items: list[UserPublic]
+    total: int
+    page: int
+    page_size: int
+    pages: int

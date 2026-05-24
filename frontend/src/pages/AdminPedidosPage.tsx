@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchPedidos, patchPedidoEstado } from '../api/pedidos'
+import { fetchPedidos, patchPedidoEstado, fetchPedido } from '../api/pedidos'
 import { usePedidosWebSocket } from '../hooks/usePedidosWebSocket'
 import type { PedidoPublic, PaginatedPedidos } from '../types'
 
@@ -10,7 +10,7 @@ export default function AdminPedidosPage() {
   
   const [page, setPage] = useState(1)
   const [estadoFiltro, setEstadoFiltro] = useState('')
-  const [selectedPedido, setSelectedPedido] = useState<PedidoPublic | null>(null)
+  const [selectedPedidoId, setSelectedPedidoId] = useState<number | null>(null)
   const [errorMsg, setErrorMsg] = useState('')
 
   const { data: response, isLoading } = useQuery<PaginatedPedidos>({
@@ -19,21 +19,23 @@ export default function AdminPedidosPage() {
     placeholderData: (prev) => prev,
   })
 
-  useEffect(() => {
-    if (response && selectedPedido) {
-      const updated = response.items.find((p) => p.id === selectedPedido.id)
-      if (updated && JSON.stringify(updated) !== JSON.stringify(selectedPedido)) {
-        setSelectedPedido(updated)
-      }
-    }
-  }, [response, selectedPedido])
+  const { data: selectedPedido } = useQuery<PedidoPublic | null>({
+    queryKey: ['pedido-detalle', selectedPedidoId],
+    queryFn: () => selectedPedidoId ? fetchPedido(selectedPedidoId) : Promise.resolve(null),
+    enabled: !!selectedPedidoId,
+    initialData: () => {
+      if (!selectedPedidoId || !response) return undefined
+      return response.items.find((p) => p.id === selectedPedidoId)
+    },
+    initialDataUpdatedAt: 0,
+  })
 
   const stateMutation = useMutation({
     mutationFn: ({ id, nuevoEstado }: { id: number; nuevoEstado: string }) =>
       patchPedidoEstado(id, nuevoEstado),
     onSuccess: (updated) => {
+      queryClient.setQueryData(['pedido-detalle', updated.id], updated)
       queryClient.invalidateQueries({ queryKey: ['admin-pedidos'] })
-      setSelectedPedido(updated)
       setErrorMsg('')
     },
     onError: (err: any) => {
@@ -220,15 +222,15 @@ export default function AdminPedidosPage() {
                   {response.items.map((p) => (
                     <tr
                       key={p.id}
-                      onClick={() => setSelectedPedido(p)}
+                      onClick={() => setSelectedPedidoId(p.id)}
                       style={{
                         borderBottom: '1px solid var(--border)',
                         cursor: 'pointer',
-                        background: selectedPedido?.id === p.id ? 'rgba(var(--primary-rgb), 0.03)' : 'transparent',
+                        background: selectedPedidoId === p.id ? 'rgba(var(--primary-rgb), 0.03)' : 'transparent',
                         transition: 'background 0.2s',
                       }}
-                      onMouseEnter={(e) => { if (selectedPedido?.id !== p.id) e.currentTarget.style.background = 'var(--bg-muted)' }}
-                      onMouseLeave={(e) => { if (selectedPedido?.id !== p.id) e.currentTarget.style.background = 'transparent' }}
+                      onMouseEnter={(e) => { if (selectedPedidoId !== p.id) e.currentTarget.style.background = 'var(--bg-muted)' }}
+                      onMouseLeave={(e) => { if (selectedPedidoId !== p.id) e.currentTarget.style.background = 'transparent' }}
                     >
                       <td style={{ padding: 12, fontWeight: 700 }}>#{p.id}</td>
                       <td style={{ padding: 12 }}>{p.usuario_nombre}</td>

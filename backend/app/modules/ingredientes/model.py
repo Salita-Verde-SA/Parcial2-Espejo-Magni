@@ -1,8 +1,12 @@
-import math
 from datetime import datetime
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, Relationship
+
+from app.modules.productos.model import ProductoIngrediente
+
+if TYPE_CHECKING:
+    from app.modules.productos.model import Producto
 
 
 def _utcnow() -> datetime:
@@ -18,6 +22,9 @@ class Ingrediente(SQLModel, table=True):
     created_at:  datetime      = Field(default_factory=_utcnow)
     updated_at:  datetime      = Field(default_factory=_utcnow)
     deleted_at:  Optional[datetime] = Field(default=None)
+
+    # ORM Relationships
+    productos: list["Producto"] = Relationship(back_populates="ingredientes_rel", link_model=ProductoIngrediente)
 
 
 class IngredienteCreate(SQLModel):

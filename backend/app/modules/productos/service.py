@@ -22,7 +22,8 @@ from app.modules.productos.model import (
 def calcular_stock_producto(producto_id: int, uow: UnitOfWork) -> int:
     stocks_data = uow.productos.get_ingrediente_stocks(producto_id)
     if not stocks_data:
-        return 0
+        p = uow.productos.get_by_id(producto_id)
+        return p.stock_cantidad if p else 0
     
     max_products = []
     for _, stock, cantidad_necesaria in stocks_data:

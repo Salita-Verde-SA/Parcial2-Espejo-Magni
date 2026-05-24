@@ -25,6 +25,9 @@ export function usePedidosWebSocket() {
           if (data.type === 'NEW_PEDIDO' || data.type === 'PEDIDO_UPDATED') {
             qc.invalidateQueries({ queryKey: ['pedidos'] })
             qc.invalidateQueries({ queryKey: ['admin-pedidos'] })
+            if (data.pedido_id) {
+              qc.invalidateQueries({ queryKey: ['pedido-detalle', data.pedido_id] })
+            }
           }
         } catch (err) {
           console.error('Error parseando mensaje WS:', err)
