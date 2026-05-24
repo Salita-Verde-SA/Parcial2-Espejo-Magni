@@ -251,6 +251,52 @@ def _restore_stock_ingredientes(pedido_id: int, uow: UnitOfWork) -> None:
     uow.session.flush()
 
 
+def _do_update_estado(pedido_id: int, nuevo_estado: str, actual_usuario_id: int, uow: UnitOfWork) -> PedidoPublic:
+    """Ejecuta la transición de estado dentro de un UoW ya abierto (sin abrir contexto propio)."""
+    p = uow.pedidos.get_by_id_active(pedido_id)
+    if not p:
+        raise HTTPException(status_code=404, detail="Pedido no encontrado")
+
+    estado_anterior = p.estado_codigo
+    if estado_anterior == nuevo_estado:
+        return _enrich_pedido(p, uow)
+
+    validas = {
+        "PENDIENTE": ["CONFIRMADO", "CANCELADO"],
+        "CONFIRMADO": ["EN_PREP", "CANCELADO"],
+        "EN_PREP": ["EN_CAMINO", "CANCELADO"],
+        "EN_CAMINO": ["ENTREGADO", "CANCELADO"],
+        "ENTREGADO": [],
+        "CANCELADO": [],
+    }
+
+    if nuevo_estado not in validas.get(estado_anterior, []):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Transición de estado inválida: no se puede pasar de {estado_anterior} a {nuevo_estado}",
+        )
+
+    if nuevo_estado == "CONFIRMADO":
+        _deduct_stock_ingredientes(p.id, uow)
+
+    if nuevo_estado == "CANCELADO" and estado_anterior in ["CONFIRMADO", "EN_PREP", "EN_CAMINO"]:
+        _restore_stock_ingredientes(p.id, uow)
+
+    p.estado_codigo = nuevo_estado
+    p.updated_at = datetime.now(timezone.utc)
+    uow.pedidos.update(p)
+
+    hist = HistorialEstadoPedido(
+        pedido_id=p.id,
+        estado_anterior_codigo=estado_anterior,
+        estado_nuevo_codigo=nuevo_estado,
+        usuario_id=actual_usuario_id,
+    )
+    uow.session.add(hist)
+
+    return _enrich_pedido(p, uow)
+
+
 def create_pedido(usuario_id: int, data: PedidoCreate, uow: UnitOfWork) -> PedidoPublic:
     with uow:
         if data.direccion_id:
@@ -379,48 +425,7 @@ def update_pedido_estado(
     pedido_id: int, nuevo_estado: str, actual_usuario_id: int, uow: UnitOfWork
 ) -> PedidoPublic:
     with uow:
-        p = uow.pedidos.get_by_id_active(pedido_id)
-        if not p:
-            raise HTTPException(status_code=404, detail="Pedido no encontrado")
-
-        estado_anterior = p.estado_codigo
-        if estado_anterior == nuevo_estado:
-            return _enrich_pedido(p, uow)
-
-        validas = {
-            "PENDIENTE": ["CONFIRMADO", "CANCELADO"],
-            "CONFIRMADO": ["EN_PREP", "CANCELADO"],
-            "EN_PREP": ["EN_CAMINO", "CANCELADO"],
-            "EN_CAMINO": ["ENTREGADO", "CANCELADO"],
-            "ENTREGADO": [],
-            "CANCELADO": [],
-        }
-
-        if nuevo_estado not in validas.get(estado_anterior, []):
-            raise HTTPException(
-                status_code=400,
-                detail=f"Transición de estado inválida: no se puede pasar de {estado_anterior} a {nuevo_estado}",
-            )
-
-        if nuevo_estado == "CONFIRMADO":
-            _deduct_stock_ingredientes(p.id, uow)
-        
-        if nuevo_estado == "CANCELADO" and estado_anterior in ["CONFIRMADO", "EN_PREP", "EN_CAMINO"]:
-            _restore_stock_ingredientes(p.id, uow)
-
-        p.estado_codigo = nuevo_estado
-        p.updated_at = datetime.now(timezone.utc)
-        uow.pedidos.update(p)
-
-        hist = HistorialEstadoPedido(
-            pedido_id=p.id,
-            estado_anterior_codigo=estado_anterior,
-            estado_nuevo_codigo=nuevo_estado,
-            usuario_id=actual_usuario_id,
-        )
-        uow.session.add(hist)
-
-        return _enrich_pedido(p, uow)
+        return _do_update_estado(pedido_id, nuevo_estado, actual_usuario_id, uow)
 
 
 def cancelar_pedido_cliente(pedido_id: int, usuario_id: int, uow: UnitOfWork) -> PedidoPublic:
@@ -428,14 +433,14 @@ def cancelar_pedido_cliente(pedido_id: int, usuario_id: int, uow: UnitOfWork) ->
         p = uow.pedidos.get_by_id_active(pedido_id)
         if not p:
             raise HTTPException(status_code=404, detail="Pedido no encontrado")
-        
+
         if p.usuario_id != usuario_id:
             raise HTTPException(status_code=403, detail="No puedes cancelar este pedido")
-        
+
         if p.estado_codigo not in ["PENDIENTE", "CONFIRMADO"]:
             raise HTTPException(
                 status_code=400,
                 detail="Solo puedes cancelar pedidos que estén pendientes o confirmados",
             )
-        
-        return update_pedido_estado(pedido_id, "CANCELADO", usuario_id, uow)
+
+        return _do_update_estado(pedido_id, "CANCELADO", usuario_id, uow)

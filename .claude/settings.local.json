@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker compose *)",
+      "Bash(Start-Sleep -Seconds 15)",
+      "Bash(t{{.Status}})",
+      "Bash(docker ps *)"
+    ]
+  }
+}

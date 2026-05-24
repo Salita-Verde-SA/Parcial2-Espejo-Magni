@@ -21,14 +21,14 @@ export default function LoginPage() {
       const { token, userId, email: userEmail, nombre, roles } = useAuthStore.getState()
       const isStaff = roles.some(r => STAFF_ROLES.includes(r))
 
-      if (!isStaff && roles.includes('CLIENT')) {
-        // Es cliente puro → redirigir a la tienda con sesión pre-cargada
-        localStorage.setItem('store-auth-storage', JSON.stringify({
+      if (isStaff) {
+        // Es staff → redirigir al panel admin con sesión pre-cargada
+        localStorage.setItem('auth-storage', JSON.stringify({
           state: { token, userId, email: userEmail, nombre, roles },
           version: 0,
         }))
         useAuthStore.getState().logout()
-        window.location.href = 'http://localhost:5174'
+        window.location.href = 'http://localhost'
         return
       }
 
@@ -142,7 +142,7 @@ export default function LoginPage() {
         </form>
 
         <p style={{ textAlign: 'center', marginTop: 20, color: '#9ca3af', fontSize: 12 }}>
-          admin@fastfood.com · stock@fastfood.com · pedidos@fastfood.com · juan@fastfood.com
+          juan@fastfood.com / Juan1234!
         </p>
       </div>
     </div>

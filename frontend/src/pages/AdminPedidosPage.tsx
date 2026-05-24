@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchPedidos, patchPedidoEstado, fetchPedido } from '../api/pedidos'
 import { usePedidosWebSocket } from '../hooks/usePedidosWebSocket'
