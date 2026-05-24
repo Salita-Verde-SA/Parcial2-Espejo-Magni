@@ -1,3 +1,6 @@
+from datetime import datetime, timezone
+from typing import Optional
+
 from sqlmodel import Session, select
 
 from app.core.base_repository import BaseRepository
@@ -46,3 +49,22 @@ class UsuarioRepository(BaseRepository[Usuario]):
         if existing:
             self.session.delete(existing)
             self.session.flush()
+
+    def list_filtered(
+        self, rol_codigo: str = "", page: int = 1, page_size: int = 10
+    ) -> tuple[list[Usuario], int]:
+        stmt = select(Usuario).where(Usuario.deleted_at.is_(None))
+        if rol_codigo:
+            stmt = stmt.join(
+                UsuarioRol, UsuarioRol.usuario_id == Usuario.id
+            ).where(UsuarioRol.rol_codigo == rol_codigo)
+            
+        all_items = list(self.session.exec(stmt).all())
+        total = len(all_items)
+        offset = (page - 1) * page_size
+        return all_items[offset : offset + page_size], total
+
+    def soft_delete(self, usuario: Usuario) -> None:
+        usuario.deleted_at = datetime.now(timezone.utc)
+        self.session.add(usuario)
+        self.session.flush()

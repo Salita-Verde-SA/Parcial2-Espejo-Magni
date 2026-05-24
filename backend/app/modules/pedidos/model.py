@@ -1,8 +1,12 @@
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
 from sqlalchemy import Column, Numeric
 from sqlmodel import SQLModel, Field, Relationship
+
+if TYPE_CHECKING:
+    from app.modules.productos.model import Producto
+    from app.modules.usuarios.model import Usuario
 
 
 def _utcnow() -> datetime:
@@ -16,6 +20,9 @@ class EstadoPedido(SQLModel, table=True):
     descripcion: Optional[str] = Field(default=None, max_length=200)
     created_at: datetime = Field(default_factory=_utcnow)
 
+    # ORM Relationships
+    pedidos: list["Pedido"] = Relationship(back_populates="estado")
+
 
 class FormaPago(SQLModel, table=True):
     __tablename__ = "forma_pago"
@@ -23,6 +30,9 @@ class FormaPago(SQLModel, table=True):
     codigo: str = Field(primary_key=True, max_length=50)
     descripcion: Optional[str] = Field(default=None, max_length=200)
     created_at: datetime = Field(default_factory=_utcnow)
+
+    # ORM Relationships
+    pedidos: list["Pedido"] = Relationship(back_populates="forma_pago")
 
 
 class DireccionEntrega(SQLModel, table=True):
@@ -41,6 +51,10 @@ class DireccionEntrega(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=_utcnow)
     deleted_at: Optional[datetime] = Field(default=None)
 
+    # ORM Relationships
+    usuario: "Usuario" = Relationship(back_populates="direcciones")
+    pedidos: list["Pedido"] = Relationship(back_populates="direccion")
+
 
 class Pedido(SQLModel, table=True):
     __tablename__ = "pedido"
@@ -56,6 +70,14 @@ class Pedido(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=_utcnow)
     deleted_at: Optional[datetime] = Field(default=None)
 
+    # ORM Relationships
+    usuario: "Usuario" = Relationship(back_populates="pedidos")
+    direccion: Optional[DireccionEntrega] = Relationship(back_populates="pedidos")
+    estado: EstadoPedido = Relationship(back_populates="pedidos")
+    forma_pago: FormaPago = Relationship(back_populates="pedidos")
+    detalles: list["DetallePedido"] = Relationship(back_populates="pedido")
+    historial: list["HistorialEstadoPedido"] = Relationship(back_populates="pedido")
+
 
 class DetallePedido(SQLModel, table=True):
     __tablename__ = "detalle_pedido"
@@ -67,6 +89,10 @@ class DetallePedido(SQLModel, table=True):
     precio_unitario: Decimal = Field(sa_column=Column(Numeric(10, 2), nullable=False))
     producto_nombre: str = Field(max_length=150)
 
+    # ORM Relationships
+    pedido: Pedido = Relationship(back_populates="detalles")
+    producto: "Producto" = Relationship(back_populates="detalles")
+
 
 class HistorialEstadoPedido(SQLModel, table=True):
     __tablename__ = "historial_estado_pedido"
@@ -77,6 +103,9 @@ class HistorialEstadoPedido(SQLModel, table=True):
     estado_nuevo_codigo: str = Field(foreign_key="estado_pedido.codigo")
     fecha: datetime = Field(default_factory=_utcnow)
     usuario_id: int = Field(foreign_key="usuario.id")
+
+    # ORM Relationships
+    pedido: Pedido = Relationship(back_populates="historial")
 
 
 class DireccionCreate(SQLModel):

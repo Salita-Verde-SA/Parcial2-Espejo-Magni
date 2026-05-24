@@ -165,6 +165,21 @@ def update_direccion(
         return _to_direccion_public(d)
 
 
+def set_direccion_principal(direccion_id: int, usuario_id: int, uow: UnitOfWork) -> DireccionPublic:
+    with uow:
+        d = uow.direcciones.get_by_id_active(direccion_id, usuario_id)
+        if not d:
+            raise HTTPException(status_code=404, detail="Dirección no encontrada")
+
+        if not d.principal:
+            d.principal = True
+            d.updated_at = datetime.now(timezone.utc)
+            uow.direcciones.update(d)
+            uow.direcciones.clear_principal_except(usuario_id, d.id)
+
+        return _to_direccion_public(d)
+
+
 def delete_direccion(direccion_id: int, usuario_id: int, uow: UnitOfWork) -> None:
     with uow:
         d = uow.direcciones.get_by_id_active(direccion_id, usuario_id)
@@ -187,19 +202,30 @@ def _deduct_stock_ingredientes(pedido_id: int, uow: UnitOfWork) -> None:
     for d in detalles:
         stmt = select(ProductoIngrediente).where(ProductoIngrediente.producto_id == d.producto_id)
         prod_ings = uow.session.exec(stmt).all()
-        for pi in prod_ings:
-            ing = uow.session.get(Ingrediente, pi.ingrediente_id)
-            if ing:
-                cantidad_necesaria = float(pi.cantidad) if pi.cantidad and float(pi.cantidad) > 0 else 1.0
-                total_descuento = cantidad_necesaria * d.cantidad
-                if ing.stock_cantidad is not None:
-                    if ing.stock_cantidad < total_descuento:
-                        raise HTTPException(
-                            status_code=400,
-                            detail=f"Stock insuficiente del ingrediente '{ing.nombre}' para procesar el pedido.",
-                        )
-                    ing.stock_cantidad = ing.stock_cantidad - total_descuento
-                    uow.session.add(ing)
+        if not prod_ings:
+            prod = uow.productos.get_by_id(d.producto_id)
+            if prod:
+                if prod.stock_cantidad < d.cantidad:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Stock insuficiente del producto '{prod.nombre}' para procesar el pedido.",
+                    )
+                prod.stock_cantidad = prod.stock_cantidad - d.cantidad
+                uow.session.add(prod)
+        else:
+            for pi in prod_ings:
+                ing = uow.session.get(Ingrediente, pi.ingrediente_id)
+                if ing:
+                    cantidad_necesaria = float(pi.cantidad) if pi.cantidad and float(pi.cantidad) > 0 else 1.0
+                    total_descuento = cantidad_necesaria * d.cantidad
+                    if ing.stock_cantidad is not None:
+                        if ing.stock_cantidad < total_descuento:
+                            raise HTTPException(
+                                status_code=400,
+                                detail=f"Stock insuficiente del ingrediente '{ing.nombre}' para procesar el pedido.",
+                            )
+                        ing.stock_cantidad = ing.stock_cantidad - total_descuento
+                        uow.session.add(ing)
     uow.session.flush()
 
 
@@ -208,14 +234,20 @@ def _restore_stock_ingredientes(pedido_id: int, uow: UnitOfWork) -> None:
     for d in detalles:
         stmt = select(ProductoIngrediente).where(ProductoIngrediente.producto_id == d.producto_id)
         prod_ings = uow.session.exec(stmt).all()
-        for pi in prod_ings:
-            ing = uow.session.get(Ingrediente, pi.ingrediente_id)
-            if ing:
-                cantidad_necesaria = float(pi.cantidad) if pi.cantidad and float(pi.cantidad) > 0 else 1.0
-                total_retorno = cantidad_necesaria * d.cantidad
-                if ing.stock_cantidad is not None:
-                    ing.stock_cantidad = ing.stock_cantidad + total_retorno
-                    uow.session.add(ing)
+        if not prod_ings:
+            prod = uow.productos.get_by_id(d.producto_id)
+            if prod:
+                prod.stock_cantidad = prod.stock_cantidad + d.cantidad
+                uow.session.add(prod)
+        else:
+            for pi in prod_ings:
+                ing = uow.session.get(Ingrediente, pi.ingrediente_id)
+                if ing:
+                    cantidad_necesaria = float(pi.cantidad) if pi.cantidad and float(pi.cantidad) > 0 else 1.0
+                    total_retorno = cantidad_necesaria * d.cantidad
+                    if ing.stock_cantidad is not None:
+                        ing.stock_cantidad = ing.stock_cantidad + total_retorno
+                        uow.session.add(ing)
     uow.session.flush()
 
 
@@ -244,17 +276,24 @@ def create_pedido(usuario_id: int, data: PedidoCreate, uow: UnitOfWork) -> Pedid
             stmt = select(ProductoIngrediente).where(ProductoIngrediente.producto_id == prod.id)
             relaciones = uow.session.exec(stmt).all()
             
-            validar_stock_ingredientes(
-                [
-                    type(
-                        "InputMock",
-                        (),
-                        {"ingrediente_id": r.ingrediente_id, "cantidad": r.cantidad * item.cantidad},
-                    )()
-                    for r in relaciones
-                ],
-                uow,
-            )
+            if not relaciones:
+                if prod.stock_cantidad < item.cantidad:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Stock insuficiente del producto '{prod.nombre}': disponible {prod.stock_cantidad}, solicitado {item.cantidad}",
+                    )
+            else:
+                validar_stock_ingredientes(
+                    [
+                        type(
+                            "InputMock",
+                            (),
+                            {"ingrediente_id": r.ingrediente_id, "cantidad": r.cantidad * item.cantidad},
+                        )()
+                        for r in relaciones
+                    ],
+                    uow,
+                )
             
             item_total = prod.precio_base * item.cantidad
             total += item_total

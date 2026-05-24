@@ -1,27 +1,18 @@
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from sqlalchemy import Column, Numeric
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, Relationship
+
+if TYPE_CHECKING:
+    from app.modules.pedidos.model import DetallePedido
+    from app.modules.ingredientes.model import Ingrediente
+    from app.modules.categorias.model import Categoria
 
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
-
-
-class Producto(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    nombre: str = Field(index=True, max_length=150)
-    descripcion: Optional[str] = Field(default=None, max_length=1000)
-    precio_base: Decimal = Field(sa_column=Column(Numeric(10, 2), nullable=False))
-    unidad_venta_id: Optional[int] = Field(default=None, foreign_key="unidad_medida.id")
-    stock_cantidad: int = Field(default=0)
-    disponible: bool = Field(default=True)
-    imagen_url: Optional[str] = Field(default=None, max_length=500)
-    created_at: datetime = Field(default_factory=_utcnow)
-    updated_at: datetime = Field(default_factory=_utcnow)
-    deleted_at: Optional[datetime] = Field(default=None)
 
 
 class ProductoCategoria(SQLModel, table=True):
@@ -41,6 +32,25 @@ class ProductoIngrediente(SQLModel, table=True):
     unidad_medida_id: int = Field(foreign_key="unidad_medida.id")
     es_removible: bool = Field(default=False)
     created_at: datetime = Field(default_factory=_utcnow)
+
+
+class Producto(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    nombre: str = Field(index=True, max_length=150)
+    descripcion: Optional[str] = Field(default=None, max_length=1000)
+    precio_base: Decimal = Field(sa_column=Column(Numeric(10, 2), nullable=False))
+    unidad_venta_id: Optional[int] = Field(default=None, foreign_key="unidad_medida.id")
+    stock_cantidad: int = Field(default=0)
+    disponible: bool = Field(default=True)
+    imagen_url: Optional[str] = Field(default=None, max_length=500)
+    created_at: datetime = Field(default_factory=_utcnow)
+    updated_at: datetime = Field(default_factory=_utcnow)
+    deleted_at: Optional[datetime] = Field(default=None)
+
+    # ORM Relationships
+    categorias_rel: list["Categoria"] = Relationship(back_populates="productos", link_model=ProductoCategoria)
+    ingredientes_rel: list["Ingrediente"] = Relationship(back_populates="productos", link_model=ProductoIngrediente)
+    detalles: list["DetallePedido"] = Relationship(back_populates="producto")
 
 
 class IngredienteCantidadInput(SQLModel):

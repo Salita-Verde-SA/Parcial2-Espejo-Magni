@@ -23,6 +23,7 @@ from app.modules.pedidos.service import (
     list_pedidos,
     update_pedido_estado,
     cancelar_pedido_cliente,
+    set_direccion_principal,
 )
 from app.core.websockets import manager
 
@@ -71,6 +72,16 @@ def delete_dir(
 ):
     user, _ = ctx
     delete_direccion(direccion_id, user.id, uow)
+
+
+@router.patch("/api/v1/direcciones/{direccion_id}/principal", response_model=DireccionPublic)
+def set_principal_dir(
+    direccion_id: int,
+    ctx: Annotated[tuple, Depends(get_current_active_user)],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+):
+    user, _ = ctx
+    return set_direccion_principal(direccion_id, user.id, uow)
 
 
 @router.post(
