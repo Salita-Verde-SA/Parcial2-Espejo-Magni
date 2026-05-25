@@ -24,5 +24,5 @@ class Rol(SQLModel, table=True):
     descripcion: Optional[str] = Field(default=None, max_length=200)
     created_at: datetime = Field(default_factory=_utcnow)
 
-    # ORM Relationships
+    # Relaciones ORM
     usuarios: list["Usuario"] = Relationship(back_populates="roles", link_model=UsuarioRol)

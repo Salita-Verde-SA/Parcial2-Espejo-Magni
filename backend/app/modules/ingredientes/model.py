@@ -23,7 +23,7 @@ class Ingrediente(SQLModel, table=True):
     updated_at:  datetime      = Field(default_factory=_utcnow)
     deleted_at:  Optional[datetime] = Field(default=None)
 
-    # ORM Relationships
+    # Relaciones ORM
     productos: list["Producto"] = Relationship(back_populates="ingredientes_rel", link_model=ProductoIngrediente)
 
 

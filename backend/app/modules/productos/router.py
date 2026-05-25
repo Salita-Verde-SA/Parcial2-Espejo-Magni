@@ -51,7 +51,7 @@ def list_prods(
     dependencies=[Depends(require_roles(["ADMIN", "STOCK"]))],
 )
 def list_prods_all(uow: Annotated[UnitOfWork, Depends(get_uow)]):
-    """List all productos including deleted ones (for admin management)."""
+    """Listar todos los productos incluyendo eliminados (para administración)."""
     return list_productos_all(uow)
 
 

@@ -34,31 +34,31 @@ export default function ProductoModal({ producto, onClose }: Props) {
   const [apiError, setApiError] = useState('')
   const [stockWarning, setStockWarning] = useState<string | null>(null)
 
-  // Fetch categorias
+  // Traer categorías
   const { data: categorias = [] } = useQuery({
     queryKey: ['categorias', 'all'],
     queryFn: fetchCategorias,
   })
 
-  // Fetch ingredientes (using "all" endpoint to get all ingredients)
+  // Traer ingredientes (usando el endpoint "all" para obtenerlos todos)
   const { data: ingredientesData } = useQuery({
     queryKey: ['ingredientes', 'all'],
     queryFn: fetchIngredientesAll,
   })
   const ingredientes: Ingrediente[] = ingredientesData?.items ?? []
 
-  // Fetch unidades de medida
+  // Traer unidades de medida
   const { data: unidades = [] } = useQuery({
     queryKey: ['unidades'],
     queryFn: fetchUnidades,
   })
 
-  // Helper to check if an ingredient is selected
+  // Verifica si un ingrediente está seleccionado
   function hasIngrediente(ingId: number): boolean {
     return form.ingredientes.some(i => i.ingrediente_id === ingId)
   }
 
-  // Get unidad symbol by id
+  // Obtener símbolo de unidad por id
   function getUnidadSimbolo(unidadId: number | null): string {
     if (!unidadId) return ''
     const unidad = unidades.find(u => u.id === unidadId)
@@ -89,7 +89,7 @@ export default function ProductoModal({ producto, onClose }: Props) {
 
   const stockCalculado = calcularStockEnTiempoReal()
 
-  // Load producto data in edit mode
+  // Cargar datos del producto en modo edición
   useEffect(() => {
     if (producto) {
       setForm({

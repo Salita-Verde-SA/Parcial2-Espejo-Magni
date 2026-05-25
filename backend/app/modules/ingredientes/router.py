@@ -40,7 +40,7 @@ def list_ingredientes(
     dependencies=[Depends(require_roles(["ADMIN", "STOCK"]))],
 )
 def list_ingredientes_all(uow: Annotated[UnitOfWork, Depends(get_uow)]):
-    """List all ingredientes including deleted ones (for admin management)."""
+    """Listar todos los ingredientes incluyendo eliminados (para administración)."""
     with uow:
         return IngredienteService(uow).list_all()
 

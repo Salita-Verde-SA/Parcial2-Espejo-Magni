@@ -24,7 +24,7 @@ class Usuario(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=_utcnow)
     deleted_at: Optional[datetime] = Field(default=None)
 
-    # ORM Relationships
+    # Relaciones ORM
     roles: list[Rol] = Relationship(back_populates="usuarios", link_model=UsuarioRol)
     direcciones: list["DireccionEntrega"] = Relationship(back_populates="usuario")
     pedidos: list["Pedido"] = Relationship(back_populates="usuario")
