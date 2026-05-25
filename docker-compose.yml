@@ -8,10 +8,7 @@ services:
     image: postgres:15-alpine
     container_name: fastfood-postgres
     restart: unless-stopped
-    environment:
-      POSTGRES_USER: fastfood
-      POSTGRES_PASSWORD: fastfood
-      POSTGRES_DB: fastfood_db
+    env_file: .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -33,10 +30,7 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql://fastfood:fastfood@postgres:5432/fastfood_db
-      - SECRET_KEY=dev-secret-key-change-in-production
-      - PYTHONUNBUFFERED=1
+    env_file: .env
     depends_on:
       postgres:
         condition: service_healthy
