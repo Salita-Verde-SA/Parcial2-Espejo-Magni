@@ -2,6 +2,10 @@
 
 > 📁 **Documentación adicional** en `/docs/pdf/` — archivos complementarios del proyecto.
 
+## Entrega para el parcial
+
+[Enlace al video para la presentación del segundo parcial](https://drive.google.com/file/d/111Qs4vTrp4xQ8rA84ZaXlW0PcZnhixfC/view?usp=sharing)
+
 **Integrantes del grupo**
 
 - Castillo Fabrizio
