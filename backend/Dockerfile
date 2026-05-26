@@ -25,6 +25,7 @@ WORKDIR /app
 # Instalar solo runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar dependencias instaladas del builder

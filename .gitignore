@@ -15,7 +15,6 @@ venv/
 .venv/
 env/
 .env.local
-.env
 
 
 backend/.env

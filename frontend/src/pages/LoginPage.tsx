@@ -1,99 +1,148 @@
-// ─── pages/LoginPage.tsx ──────────────────────────────────────────────────────
-// Página de inicio de sesión.
-// Es la única ruta pública de la app (no requiere estar autenticado).
-// Al hacer submit llama a login() de la API, y si es exitoso redirige a "/".
-
 import { useState, FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { login } from '../api/auth'
+import { useAuthStore } from '../stores/authStore'
+
+const STAFF_ROLES = ['ADMIN', 'STOCK', 'PEDIDOS']
 
 export default function LoginPage() {
-  // useState: estado local del componente (no necesita store global)
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError]       = useState('')     // mensaje de error a mostrar
-  const [loading, setLoading]   = useState(false)  // deshabilita el botón mientras carga
-
+  const [error, setError]       = useState('')
+  const [loading, setLoading]   = useState(false)
   const navigate = useNavigate()
 
-  // ─── handleSubmit ─────────────────────────────────────────────────────────
-  // Se llama al enviar el formulario.
-  // Patrón estándar: try/catch/finally para manejar el estado de carga.
   async function handleSubmit(e: FormEvent) {
-    e.preventDefault()   // evita que el navegador recargue la página (comportamiento default del form)
+    e.preventDefault()
     setError('')
     setLoading(true)
     try {
       await login(email, password)
-      // Si login() no lanzó error → credenciales correctas → redirige
-      navigate('/', { replace: true })  // replace: true → no puede volver con "Atrás" al login
+      const { token, userId, email: userEmail, nombre, roles } = useAuthStore.getState()
+      const isStaff = roles.some(r => STAFF_ROLES.includes(r))
+
+      if (!isStaff && roles.includes('CLIENT')) {
+        // Es cliente puro → redirigir a la tienda con sesión pre-cargada
+        localStorage.setItem('store-auth-storage', JSON.stringify({
+          state: { token, userId, email: userEmail, nombre, roles },
+          version: 0,
+        }))
+        useAuthStore.getState().logout()
+        window.location.href = 'http://localhost:5174'
+        return
+      }
+
+      navigate('/', { replace: true })
     } catch (err: unknown) {
-      // Extrae el mensaje de error del backend (FastAPI devuelve { detail: "..." })
-      // La cadena de "?" (optional chaining) evita crashes si alguna parte es undefined
       const msg =
-        (err as { response?: { data?: { detail?: string } } })?.response?.data
-          ?.detail ?? 'Email o contraseña incorrectos'
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
+        'Email o contraseña incorrectos'
       setError(msg)
     } finally {
-      setLoading(false)  // siempre se ejecuta, tanto si hay error como si no
+      setLoading(false)
     }
   }
 
   return (
-    <div className="login-page">
-      {/* Tarjeta blanca flotante sobre el fondo oscuro */}
-      <div className="login-card">
-
-        {/* Logo de la app */}
-        <div className="login-logo">
-          <div className="login-logo-mark">FF</div>
-          <h1>Fast Food Admin</h1>
-          <p>Ingresá con tu cuenta para continuar</p>
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #1C1917 0%, #292524 60%, #1C1917 100%)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 16,
+    }}>
+      <div style={{
+        background: '#fff',
+        borderRadius: 16,
+        padding: '40px 36px',
+        width: '100%',
+        maxWidth: 420,
+        boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div style={{
+            width: 56, height: 56,
+            background: 'linear-gradient(135deg, #CC1F1F, #E53E3E)',
+            borderRadius: 14,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontWeight: 900, fontSize: 22, color: '#fff',
+            margin: '0 auto 12px',
+          }}>FF</div>
+          <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0, color: '#111827' }}>Fast Food</h1>
+          <p style={{ color: '#6b7280', marginTop: 6, fontSize: 14, margin: '6px 0 0' }}>
+            Ingresá con tu cuenta para continuar
+          </p>
         </div>
 
-        {/* Mensaje de error (solo se muestra si error !== "") */}
-        {error && <div className="alert alert-danger">{error}</div>}
+        {error && (
+          <div style={{
+            background: '#fef2f2', border: '1px solid #fecaca',
+            borderRadius: 8, padding: '10px 14px',
+            color: '#b91c1c', fontSize: 13, marginBottom: 16,
+          }}>
+            {error}
+          </div>
+        )}
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label className="form-label" htmlFor="email">Email</label>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#374151' }}>
+              Email
+            </label>
             <input
-              id="email"
-              className="form-input"
               type="email"
               autoComplete="email"
-              placeholder="admin@fastfood.com"
+              placeholder="tu@email.com"
               value={email}
-              // Patrón controlled input: el valor del input siempre es el del estado
               onChange={(e) => setEmail(e.target.value)}
               required
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                padding: '10px 14px', borderRadius: 8,
+                border: '1px solid #d1d5db', fontSize: 14,
+                outline: 'none',
+              }}
             />
           </div>
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="password">Contraseña</label>
+          <div>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#374151' }}>
+              Contraseña
+            </label>
             <input
-              id="password"
-              className="form-input"
               type="password"
               autoComplete="current-password"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                padding: '10px 14px', borderRadius: 8,
+                border: '1px solid #d1d5db', fontSize: 14,
+                outline: 'none',
+              }}
             />
           </div>
 
-          {/* disabled={loading}: bloquea el botón mientras espera la respuesta */}
-          <button className="btn btn-primary" type="submit" disabled={loading} style={{ width: '100%' }}>
-            {/* Muestra spinner girando mientras carga, si no muestra texto */}
-            {loading ? <span className="spinner" /> : 'Ingresar'}
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              background: loading ? '#fc8181' : '#E53E3E',
+              color: '#fff', border: 'none', borderRadius: 8,
+              padding: '12px 0', fontWeight: 700, fontSize: 15,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              marginTop: 4, width: '100%',
+            }}
+          >
+            {loading ? 'Ingresando...' : 'Ingresar'}
           </button>
         </form>
 
-        {/* Credenciales de prueba para facilitar el desarrollo/presentación */}
-        <p style={{ textAlign: 'center', marginTop: 20, color: 'var(--text-muted)', fontSize: 12 }}>
-          admin@fastfood.com / Admin1234! · juan@fastfood.com / Juan1234!
+        <p style={{ textAlign: 'center', marginTop: 20, color: '#9ca3af', fontSize: 12 }}>
+          admin@fastfood.com · stock@fastfood.com · pedidos@fastfood.com · juan@fastfood.com
         </p>
       </div>
     </div>

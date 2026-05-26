@@ -24,7 +24,7 @@ export default function CategoriaModal({ categoria, onClose }: Props) {
   const [form, setForm] = useState<CategoriaCreate>(EMPTY)
   const [apiError, setApiError] = useState('')
 
-  // Traer todas las categorías para el selector de padre (incluyendo eliminadas por consistencia)
+  // Fetch all categorias for parent select (including deleted for consistency)
   const { data: categorias = [] } = useQuery({
     queryKey: ['categorias-all'],
     queryFn: fetchCategoriasAll,
@@ -76,7 +76,7 @@ export default function CategoriaModal({ categoria, onClose }: Props) {
 
   const loading = mutation.isPending
 
-  // Excluir la categoría actual de las opciones de padre (evitar auto-referencia)
+  // Filter out current category from parent options (prevent self-parent)
   const parentOptions = categorias.filter(c => c.id !== categoria?.id)
 
   return (

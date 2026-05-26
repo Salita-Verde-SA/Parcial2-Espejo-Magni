@@ -22,7 +22,7 @@ class Categoria(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=_utcnow)
     deleted_at: Optional[datetime] = Field(default=None)
 
-    # Relaciones ORM
+    # ORM Relationships
     parent: Optional["Categoria"] = Relationship(back_populates="children", sa_relationship_kwargs={"remote_side": "Categoria.id"})
     children: list["Categoria"] = Relationship(back_populates="parent")
     productos: list["Producto"] = Relationship(back_populates="categorias_rel", link_model=ProductoCategoria)

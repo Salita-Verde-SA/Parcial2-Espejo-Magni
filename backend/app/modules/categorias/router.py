@@ -40,7 +40,7 @@ def list_cats(
     dependencies=[Depends(require_roles(["ADMIN"]))],
 )
 def list_cats_all(uow: Annotated[UnitOfWork, Depends(get_uow)]):
-    """Listar todas las categorías incluyendo eliminadas (para administración)."""
+    """List all categorias including deleted ones (for admin management)."""
     return list_categorias_all(uow)
 
 

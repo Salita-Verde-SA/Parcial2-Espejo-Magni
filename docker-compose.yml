@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   # ─────────────────────────────────────────────────────────────────────────────
   # PostgreSQL Database
@@ -6,7 +8,10 @@ services:
     image: postgres:15-alpine
     container_name: fastfood-postgres
     restart: unless-stopped
-    env_file: .env
+    environment:
+      POSTGRES_USER: fastfood
+      POSTGRES_PASSWORD: fastfood
+      POSTGRES_DB: fastfood_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -28,7 +33,10 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
-    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://fastfood:fastfood@postgres:5432/fastfood_db
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - PYTHONUNBUFFERED=1
     depends_on:
       postgres:
         condition: service_healthy
@@ -40,18 +48,39 @@ services:
       start_period: 40s
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # Frontend (React/Vite -> Nginx)
+  # Frontend Admin (React -> Nginx) — puerto 80
   # ─────────────────────────────────────────────────────────────────────────────
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: fastfood-frontend
+    container_name: fastfood-frontend-admin
     restart: unless-stopped
     ports:
       - "80:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Frontend Store (React -> Nginx) — puerto 5174
+  # ─────────────────────────────────────────────────────────────────────────────
+  frontend-store:
+    build:
+      context: ./frontend-store
+      dockerfile: Dockerfile
+    container_name: fastfood-frontend-store
+    restart: unless-stopped
+    ports:
+      - "5174:80"
+    depends_on:
+      backend:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: 30s

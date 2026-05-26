@@ -1,10 +1,9 @@
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
-from sqlmodel import select
+from fastapi import APIRouter, Depends
 
-from app.core.deps import get_current_active_user, require_roles
+from app.core.deps import get_current_active_user
 from app.core.uow import UnitOfWork, get_uow
 from app.modules.usuarios.model import Usuario, UserPublic, UserUpdate
 
@@ -21,8 +20,6 @@ def _to_public(u: Usuario, roles: list[str]) -> UserPublic:
         roles=roles,
         created_at=u.created_at,
     )
-
-
 
 
 @router.patch("/me", response_model=UserPublic)

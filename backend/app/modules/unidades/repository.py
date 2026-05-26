@@ -11,7 +11,7 @@ class UnidadMedidaRepository(BaseRepository[UnidadMedida]):
         super().__init__(UnidadMedida, session)
 
     def get_all(self) -> list[UnidadMedida]:
-        """Obtener todas las unidades ordenadas por tipo y nombre."""
+        """Get all unidades ordenadas por tipo y nombre."""
         return list(
             self.session.exec(
                 select(UnidadMedida).order_by(UnidadMedida.tipo, UnidadMedida.nombre)

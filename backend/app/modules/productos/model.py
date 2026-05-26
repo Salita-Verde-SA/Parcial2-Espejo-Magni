@@ -47,7 +47,7 @@ class Producto(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=_utcnow)
     deleted_at: Optional[datetime] = Field(default=None)
 
-    # Relaciones ORM
+    # ORM Relationships
     categorias_rel: list["Categoria"] = Relationship(back_populates="productos", link_model=ProductoCategoria)
     ingredientes_rel: list["Ingrediente"] = Relationship(back_populates="productos", link_model=ProductoIngrediente)
     detalles: list["DetallePedido"] = Relationship(back_populates="producto")

@@ -2,12 +2,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './stores/authStore'
 import LoginPage from './pages/LoginPage'
 import Layout from './components/Layout'
-import CatalogoPage from './pages/CatalogoPage'
 import IngredientesPage from './pages/IngredientesPage'
 import ProductosPage from './pages/ProductosPage'
 import CategoriasPage from './pages/CategoriasPage'
-import CheckoutPage from './pages/CheckoutPage'
-import MisPedidosPage from './pages/MisPedidosPage'
 import AdminPedidosPage from './pages/AdminPedidosPage'
 import AdminUsuariosPage from './pages/AdminUsuariosPage'
 
@@ -22,6 +19,14 @@ function RequireRole({ roles, children }: { roles: string[]; children: React.Rea
   const hasAny = userRoles.some((r) => roles.includes(r))
   if (!hasAny) return <Navigate to="/" replace />
   return <>{children}</>
+}
+
+function DefaultRedirect() {
+  const roles = useAuthStore((s) => s.roles)
+  if (roles.includes('ADMIN') || roles.includes('PEDIDOS')) {
+    return <Navigate to="/admin/pedidos" replace />
+  }
+  return <Navigate to="/ingredientes" replace />
 }
 
 export default function App() {
@@ -39,13 +44,7 @@ export default function App() {
             </RequireAuth>
           }
         >
-          <Route index element={<Navigate to="/catalogo" replace />} />
-
-          <Route path="catalogo" element={<CatalogoPage />} />
-
-          <Route path="checkout" element={<CheckoutPage />} />
-
-          <Route path="mis-pedidos" element={<MisPedidosPage />} />
+          <Route index element={<DefaultRedirect />} />
 
           <Route path="ingredientes" element={
             <RequireRole roles={['ADMIN', 'STOCK']}><IngredientesPage /></RequireRole>

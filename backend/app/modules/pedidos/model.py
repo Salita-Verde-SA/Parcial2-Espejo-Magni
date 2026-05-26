@@ -20,7 +20,7 @@ class EstadoPedido(SQLModel, table=True):
     descripcion: Optional[str] = Field(default=None, max_length=200)
     created_at: datetime = Field(default_factory=_utcnow)
 
-    # Relaciones ORM
+    # ORM Relationships
     pedidos: list["Pedido"] = Relationship(back_populates="estado")
 
 
@@ -31,7 +31,7 @@ class FormaPago(SQLModel, table=True):
     descripcion: Optional[str] = Field(default=None, max_length=200)
     created_at: datetime = Field(default_factory=_utcnow)
 
-    # Relaciones ORM
+    # ORM Relationships
     pedidos: list["Pedido"] = Relationship(back_populates="forma_pago")
 
 
@@ -51,7 +51,7 @@ class DireccionEntrega(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=_utcnow)
     deleted_at: Optional[datetime] = Field(default=None)
 
-    # Relaciones ORM
+    # ORM Relationships
     usuario: "Usuario" = Relationship(back_populates="direcciones")
     pedidos: list["Pedido"] = Relationship(back_populates="direccion")
 
@@ -70,7 +70,7 @@ class Pedido(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=_utcnow)
     deleted_at: Optional[datetime] = Field(default=None)
 
-    # Relaciones ORM
+    # ORM Relationships
     usuario: "Usuario" = Relationship(back_populates="pedidos")
     direccion: Optional[DireccionEntrega] = Relationship(back_populates="pedidos")
     estado: EstadoPedido = Relationship(back_populates="pedidos")
@@ -89,7 +89,7 @@ class DetallePedido(SQLModel, table=True):
     precio_unitario: Decimal = Field(sa_column=Column(Numeric(10, 2), nullable=False))
     producto_nombre: str = Field(max_length=150)
 
-    # Relaciones ORM
+    # ORM Relationships
     pedido: Pedido = Relationship(back_populates="detalles")
     producto: "Producto" = Relationship(back_populates="detalles")
 
@@ -104,7 +104,7 @@ class HistorialEstadoPedido(SQLModel, table=True):
     fecha: datetime = Field(default_factory=_utcnow)
     usuario_id: int = Field(foreign_key="usuario.id")
 
-    # Relaciones ORM
+    # ORM Relationships
     pedido: Pedido = Relationship(back_populates="historial")
 
 

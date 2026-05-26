@@ -33,7 +33,7 @@ def create_access_token(user_id: int, roles: list[str]) -> str:
 
 
 def create_refresh_token() -> tuple[str, str]:
-    """Retorna (token_raw, sha256_hash). Guardar solo el hash."""
+    """Returns (raw_token, sha256_hash). Store only the hash."""
     raw = secrets.token_hex(32)
     token_hash = hashlib.sha256(raw.encode()).hexdigest()
     return raw, token_hash

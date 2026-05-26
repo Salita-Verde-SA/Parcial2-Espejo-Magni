@@ -1,5 +1,5 @@
 #!/bin/sh
-echo "Ejecutando seed de la base de datos..."
+echo "Running database seed..."
 python -m app.db.seed
-echo "Iniciando la aplicación..."
+echo "Starting application..."
 exec uvicorn app.main:app --host 0.0.0.0 --port 8000

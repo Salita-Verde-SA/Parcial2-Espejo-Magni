@@ -1,0 +1,22 @@
+name: activate-records
+description: Agregar botón para activar registros desactivados en CRUD de Categorías, Productos, Ingredientes y Usuarios
+created: 2026-05-08
+status: proposed
+artifacts:
+  - id: backend-activate-endpoints
+    type: file
+    description: Endpoints POST /activate para categorias, productos, ingredientes, usuarios
+  - id: frontend-productos-page-update
+    type: file
+    description: Actualizar ProductosPage con botón Activar/Editar condicional
+  - id: frontend-categorias-page-update
+    type: file
+    description: Actualizar CategoriasPage con botón Activar/Editar condicional
+  - id: frontend-ingredientes-page-update
+    type: file
+    description: Actualizar IngredientesPage con botón Activar/Editar condicional
+applyRequires:
+  - backend-activate-endpoints
+  - frontend-productos-page-update
+  - frontend-categorias-page-update
+  - frontend-ingredientes-page-update

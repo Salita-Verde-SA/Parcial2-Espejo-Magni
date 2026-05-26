@@ -19,7 +19,7 @@ class CategoriaRepository(BaseRepository[Categoria]):
         )
 
     def get_all(self) -> list[Categoria]:
-        """Obtener TODAS las categorías incluyendo eliminadas (para vista de admin)."""
+        """Get ALL categorias including deleted ones (for admin view)."""
         return list(self.session.exec(select(Categoria)).all())
 
     def get_by_id_active(self, cat_id: int) -> Categoria | None:
@@ -55,7 +55,7 @@ class CategoriaRepository(BaseRepository[Categoria]):
         self.session.flush()
 
     def get_by_id(self, cat_id: int) -> Categoria | None:
-        """Obtener categoría por ID sin filtrar por deleted_at."""
+        """Get categoria by ID without filtering by deleted_at."""
         return self.session.get(Categoria, cat_id)
 
     def activate(self, categoria: Categoria) -> None:

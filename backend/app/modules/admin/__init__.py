@@ -1,1 +1,1 @@
-# Módulo de administración
+# Admin module
