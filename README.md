@@ -2,6 +2,14 @@
 
 > 📁 **Documentación adicional** en `/docs/pdf/` — archivos complementarios del proyecto.
 
+**Integrantes del grupo**
+
+- Castillo Fabrizio
+- Genem Agustín
+- Luna Joaquín
+- Palmero Manuel
+- Rojas Uriel
+
 ## Índice
 
 1. [Stack Tecnológico](#stack-tecnológico)
