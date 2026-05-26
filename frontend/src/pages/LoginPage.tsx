@@ -1,9 +1,6 @@
 import { useState, FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { login } from '../api/auth'
-import { useAuthStore } from '../stores/authStore'
-
-const STAFF_ROLES = ['ADMIN', 'STOCK', 'PEDIDOS']
 
 export default function LoginPage() {
   const [email, setEmail]       = useState('')
@@ -18,20 +15,6 @@ export default function LoginPage() {
     setLoading(true)
     try {
       await login(email, password)
-      const { token, userId, email: userEmail, nombre, roles } = useAuthStore.getState()
-      const isStaff = roles.some(r => STAFF_ROLES.includes(r))
-
-      if (!isStaff && roles.includes('CLIENT')) {
-        // Es cliente puro → redirigir a la tienda con sesión pre-cargada
-        localStorage.setItem('store-auth-storage', JSON.stringify({
-          state: { token, userId, email: userEmail, nombre, roles },
-          version: 0,
-        }))
-        useAuthStore.getState().logout()
-        window.location.href = 'http://localhost:5174'
-        return
-      }
-
       navigate('/', { replace: true })
     } catch (err: unknown) {
       const msg =
@@ -142,7 +125,7 @@ export default function LoginPage() {
         </form>
 
         <p style={{ textAlign: 'center', marginTop: 20, color: '#9ca3af', fontSize: 12 }}>
-          admin@fastfood.com · stock@fastfood.com · pedidos@fastfood.com · juan@fastfood.com
+          admin@fastfood.com · stock@fastfood.com · pedidos@fastfood.com · cliente@fastfood.com
         </p>
       </div>
     </div>

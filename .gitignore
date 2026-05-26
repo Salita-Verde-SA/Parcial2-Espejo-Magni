@@ -38,6 +38,10 @@ yarn-error.log*
 
 
 .coverage
+.agent/
+.claude/
+.opencode/
+openspec/
 htmlcov/
 .pytest_cache/
 coverage/
