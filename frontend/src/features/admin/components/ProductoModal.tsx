@@ -88,7 +88,7 @@ export default function ProductoModal({ producto, onClose }: Props) {
     })
   }
 
-  function renderCategoriaCheckboxes(nodes: CategoriaTree[], depth = 0) {
+  function renderCategoriaCheckboxes(nodes: CategoriaTree[], currentIds: number[], depth = 0) {
     return nodes.map(cat => {
       const hasChildren = cat.hijos && cat.hijos.length > 0
       const isExpanded = expandedCats.has(cat.id)
@@ -118,7 +118,7 @@ export default function ProductoModal({ producto, onClose }: Props) {
             <label className="checkbox-row" style={{ gap: 6, marginBottom: 0, fontWeight: depth === 0 ? 600 : 400 }}>
               <input
                 type="checkbox"
-                checked={form.state.values.categoria_ids.includes(cat.id)}
+                checked={currentIds.includes(cat.id)}
                 onChange={() => toggleCategoria(cat.id)}
               />
               <span>{cat.nombre}</span>
@@ -126,7 +126,7 @@ export default function ProductoModal({ producto, onClose }: Props) {
           </div>
           {hasChildren && isExpanded && (
             <div style={{ marginTop: 2 }}>
-              {renderCategoriaCheckboxes(cat.hijos, depth + 1)}
+              {renderCategoriaCheckboxes(cat.hijos, currentIds, depth + 1)}
             </div>
           )}
         </div>
@@ -148,8 +148,8 @@ export default function ProductoModal({ producto, onClose }: Props) {
   })
 
   // Verifica si un ingrediente está seleccionado
-  function hasIngrediente(ingId: number): boolean {
-    return form.state.values.ingredientes.some(i => i.ingrediente_id === ingId)
+  function hasIngrediente(ingId: number, selectedIngs: any[]): boolean {
+    return selectedIngs.some(i => i.ingrediente_id === ingId)
   }
 
   // Obtener símbolo de unidad por id
@@ -160,12 +160,12 @@ export default function ProductoModal({ producto, onClose }: Props) {
   }
 
   // Calcular stock del producto en tiempo real
-  function calcularStockEnTiempoReal(): number {
-    if (form.state.values.ingredientes.length === 0) return 0
+  function calcularStockEnTiempoReal(selectedIngs: any[]): number {
+    if (selectedIngs.length === 0) return 0
     
     const maxProducts: number[] = []
     
-    for (const ing of form.state.values.ingredientes) {
+    for (const ing of selectedIngs) {
       const ingData = ingredientes.find(i => i.id === ing.ingrediente_id)
       if (!ingData) continue
       
@@ -180,8 +180,6 @@ export default function ProductoModal({ producto, onClose }: Props) {
     if (maxProducts.length === 0) return 0
     return Math.min(...maxProducts)
   }
-
-  const stockCalculado = calcularStockEnTiempoReal()
 
   // Cargar datos del producto en modo edición
   useEffect(() => {
@@ -237,14 +235,16 @@ export default function ProductoModal({ producto, onClose }: Props) {
   })
 
   function toggleCategoria(catId: number) {
-    const ids = form.state.values.categoria_ids.includes(catId)
-      ? form.state.values.categoria_ids.filter(id => id !== catId)
-      : [...form.state.values.categoria_ids, catId]
+    const currentIds = form.getFieldValue('categoria_ids')
+    const ids = currentIds.includes(catId)
+      ? currentIds.filter((id: number) => id !== catId)
+      : [...currentIds, catId]
     form.setFieldValue('categoria_ids', ids)
   }
 
   function addIngrediente(ingId: number) {
     // Agregar ingrediente con cantidad por defecto 1 y unidad "u" (pieza)
+    const currentIngs = form.getFieldValue('ingredientes')
     const unidadDefault = unidades.find(u => u.simbolo === 'u')
     const newIngrediente: IngredienteCantidadInput = {
       ingrediente_id: ingId,
@@ -261,29 +261,33 @@ export default function ProductoModal({ producto, onClose }: Props) {
       setTimeout(() => setStockWarning(null), 4000)
     }
     
-    form.setFieldValue('ingredientes', [...form.state.values.ingredientes, newIngrediente])
+    form.setFieldValue('ingredientes', [...currentIngs, newIngrediente])
   }
 
   function removeIngrediente(ingId: number) {
-    form.setFieldValue('ingredientes', form.state.values.ingredientes.filter(i => i.ingrediente_id !== ingId))
+    const currentIngs = form.getFieldValue('ingredientes')
+    form.setFieldValue('ingredientes', currentIngs.filter((i: any) => i.ingrediente_id !== ingId))
   }
 
   function updateCantidad(ingId: number, cantidad: number) {
-    const newIngredientes = form.state.values.ingredientes.map(i =>
+    const currentIngs = form.getFieldValue('ingredientes')
+    const newIngredientes = currentIngs.map((i: any) =>
       i.ingrediente_id === ingId ? { ...i, cantidad: Math.max(0.001, cantidad) } : i
     )
     form.setFieldValue('ingredientes', newIngredientes)
   }
 
   function updateUnidadMedida(ingId: number, unidadId: number) {
-    const newIngredientes = form.state.values.ingredientes.map(i =>
+    const currentIngs = form.getFieldValue('ingredientes')
+    const newIngredientes = currentIngs.map((i: any) =>
       i.ingrediente_id === ingId ? { ...i, unidad_medida_id: unidadId } : i
     )
     form.setFieldValue('ingredientes', newIngredientes)
   }
 
   function toggleEsRemovible(ingId: number) {
-    const newIngredientes = form.state.values.ingredientes.map(i =>
+    const currentIngs = form.getFieldValue('ingredientes')
+    const newIngredientes = currentIngs.map((i: any) =>
       i.ingrediente_id === ingId ? { ...i, es_removible: !i.es_removible } : i
     )
     form.setFieldValue('ingredientes', newIngredientes)
@@ -415,34 +419,41 @@ export default function ProductoModal({ producto, onClose }: Props) {
                 )}
               />
 
-              <div className="form-group">
-                <label className="form-label">Stock calculado</label>
-                {form.state.values.ingredientes.length > 0 ? (
-                  <div style={{ 
-                    padding: '8px 12px', 
-                    background: stockCalculado > 0 ? 'var(--bg-light)' : 'rgba(220, 53, 69, 0.1)', 
-                    borderRadius: 4,
-                    border: `1px solid ${stockCalculado > 0 ? 'var(--border)' : 'var(--danger)'}`,
-                    color: stockCalculado > 0 ? 'var(--success)' : 'var(--danger)',
-                    fontSize: 18,
-                    fontWeight: 'bold'
-                  }}>
-                    {stockCalculado} {stockCalculado === 1 ? 'unidad' : 'unidades'} disponibles
-                  </div>
-                ) : (
-                  <div style={{ 
-                    padding: '8px 12px', 
-                    background: 'var(--bg-light)', 
-                    borderRadius: 4,
-                    border: '1px solid var(--border)',
-                    color: 'var(--danger)',
-                    fontSize: 13,
-                    fontStyle: 'italic'
-                  }}>
-                    Sin ingredientes
-                  </div>
-                )}
-              </div>
+              <form.Subscribe selector={(state) => state.values.ingredientes}>
+                {(ingredientesList) => {
+                  const stockCalculado = calcularStockEnTiempoReal(ingredientesList)
+                  return (
+                    <div className="form-group">
+                      <label className="form-label">Stock calculado</label>
+                      {ingredientesList.length > 0 ? (
+                        <div style={{ 
+                          padding: '8px 12px', 
+                          background: stockCalculado > 0 ? 'var(--bg-light)' : 'rgba(220, 53, 69, 0.1)', 
+                          borderRadius: 4,
+                          border: `1px solid ${stockCalculado > 0 ? 'var(--border)' : 'var(--danger)'}`,
+                          color: stockCalculado > 0 ? 'var(--success)' : 'var(--danger)',
+                          fontSize: 18,
+                          fontWeight: 'bold'
+                        }}>
+                          {stockCalculado} {stockCalculado === 1 ? 'unidad' : 'unidades'} disponibles
+                        </div>
+                      ) : (
+                        <div style={{ 
+                          padding: '8px 12px', 
+                          background: 'var(--bg-light)', 
+                          borderRadius: 4,
+                          border: '1px solid var(--border)',
+                          color: 'var(--danger)',
+                          fontSize: 13,
+                          fontStyle: 'italic'
+                        }}>
+                          Sin ingredientes
+                        </div>
+                      )}
+                    </div>
+                  )
+                }}
+              </form.Subscribe>
             </div>
 
             <form.Field
@@ -481,131 +492,139 @@ export default function ProductoModal({ producto, onClose }: Props) {
               )}
             />
 
-            <div className="form-group">
-              <label className="form-label">Categorías</label>
-              <div style={{ 
-                padding: '12px 16px', 
-                background: 'var(--bg-light)', 
-                borderRadius: 8, 
-                border: '1px solid var(--border)',
-                maxHeight: 200,
-                overflowY: 'auto'
-              }}>
-                {categoriasTree.length > 0 ? (
-                  renderCategoriaCheckboxes(categoriasTree)
-                ) : (
-                  <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>No hay categorías disponibles.</span>
-                )}
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Ingredientes de receta</label>
-              
-              {/* Lista de ingredientes seleccionados con cantidad y unidad */}
-              {form.state.values.ingredientes.length > 0 && (
-                <div style={{ marginBottom: 12, padding: 8, background: 'var(--bg-light)', borderRadius: 6 }}>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
-                    Ingredientes seleccionados:
+            <form.Subscribe selector={(state) => state.values.categoria_ids}>
+              {(categoria_ids) => (
+                <div className="form-group">
+                  <label className="form-label">Categorías</label>
+                  <div style={{ 
+                    padding: '12px 16px', 
+                    background: 'var(--bg-light)', 
+                    borderRadius: 8, 
+                    border: '1px solid var(--border)',
+                    maxHeight: 200,
+                    overflowY: 'auto'
+                  }}>
+                    {categoriasTree.length > 0 ? (
+                      renderCategoriaCheckboxes(categoriasTree, categoria_ids)
+                    ) : (
+                      <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>No hay categorías disponibles.</span>
+                    )}
                   </div>
-                  {form.state.values.ingredientes.map((ing) => {
-                    const ingInfo = ingredientes.find(i => i.id === ing.ingrediente_id)
-                    const simbolo = getUnidadSimbolo(ing.unidad_medida_id)
-                    const stockActual = ingInfo?.stock_cantidad ?? 0
-                    const tieneStock = stockActual >= ing.cantidad
-                    
-                    return (
-                      <div key={ing.ingrediente_id} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        marginBottom: 6,
-                        flexWrap: 'wrap',
-                        padding: tieneStock ? 0 : '4px 8px',
-                        background: tieneStock ? 'transparent' : 'rgba(220, 53, 69, 0.1)',
-                        borderRadius: 4,
-                        border: tieneStock ? 'none' : '1px solid var(--danger)'
-                      }}>
-                        <span style={{ flex: 1, minWidth: 100, color: tieneStock ? 'inherit' : 'var(--danger)' }}>
-                          {ingInfo?.nombre ?? `ID ${ing.ingrediente_id}`}
-                          {!tieneStock && <span style={{ fontSize: 11, marginLeft: 4 }}>⚠️ Sin stock</span>}
-                        </span>
-                        
-                        {/* Stock actual del ingrediente */}
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)', marginRight: 4 }}>
-                          Stock: {stockActual}
-                        </span>
-                        
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
-                          Cant:
-                          <input
-                            type="number"
-                            min="0.001"
-                            step="0.001"
-                            style={{ width: 60, padding: '4px 6px', borderRadius: 4, border: '1px solid var(--border)' }}
-                            value={ing.cantidad}
-                            onChange={(e) => updateCantidad(ing.ingrediente_id, parseFloat(e.target.value) || 0.001)}
-                          />
-                        </label>
-                        {simbolo && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{simbolo}</span>}
-                        <select
-                          style={{ padding: '4px 6px', borderRadius: 4, border: '1px solid var(--border)', fontSize: 13 }}
-                          value={ing.unidad_medida_id}
-                          onChange={(e) => updateUnidadMedida(ing.ingrediente_id, Number(e.target.value))}
-                        >
-                          {unidades.map((u: UnidadMedida) => (
-                            <option key={u.id} value={u.id}>
-                              {u.simbolo}
-                            </option>
-                          ))}
-                        </select>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
-                          <input
-                            type="checkbox"
-                            checked={ing.es_removible}
-                            onChange={() => toggleEsRemovible(ing.ingrediente_id)}
-                          />
-                          Remov.
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => removeIngrediente(ing.ingrediente_id)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: 'var(--danger)',
-                            cursor: 'pointer',
-                            fontSize: 18,
-                            padding: '0 4px'
-                          }}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    )
-                  })}
                 </div>
               )}
-              
-              {/* Checkboxes para agregar ingredientes */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: 120, overflowY: 'auto' }}>
-                {ingredientes.map((ing: Ingrediente) => (
-                  <label key={ing.id} className="checkbox-row" style={{ gap: 6, opacity: ing.stock_cantidad > 0 ? 1 : 0.5 }}>
-                    <input
-                      type="checkbox"
-                      checked={hasIngrediente(ing.id)}
-                      onChange={() => hasIngrediente(ing.id) ? removeIngrediente(ing.id) : addIngrediente(ing.id)}
-                      disabled={ing.stock_cantidad === 0}
-                    />
-                    <span title={`Stock: ${ing.stock_cantidad}`}>
-                      {ing.nombre}
-                      {ing.stock_cantidad > 0 && <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 4 }}>({ing.stock_cantidad})</span>}
-                      {ing.stock_cantidad === 0 && <span style={{ fontSize: 10, color: 'var(--danger)', marginLeft: 4 }}>(sin stock)</span>}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </div>
+            </form.Subscribe>
+
+            <form.Subscribe selector={(state) => state.values.ingredientes}>
+              {(ingredientesList) => (
+                <div className="form-group">
+                  <label className="form-label">Ingredientes de receta</label>
+                  
+                  {/* Lista de ingredientes seleccionados con cantidad y unidad */}
+                  {ingredientesList.length > 0 && (
+                    <div style={{ marginBottom: 12, padding: 8, background: 'var(--bg-light)', borderRadius: 6 }}>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
+                        Ingredientes seleccionados:
+                      </div>
+                      {ingredientesList.map((ing: any) => {
+                        const ingInfo = ingredientes.find(i => i.id === ing.ingrediente_id)
+                        const simbolo = getUnidadSimbolo(ing.unidad_medida_id)
+                        const stockActual = ingInfo?.stock_cantidad ?? 0
+                        const tieneStock = stockActual >= ing.cantidad
+                        
+                        return (
+                          <div key={ing.ingrediente_id} style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            marginBottom: 6,
+                            flexWrap: 'wrap',
+                            padding: tieneStock ? 0 : '4px 8px',
+                            background: tieneStock ? 'transparent' : 'rgba(220, 53, 69, 0.1)',
+                            borderRadius: 4,
+                            border: tieneStock ? 'none' : '1px solid var(--danger)'
+                          }}>
+                            <span style={{ flex: 1, minWidth: 100, color: tieneStock ? 'inherit' : 'var(--danger)' }}>
+                              {ingInfo?.nombre ?? `ID ${ing.ingrediente_id}`}
+                              {!tieneStock && <span style={{ fontSize: 11, marginLeft: 4 }}>⚠️ Sin stock</span>}
+                            </span>
+                            
+                            {/* Stock actual del ingrediente */}
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)', marginRight: 4 }}>
+                              Stock: {stockActual}
+                            </span>
+                            
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+                              Cant:
+                              <input
+                                type="number"
+                                min="0.001"
+                                step="0.001"
+                                style={{ width: 60, padding: '4px 6px', borderRadius: 4, border: '1px solid var(--border)' }}
+                                value={ing.cantidad}
+                                onChange={(e) => updateCantidad(ing.ingrediente_id, parseFloat(e.target.value) || 0.001)}
+                              />
+                            </label>
+                            {simbolo && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{simbolo}</span>}
+                            <select
+                              style={{ padding: '4px 6px', borderRadius: 4, border: '1px solid var(--border)', fontSize: 13 }}
+                              value={ing.unidad_medida_id}
+                              onChange={(e) => updateUnidadMedida(ing.ingrediente_id, Number(e.target.value))}
+                            >
+                              {unidades.map((u: UnidadMedida) => (
+                                <option key={u.id} value={u.id}>
+                                  {u.simbolo}
+                                </option>
+                              ))}
+                            </select>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+                              <input
+                                type="checkbox"
+                                checked={ing.es_removible}
+                                onChange={() => toggleEsRemovible(ing.ingrediente_id)}
+                              />
+                              Remov.
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => removeIngrediente(ing.ingrediente_id)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--danger)',
+                                cursor: 'pointer',
+                                fontSize: 18,
+                                padding: '0 4px'
+                              }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                  
+                  {/* Checkboxes para agregar ingredientes */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: 120, overflowY: 'auto' }}>
+                    {ingredientes.map((ing: Ingrediente) => (
+                      <label key={ing.id} className="checkbox-row" style={{ gap: 6, opacity: ing.stock_cantidad > 0 ? 1 : 0.5 }}>
+                        <input
+                          type="checkbox"
+                          checked={hasIngrediente(ing.id, ingredientesList)}
+                          onChange={() => hasIngrediente(ing.id, ingredientesList) ? removeIngrediente(ing.id) : addIngrediente(ing.id)}
+                          disabled={ing.stock_cantidad === 0}
+                        />
+                        <span title={`Stock: ${ing.stock_cantidad}`}>
+                          {ing.nombre}
+                          {ing.stock_cantidad > 0 && <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 4 }}>({ing.stock_cantidad})</span>}
+                          {ing.stock_cantidad === 0 && <span style={{ fontSize: 10, color: 'var(--danger)', marginLeft: 4 }}>(sin stock)</span>}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </form.Subscribe>
           </div>
 
           <div className="modal-footer">
