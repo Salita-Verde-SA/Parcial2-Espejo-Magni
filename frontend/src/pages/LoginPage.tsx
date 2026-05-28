@@ -27,107 +27,99 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #1C1917 0%, #292524 60%, #1C1917 100%)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 16,
-    }}>
-      <div style={{
-        background: '#fff',
-        borderRadius: 16,
-        padding: '40px 36px',
-        width: '100%',
-        maxWidth: 420,
-        boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{
-            width: 56, height: 56,
-            background: 'linear-gradient(135deg, #CC1F1F, #E53E3E)',
-            borderRadius: 14,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 900, fontSize: 22, color: '#fff',
-            margin: '0 auto 12px',
-          }}>FF</div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0, color: '#111827' }}>Fast Food</h1>
-          <p style={{ color: '#6b7280', marginTop: 6, fontSize: 14, margin: '6px 0 0' }}>
-            Ingresá con tu cuenta para continuar
+    <div className="login-container">
+
+      <div className="login-brand-panel">
+        <div className="login-brand-content">
+          <div className="login-brand-logo">FF</div>
+          <h1 className="login-brand-title">Fast Food<br />Admin Panel</h1>
+          <p className="login-brand-subtitle">
+            Gestioná tu negocio desde un solo lugar.
           </p>
+          <div className="login-feature-list">
+            <div className="login-feature-item">
+              <span className="login-feature-dot" />
+              Gestión de productos e ingredientes
+            </div>
+            <div className="login-feature-item">
+              <span className="login-feature-dot" />
+              Control de pedidos en tiempo real
+            </div>
+            <div className="login-feature-item">
+              <span className="login-feature-dot" />
+              Administración de usuarios y roles
+            </div>
+            <div className="login-feature-item">
+              <span className="login-feature-dot" />
+              Categorías jerárquicas y catálogo
+            </div>
+          </div>
         </div>
-
-        {error && (
-          <div style={{
-            background: '#fef2f2', border: '1px solid #fecaca',
-            borderRadius: 8, padding: '10px 14px',
-            color: '#b91c1c', fontSize: 13, marginBottom: 16,
-          }}>
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#374151' }}>
-              Email
-            </label>
-            <input
-              type="email"
-              autoComplete="email"
-              placeholder="tu@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              style={{
-                width: '100%', boxSizing: 'border-box',
-                padding: '10px 14px', borderRadius: 8,
-                border: '1px solid #d1d5db', fontSize: 14,
-                outline: 'none',
-              }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#374151' }}>
-              Contraseña
-            </label>
-            <input
-              type="password"
-              autoComplete="current-password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              style={{
-                width: '100%', boxSizing: 'border-box',
-                padding: '10px 14px', borderRadius: 8,
-                border: '1px solid #d1d5db', fontSize: 14,
-                outline: 'none',
-              }}
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              background: loading ? '#fc8181' : '#E53E3E',
-              color: '#fff', border: 'none', borderRadius: 8,
-              padding: '12px 0', fontWeight: 700, fontSize: 15,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              marginTop: 4, width: '100%',
-            }}
-          >
-            {loading ? 'Ingresando...' : 'Ingresar'}
-          </button>
-        </form>
-
-        <p style={{ textAlign: 'center', marginTop: 20, color: '#9ca3af', fontSize: 12 }}>
-          admin@fastfood.com · stock@fastfood.com · pedidos@fastfood.com · cliente@fastfood.com
-        </p>
       </div>
+
+      <div className="login-form-panel">
+        <div className="login-form-wrapper">
+
+          <div className="login-form-header">
+            <h2>Iniciar sesión</h2>
+            <p>Ingresá con tu cuenta para continuar</p>
+          </div>
+
+          {error && (
+            <div className="alert alert-danger">{error}</div>
+          )}
+
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label className="form-label">Email</label>
+              <input
+                className="form-input"
+                type="email"
+                autoComplete="email"
+                placeholder="tu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                style={{ width: '100%' }}
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Contraseña</label>
+              <input
+                className="form-input"
+                type="password"
+                autoComplete="current-password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                style={{ width: '100%' }}
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={loading}
+              style={{ width: '100%', justifyContent: 'center', padding: '12px', fontSize: 15, marginTop: 8 }}
+            >
+              {loading ? <span className="spinner" /> : null}
+              {loading ? 'Ingresando...' : 'Ingresar'}
+            </button>
+          </form>
+
+          <div className="login-demo-creds">
+            <strong>Credenciales de prueba</strong>
+            admin@fastfood.com · Admin1234!<br />
+            stock@fastfood.com · Stock1234!<br />
+            pedidos@fastfood.com · Ped1234!<br />
+            juan@fastfood.com · Juan1234!
+          </div>
+
+        </div>
+      </div>
+
     </div>
   )
 }

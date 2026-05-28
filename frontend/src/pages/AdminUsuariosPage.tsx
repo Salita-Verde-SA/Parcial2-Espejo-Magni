@@ -5,6 +5,13 @@ import type { UserPublic } from '../types'
 
 const ROLES_DISPONIBLES = ['ADMIN', 'STOCK', 'PEDIDOS', 'CLIENT']
 
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN:   'Administrador',
+  STOCK:   'Gestor de Stock',
+  PEDIDOS: 'Gestor de Pedidos',
+  CLIENT:  'Cliente',
+}
+
 export default function AdminUsuariosPage() {
   const queryClient = useQueryClient()
   const currentUserId = useAuthStore((s) => s.userId)
@@ -24,7 +31,9 @@ export default function AdminUsuariosPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['usuarios'] }),
   })
 
-  const handleToggleRole = (user: UserPublic, role: string) => {
+  const isChanging = assignMutation.isPending || removeMutation.isPending
+
+  function handleToggleRole(user: UserPublic, role: string) {
     const hasRole = user.roles.includes(role)
     if (hasRole) {
       removeMutation.mutate({ userId: user.id, role })
@@ -33,65 +42,106 @@ export default function AdminUsuariosPage() {
     }
   }
 
-  if (isLoading) return <div className="p-8">Cargando usuarios...</div>
-  if (isError) return <div className="p-8 text-red-500">Error al cargar usuarios</div>
-
   return (
-    <div className="p-8 max-w-6xl mx-auto animate-fade-in">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-orange-500 bg-clip-text text-transparent">
-          Gestión de Usuarios
-        </h1>
-      </div>
+    <>
+      <header className="topbar">
+        <span className="topbar-title">Gestión de Usuarios</span>
+      </header>
 
-      <div className="bg-surface rounded-xl border border-white/10 overflow-hidden shadow-xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-white/10 bg-white/5">
-                <th className="p-4 font-semibold text-black/70">Nombre</th>
-                <th className="p-4 font-semibold text-black/70">Email</th>
-                {ROLES_DISPONIBLES.map(role => (
-                  <th key={role} className="p-4 font-semibold text-black/70 text-center">{role}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {usuarios?.map((user) => (
-                <tr key={user.id} className="border-b border-white/10 hover:bg-white/5 transition-colors">
-                  <td className="p-4 font-medium text-black/70">{user.nombre} {user.apellido}</td>
-                  <td className="p-4 text-black/70">{user.email}</td>
-                  {ROLES_DISPONIBLES.map(role => {
-                    const hasRole = user.roles.includes(role)
-                    const isOwnAdmin = user.id === currentUserId && role === 'ADMIN'
-                    const isChanging = (assignMutation.isPending || removeMutation.isPending)
-
-                    return (
-                      <td key={role} className="p-4 text-center">
-                        <input
-                          type="checkbox"
-                          checked={hasRole}
-                          disabled={isChanging || isOwnAdmin}
-                          title={isOwnAdmin ? "No puedes remover tu propio rol de administrador" : ""}
-                          onChange={() => handleToggleRole(user, role)}
-                          className="w-5 h-5 accent-primary cursor-pointer disabled:opacity-50"
-                        />
-                      </td>
-                    )
-                  })}
-                </tr>
-              ))}
-              {usuarios?.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="p-8 text-center text-white/50">
-                    No hay usuarios registrados.
-                  </td>
-                </tr>
+      <div className="page-wrapper">
+        <div className="card">
+          <div className="card-header">
+            <span className="card-title">
+              Usuarios registrados
+              {usuarios && (
+                <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>
+                  ({usuarios.length} total)
+                </span>
               )}
-            </tbody>
-          </table>
+            </span>
+          </div>
+
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th style={{ width: 60 }}>ID</th>
+                  <th>Nombre</th>
+                  <th>Email</th>
+                  {ROLES_DISPONIBLES.map((role) => (
+                    <th key={role} style={{ width: 140, textAlign: 'center' }}>
+                      {role}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading && (
+                  <tr className="loading-row">
+                    <td colSpan={3 + ROLES_DISPONIBLES.length}>
+                      <span className="spinner spinner-dark" /> Cargando...
+                    </td>
+                  </tr>
+                )}
+                {isError && (
+                  <tr>
+                    <td colSpan={3 + ROLES_DISPONIBLES.length} style={{ textAlign: 'center', padding: 24, color: 'var(--danger)' }}>
+                      Error al cargar los usuarios. Intentá de nuevo.
+                    </td>
+                  </tr>
+                )}
+                {!isLoading && !isError && usuarios?.length === 0 && (
+                  <tr>
+                    <td colSpan={3 + ROLES_DISPONIBLES.length}>
+                      <div className="empty-state">
+                        <h3>Sin usuarios</h3>
+                        <p>No hay usuarios registrados en el sistema.</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {!isLoading && !isError && usuarios?.map((user) => (
+                  <tr key={user.id}>
+                    <td className="col-id">#{user.id}</td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{
+                          width: 30, height: 30,
+                          background: 'var(--brand)',
+                          borderRadius: '50%',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: '#fff', fontSize: 12, fontWeight: 700, flexShrink: 0,
+                        }}>
+                          {user.nombre[0].toUpperCase()}
+                        </div>
+                        <strong>{user.nombre} {user.apellido}</strong>
+                      </div>
+                    </td>
+                    <td style={{ color: 'var(--text-muted)', fontSize: 13 }}>{user.email}</td>
+                    {ROLES_DISPONIBLES.map((role) => {
+                      const hasRole = user.roles.includes(role)
+                      const isOwnAdmin = user.id === currentUserId && role === 'ADMIN'
+                      return (
+                        <td key={role} style={{ textAlign: 'center' }}>
+                          <span
+                            className={`role-chip ${hasRole ? 'active' : 'inactive'} ${isOwnAdmin || isChanging ? 'disabled' : ''}`}
+                            title={isOwnAdmin ? 'No podés remover tu propio rol ADMIN' : ROLE_LABELS[role]}
+                            onClick={() => {
+                              if (!isOwnAdmin && !isChanging) handleToggleRole(user, role)
+                            }}
+                          >
+                            {hasRole ? '✓' : '+'} {role}
+                          </span>
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }

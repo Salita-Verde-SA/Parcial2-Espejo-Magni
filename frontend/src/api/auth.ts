@@ -2,6 +2,7 @@ import { apiClient, saveRefreshToken, clearRefreshToken } from './client'
 import { useAuthStore } from '../stores/authStore'
 import type { LoginResponse, UserPublic } from '../types'
 
+/** Inicia sesión llamando a POST /api/v1/auth/login, guarda el token en el store y el refresh token en sessionStorage. */
 export async function login(email: string, password: string): Promise<void> {
   const res = await apiClient.post<LoginResponse>('/api/v1/auth/login', {
     email,
@@ -22,6 +23,7 @@ export async function login(email: string, password: string): Promise<void> {
   saveRefreshToken(refresh_token)
 }
 
+/** Cierra la sesión llamando a POST /api/v1/auth/logout, limpia el store y elimina el refresh token del sessionStorage. */
 export async function logout(): Promise<void> {
   const rt = sessionStorage.getItem('rt')
   if (rt) {

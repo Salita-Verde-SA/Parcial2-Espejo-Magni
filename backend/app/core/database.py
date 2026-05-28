@@ -5,11 +5,13 @@ engine = create_engine(settings.DATABASE_URL, echo=False)
 
 
 def get_session():
+    """Provee una sesión de base de datos como dependencia de FastAPI."""
     with Session(engine) as session:
         yield session
 
 
 def create_all_tables() -> None:
+    """Importa todos los modelos y crea las tablas en la base de datos."""
     import app.modules.roles.model          # noqa: F401
     import app.modules.auth.model           # noqa: F401
     import app.modules.usuarios.model       # noqa: F401

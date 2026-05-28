@@ -26,7 +26,7 @@ interface TreeNodeProps {
   onToggle: (id: number) => void
 }
 
-// ─── Función auxiliar: encontrar el nodo en el árbol ───────────────────────
+/** Busca recursivamente un nodo por id dentro del árbol de categorías y lo retorna, o null si no existe. */
 function findNode(nodes: CategoriaTree[], id: number): CategoriaTree | null {
   for (const node of nodes) {
     if (node.id === id) return node
@@ -38,18 +38,18 @@ function findNode(nodes: CategoriaTree[], id: number): CategoriaTree | null {
   return null
 }
 
-// ─── Función auxiliar: encontrar la raíz absoluta (con protección de ciclo) ─
+/** Recorre el árbol hacia arriba desde el nodo targetId hasta encontrar la raíz absoluta (nodo sin parent_id), con protección contra ciclos. */
 function findAbsoluteRoot(nodes: CategoriaTree[], targetId: number): CategoriaTree | null {
   const target = findNode(nodes, targetId)
   if (!target) return null
 
   const visited = new Set<number>()
-  
+
   let current: CategoriaTree | null = target
   while (current?.parent_id) {
     if (visited.has(current.id)) break
     visited.add(current.id)
-    
+
     const parent = findNode(nodes, current.parent_id)
     if (parent) {
       current = parent
@@ -60,7 +60,7 @@ function findAbsoluteRoot(nodes: CategoriaTree[], targetId: number): CategoriaTr
   return current
 }
 
-// ─── Función: procesar árbol recursivamente ───────────────────────────────
+/** Transforma recursivamente un nodo CategoriaTree en un ProcessedNode marcando el nodo seleccionado. */
 function processTree(node: CategoriaTree, selectedId: number): ProcessedNode {
   return {
     id: node.id,
@@ -70,7 +70,7 @@ function processTree(node: CategoriaTree, selectedId: number): ProcessedNode {
   }
 }
 
-// ─── Nodo del árbol ────────────────────────────────────────────────────────
+/** Componente de nodo individual del árbol; renderiza el nombre de la categoría con botón de expandir/colapsar si tiene hijos y líneas conectoras visuales. */
 function TreeNode({ node, selectedId, expandedIds, onToggle }: TreeNodeProps) {
   const hasChildren = node.children.length > 0
   const isExpanded = expandedIds.has(node.id)
@@ -79,7 +79,7 @@ function TreeNode({ node, selectedId, expandedIds, onToggle }: TreeNodeProps) {
   return (
     <div className="tree-node-group">
       {/* Nodo actual */}
-      <div 
+      <div
         className={`tree-node ${isSelected ? 'tree-node--active' : ''} ${hasChildren ? 'tree-node--has-children' : ''}`}
       >
         {/* Botón expandir/colapsar */}
@@ -107,7 +107,7 @@ function TreeNode({ node, selectedId, expandedIds, onToggle }: TreeNodeProps) {
         <div className="tree-children-wrapper">
           {/* Línea vertical desde el nodo padre */}
           <div className="tree-vertical-line"></div>
-          
+
           {/* Contenedor de hijos en column */}
           <div className="tree-children">
             {node.children.map((child) => (
@@ -130,15 +130,17 @@ function TreeNode({ node, selectedId, expandedIds, onToggle }: TreeNodeProps) {
   )
 }
 
-// ─── Modal principal ────────────────────────────────────────────────────────
+/** Modal que muestra el árbol jerárquico completo de categorías partiendo desde la raíz absoluta de la categoría seleccionada, con nodos expandibles y la categoría activa resaltada. */
 export default function CategoriaTreeModal({ categoria, allCategorias, onClose }: Props) {
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set())
 
+  /** Retorna el nodo raíz absoluto de la categoría actualmente seleccionada. */
   const getRootNode = useCallback((): CategoriaTree | null => {
     if (!categoria) return null
     return findAbsoluteRoot(allCategorias, categoria.id)
   }, [categoria, allCategorias])
 
+  /** Agrega o quita el id del nodo del conjunto de ids expandidos al hacer clic en el botón de toggle. */
   const handleToggle = useCallback((id: number) => {
     setExpandedIds(prev => {
       const next = new Set(prev)
@@ -151,6 +153,7 @@ export default function CategoriaTreeModal({ categoria, allCategorias, onClose }
     })
   }, [])
 
+  /** Al cambiar la categoría seleccionada, expande automáticamente todos los nodos en el camino desde la raíz hasta ella. */
   useEffect(() => {
     if (!categoria) return
 
@@ -160,7 +163,7 @@ export default function CategoriaTreeModal({ categoria, allCategorias, onClose }
     function collectPathToNode(node: CategoriaTree, targetId: number): boolean {
       if (visited.has(node.id)) return false
       visited.add(node.id)
-      
+
       if (node.id === targetId) return true
       if (node.hijos) {
         for (const child of node.hijos) {
@@ -542,22 +545,22 @@ export default function CategoriaTreeModal({ categoria, allCategorias, onClose }
           .tree-modal {
             max-width: 95vw;
           }
-          
+
           .tree-body {
             padding: 16px 12px;
           }
-          
+
           .tree-node {
             padding: 6px 10px;
           }
-          
+
           .tree-node-label {
             font-size: 11px;
             max-width: 80px;
             overflow: hidden;
             text-overflow: ellipsis;
           }
-          
+
           .tree-horizontal-line {
             width: 14px;
           }

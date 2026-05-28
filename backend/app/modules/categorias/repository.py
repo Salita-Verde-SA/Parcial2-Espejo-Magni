@@ -8,10 +8,13 @@ from app.modules.categorias.model import Categoria
 
 
 class CategoriaRepository(BaseRepository[Categoria]):
+    """Repositorio para operaciones de consulta y persistencia de categorías."""
+
     def __init__(self, session: Session):
         super().__init__(Categoria, session)
 
     def get_all_active(self) -> list[Categoria]:
+        """Retorna todas las categorías que no han sido eliminadas lógicamente."""
         return list(
             self.session.exec(
                 select(Categoria).where(Categoria.deleted_at.is_(None))
@@ -19,10 +22,11 @@ class CategoriaRepository(BaseRepository[Categoria]):
         )
 
     def get_all(self) -> list[Categoria]:
-        """Get ALL categorias including deleted ones (for admin view)."""
+        """Retorna todas las categorías incluyendo las eliminadas lógicamente."""
         return list(self.session.exec(select(Categoria)).all())
 
     def get_by_id_active(self, cat_id: int) -> Categoria | None:
+        """Retorna una categoría activa por ID o None si no existe o está eliminada."""
         return self.session.exec(
             select(Categoria)
             .where(Categoria.id == cat_id)
@@ -30,6 +34,7 @@ class CategoriaRepository(BaseRepository[Categoria]):
         ).first()
 
     def get_by_nombre(self, nombre: str) -> Categoria | None:
+        """Busca una categoría activa por nombre exacto."""
         return self.session.exec(
             select(Categoria)
             .where(Categoria.nombre == nombre)
@@ -37,6 +42,7 @@ class CategoriaRepository(BaseRepository[Categoria]):
         ).first()
 
     def has_active_products(self, categoria_id: int) -> bool:
+        """Verifica si la categoría tiene al menos un producto activo asociado."""
         from app.modules.productos.model import ProductoCategoria, Producto
 
         return (
@@ -50,16 +56,17 @@ class CategoriaRepository(BaseRepository[Categoria]):
         )
 
     def soft_delete(self, categoria: Categoria) -> None:
+        """Marca la categoría como eliminada registrando la fecha de borrado lógico."""
         categoria.deleted_at = datetime.now(timezone.utc)
         self.session.add(categoria)
         self.session.flush()
 
     def get_by_id(self, cat_id: int) -> Categoria | None:
-        """Get categoria by ID without filtering by deleted_at."""
+        """Retorna una categoría por ID sin filtrar por estado de eliminación."""
         return self.session.get(Categoria, cat_id)
 
     def activate(self, categoria: Categoria) -> None:
-        """Reactiva una categoría previamente desactivada."""
+        """Reactiva una categoría eliminada lógicamente, limpiando su deleted_at."""
         categoria.deleted_at = None
         self.session.add(categoria)
         self.session.flush()
@@ -70,6 +77,7 @@ class CategoriaRepository(BaseRepository[Categoria]):
         page: int = 1,
         page_size: int = 10,
     ) -> tuple[list[Categoria], int]:
+        """Retorna una página de categorías activas, opcionalmente filtradas por categoría padre."""
         stmt = select(Categoria).where(Categoria.deleted_at.is_(None))
         if parent_id is not None:
             if parent_id == -1:

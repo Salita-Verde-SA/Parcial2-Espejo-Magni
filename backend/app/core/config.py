@@ -5,6 +5,8 @@ import os
 
 
 class Settings(BaseSettings):
+    """Configuración general de la aplicación cargada desde variables de entorno."""
+
     postgres_user: str = "postgres"
     postgres_password: str = "password"
     postgres_db: str = "fastfood_db"

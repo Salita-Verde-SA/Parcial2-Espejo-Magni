@@ -30,6 +30,7 @@ router = APIRouter(prefix="/api/v1/productos", tags=["productos"])
 
 @router.get("/export", dependencies=[Depends(require_roles(["ADMIN"]))])
 def export(uow: Annotated[UnitOfWork, Depends(get_uow)]):
+    """GET /productos/export - exporta el listado de productos activos como archivo Excel."""
     return export_excel(uow)
 
 
@@ -42,6 +43,7 @@ def list_prods(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
 ):
+    """GET /productos/ - retorna una página de productos activos con filtros opcionales."""
     return list_productos(nombre, categoria_id, disponible, page, page_size, uow)
 
 
@@ -51,12 +53,13 @@ def list_prods(
     dependencies=[Depends(require_roles(["ADMIN", "STOCK"]))],
 )
 def list_prods_all(uow: Annotated[UnitOfWork, Depends(get_uow)]):
-    """List all productos including deleted ones (for admin management)."""
+    """GET /productos/all - retorna todos los productos incluyendo eliminados, para admins."""
     return list_productos_all(uow)
 
 
 @router.get("/{producto_id}", response_model=ProductoPublic)
 def get_prod(producto_id: int, uow: Annotated[UnitOfWork, Depends(get_uow)]):
+    """GET /productos/{id} - retorna el detalle completo de un producto activo por su ID."""
     return get_producto(producto_id, uow)
 
 
@@ -67,6 +70,7 @@ def get_prod(producto_id: int, uow: Annotated[UnitOfWork, Depends(get_uow)]):
     dependencies=[Depends(require_roles(["ADMIN"]))],
 )
 def create(data: ProductoCreate, uow: Annotated[UnitOfWork, Depends(get_uow)]):
+    """POST /productos/ - crea un nuevo producto y retorna el producto creado."""
     return create_producto(data, uow)
 
 
@@ -76,6 +80,7 @@ def create(data: ProductoCreate, uow: Annotated[UnitOfWork, Depends(get_uow)]):
     dependencies=[Depends(require_roles(["ADMIN"]))],
 )
 def update(producto_id: int, data: ProductoUpdate, uow: Annotated[UnitOfWork, Depends(get_uow)]):
+    """PUT /productos/{id} - actualiza un producto y retorna la versión actualizada."""
     return update_producto(producto_id, data, uow)
 
 
@@ -85,6 +90,7 @@ def update(producto_id: int, data: ProductoUpdate, uow: Annotated[UnitOfWork, De
     dependencies=[Depends(require_roles(["ADMIN", "STOCK"]))],
 )
 def patch_stock(producto_id: int, data: StockUpdate, uow: Annotated[UnitOfWork, Depends(get_uow)]):
+    """PATCH /productos/{id}/stock - actualiza el stock y disponibilidad de un producto."""
     return update_stock(producto_id, data, uow)
 
 
@@ -94,6 +100,7 @@ def patch_stock(producto_id: int, data: StockUpdate, uow: Annotated[UnitOfWork, 
     dependencies=[Depends(require_roles(["ADMIN", "STOCK"]))],
 )
 def patch_disponibilidad(producto_id: int, data: DisponibilidadUpdate, uow: Annotated[UnitOfWork, Depends(get_uow)]):
+    """PATCH /productos/{id}/disponibilidad - actualiza solo la disponibilidad de un producto."""
     return update_disponibilidad(producto_id, data, uow)
 
 
@@ -103,6 +110,7 @@ def patch_disponibilidad(producto_id: int, data: DisponibilidadUpdate, uow: Anno
     dependencies=[Depends(require_roles(["ADMIN"]))],
 )
 def delete(producto_id: int, uow: Annotated[UnitOfWork, Depends(get_uow)]):
+    """DELETE /productos/{id} - elimina lógicamente un producto activo."""
     delete_producto(producto_id, uow)
 
 
@@ -112,4 +120,5 @@ def delete(producto_id: int, uow: Annotated[UnitOfWork, Depends(get_uow)]):
     dependencies=[Depends(require_roles(["ADMIN"]))],
 )
 def activate(producto_id: int, uow: Annotated[UnitOfWork, Depends(get_uow)]):
+    """POST /productos/{id}/activate - reactiva un producto eliminado y lo retorna."""
     return activate_producto(producto_id, uow)

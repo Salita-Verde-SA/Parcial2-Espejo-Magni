@@ -13,6 +13,7 @@ interface Props {
   confirmVariant?: 'danger' | 'primary'  // color del botón (default: rojo)
 }
 
+/** Diálogo modal de confirmación genérico que renderiza un mensaje descriptivo y dos botones: cancelar y confirmar; el botón de confirmación puede ser de color rojo (danger) o primario según la acción. */
 export default function ConfirmDialog({
   message,
   onConfirm,

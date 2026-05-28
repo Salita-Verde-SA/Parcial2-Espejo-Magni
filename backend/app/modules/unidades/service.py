@@ -9,6 +9,7 @@ from app.modules.unidades.model import (
 
 
 def list_unidades(uow: UnitOfWork) -> list[UnidadMedidaPublic]:
+    """Retorna todas las unidades de medida ordenadas como lista pública."""
     with uow:
         unidades = uow.unidades.get_all()
         return [
@@ -24,6 +25,7 @@ def list_unidades(uow: UnitOfWork) -> list[UnidadMedidaPublic]:
 
 
 def get_unidad(uow: UnitOfWork, unidad_id: int) -> UnidadMedidaPublic:
+    """Retorna una unidad de medida por ID o lanza HTTP 404 si no existe."""
     with uow:
         unidad = uow.unidades.get_by_id(unidad_id)
         if not unidad:
@@ -42,6 +44,7 @@ def get_unidad(uow: UnitOfWork, unidad_id: int) -> UnidadMedidaPublic:
 
 
 def create_unidad(data: UnidadMedidaCreate, uow: UnitOfWork) -> UnidadMedidaPublic:
+    """Crea una nueva unidad de medida validando unicidad de nombre y símbolo."""
     with uow:
         if uow.unidades.get_by_nombre(data.nombre):
             from fastapi import HTTPException, status
@@ -74,6 +77,7 @@ def create_unidad(data: UnidadMedidaCreate, uow: UnitOfWork) -> UnidadMedidaPubl
 def update_unidad(
     unidad_id: int, data: UnidadMedidaUpdate, uow: UnitOfWork
 ) -> UnidadMedidaPublic:
+    """Actualiza los campos de una unidad de medida validando unicidad de nombre y símbolo."""
     with uow:
         unidad = uow.unidades.get_by_id(unidad_id)
         if not unidad:
@@ -115,6 +119,7 @@ def update_unidad(
 
 
 def delete_unidad(unidad_id: int, uow: UnitOfWork) -> None:
+    """Elimina una unidad de medida si no está en uso en productos ni recetas."""
     with uow:
         unidad = uow.unidades.get_by_id(unidad_id)
         if not unidad:

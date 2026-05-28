@@ -16,6 +16,7 @@ from app.modules.admin.router import router as admin_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Evento de inicio de la aplicación: crea las tablas de la base de datos."""
     try:
         create_all_tables()
     except Exception:
@@ -54,6 +55,7 @@ from app.core.websockets import manager
 
 @app.websocket("/ws/pedidos")
 async def websocket_pedidos(websocket: WebSocket):
+    """Endpoint WebSocket que emite actualizaciones en tiempo real sobre pedidos."""
     await manager.connect(websocket)
     try:
         while True:
@@ -63,4 +65,5 @@ async def websocket_pedidos(websocket: WebSocket):
 
 @app.get("/health", tags=["health"])
 def health():
+    """GET /health - retorna el estado de salud de la API."""
     return {"status": "ok", "version": "2.0.0"}

@@ -19,6 +19,7 @@ interface Props {
 // Valores iniciales del formulario cuando se crea uno nuevo
 const EMPTY: IngredienteCreate = { nombre: '', descripcion: '', es_alergeno: false, stock_cantidad: 0 }
 
+/** Modal reutilizable para crear o editar un ingrediente/insumo; en modo edición pre-carga los datos actuales, y en modo creación inicializa el formulario vacío. Solo el rol ADMIN puede modificar nombre, descripción y alérgeno; STOCK solo puede actualizar stock. */
 export default function IngredienteModal({ ingrediente, onClose }: Props) {
   // isEdit: true si se recibió un ingrediente existente
   const isEdit = !!ingrediente
@@ -35,6 +36,7 @@ export default function IngredienteModal({ ingrediente, onClose }: Props) {
   // Se ejecuta cada vez que cambia la prop "ingrediente".
   // Si se abre en modo edición: carga los datos actuales en el formulario.
   // Si se abre en modo creación: resetea el formulario al estado vacío.
+  /** Sincroniza el formulario con la prop ingrediente al abrir el modal. */
   useEffect(() => {
     if (ingrediente) {
       setForm({
@@ -84,6 +86,7 @@ export default function IngredienteModal({ ingrediente, onClose }: Props) {
     },
   })
 
+  /** Previene el comportamiento por defecto del formulario y dispara la mutación de creación o edición. */
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setApiError('')

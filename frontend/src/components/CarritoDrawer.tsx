@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useCartStore } from '../stores/cartStore'
 import { useUiStore } from '../stores/uiStore'
 
+/** Formatea un número como precio en pesos argentinos; si se indica un símbolo de unidad, lo agrega al final separado por '/'. */
 function formatPrecio(n: number, unidadSimbolo?: string) {
   const formatted = new Intl.NumberFormat('es-AR', {
     style: 'currency',
@@ -14,6 +15,7 @@ function formatPrecio(n: number, unidadSimbolo?: string) {
   return formatted
 }
 
+/** Componente drawer lateral derecho que muestra los productos en el carrito con controles de cantidad, precio total y botones para ir al checkout o vaciar el carrito. */
 export default function CarritoDrawer() {
   const navigate = useNavigate()
   const { items, removeItem, updateCantidad, clearCart, total } = useCartStore()

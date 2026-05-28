@@ -7,6 +7,7 @@ import CarritoDrawer from './CarritoDrawer'
 
 const STAFF_ROLES = ['ADMIN', 'STOCK', 'PEDIDOS']
 
+/** Componente de shell principal de la aplicación; renderiza la barra de navegación superior con links condicionales según el rol del usuario, el icono del carrito para clientes, el avatar del usuario, el botón de cierre de sesión y el outlet para las páginas hijas. */
 export default function Layout() {
   const { nombre, roles, isAdmin } = useAuthStore()
   const itemCount = useCartStore((s) => s.itemCount())
@@ -16,6 +17,7 @@ export default function Layout() {
   const isStaff = roles.some((r) => STAFF_ROLES.includes(r))
   const isClient = roles.includes('CLIENT') && !isStaff
 
+  /** Llama a la función de logout de la API y redirige al usuario a la página de login. */
   async function handleLogout() {
     await logout()
     navigate('/login')
@@ -106,22 +108,23 @@ export default function Layout() {
               title="Carrito"
               style={{
                 position: 'relative',
-                background: 'transparent',
-                border: '1px solid var(--border)',
+                background: 'rgba(255,255,255,.08)',
+                border: '1px solid rgba(255,255,255,.14)',
                 borderRadius: 8,
-                padding: '6px 12px',
+                padding: '6px 14px',
                 cursor: 'pointer',
-                color: 'var(--text)',
-                fontSize: 18,
+                color: 'rgba(255,255,255,.85)',
+                fontSize: 13,
+                fontWeight: 600,
                 lineHeight: 1,
               }}
             >
-              🛒
+              Carrito
               {itemCount > 0 && (
                 <span style={{
                   position: 'absolute',
                   top: -6, right: -6,
-                  background: 'var(--primary)',
+                  background: 'var(--brand)',
                   color: '#fff',
                   borderRadius: '50%',
                   width: 18, height: 18,

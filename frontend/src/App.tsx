@@ -13,12 +13,14 @@ import MisPedidosPage from './pages/MisPedidosPage'
 
 const STAFF_ROLES = ['ADMIN', 'STOCK', 'PEDIDOS']
 
+/** Guard de ruta que redirige al login si el usuario no tiene un token activo en el store. */
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token)
   if (!token) return <Navigate to="/login" replace />
   return <>{children}</>
 }
 
+/** Guard de ruta que redirige a la raíz si el usuario no posee ninguno de los roles requeridos. */
 function RequireRole({ roles, children }: { roles: string[]; children: React.ReactNode }) {
   const userRoles = useAuthStore((s) => s.roles)
   const hasAny = userRoles.some((r) => roles.includes(r))
@@ -26,6 +28,7 @@ function RequireRole({ roles, children }: { roles: string[]; children: React.Rea
   return <>{children}</>
 }
 
+/** Componente que redirige automáticamente al usuario a la ruta inicial correspondiente según sus roles: clientes van al catálogo, ADMIN/PEDIDOS van a la gestión de pedidos, y STOCK va a ingredientes. */
 function DefaultRedirect() {
   const roles = useAuthStore((s) => s.roles)
   const isStaff = roles.some((r) => STAFF_ROLES.includes(r))
@@ -34,6 +37,7 @@ function DefaultRedirect() {
   return <Navigate to="/ingredientes" replace />
 }
 
+/** Componente raíz de la aplicación; define el router con todas las rutas protegidas por rol y el layout compartido. */
 export default function App() {
   return (
     <BrowserRouter>

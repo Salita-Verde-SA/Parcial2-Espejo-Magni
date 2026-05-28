@@ -16,6 +16,7 @@ from app.modules.usuarios.model import Usuario, UserRegister, Token
 
 
 def register_user(data: UserRegister, uow: UnitOfWork) -> Token:
+    """Registra un nuevo usuario con rol CLIENT y retorna los tokens de acceso."""
     with uow:
         if uow.usuarios.get_by_email(data.email):
             raise HTTPException(
@@ -36,6 +37,7 @@ def register_user(data: UserRegister, uow: UnitOfWork) -> Token:
 
 
 def login_user(email: str, password: str, uow: UnitOfWork) -> Token:
+    """Autentica un usuario por email y contraseña, retornando sus tokens."""
     with uow:
         user = uow.usuarios.get_by_email(email)
         if not user or not verify_password(password, user.hashed_password):
@@ -53,6 +55,7 @@ def login_user(email: str, password: str, uow: UnitOfWork) -> Token:
 
 
 def refresh_tokens(raw_refresh: str, uow: UnitOfWork) -> Token:
+    """Valida el refresh token y emite un nuevo par de tokens de acceso."""
     token_hash = hash_token(raw_refresh)
     with uow:
         rt = uow.refresh_tokens.get_by_hash(token_hash)
@@ -70,6 +73,7 @@ def refresh_tokens(raw_refresh: str, uow: UnitOfWork) -> Token:
 
 
 def logout_user(raw_refresh: str, uow: UnitOfWork) -> None:
+    """Revoca el refresh token del usuario para cerrar su sesión."""
     token_hash = hash_token(raw_refresh)
     with uow:
         rt = uow.refresh_tokens.get_by_hash(token_hash)
@@ -78,6 +82,7 @@ def logout_user(raw_refresh: str, uow: UnitOfWork) -> None:
 
 
 def _issue_tokens(user: Usuario, roles: list[str], uow: UnitOfWork) -> Token:
+    """Crea y persiste un access token y un refresh token para el usuario dado."""
     access = create_access_token(user.id, roles)
     raw_rt, rt_hash = create_refresh_token()
     expires = datetime.now(timezone.utc) + timedelta(

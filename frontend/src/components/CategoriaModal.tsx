@@ -8,6 +8,7 @@ import type { Categoria, CategoriaCreate } from '../types'
 
 interface Props {
   categoria?: Categoria | null
+  defaultParentId?: number | null
   onClose: () => void
 }
 
@@ -17,7 +18,8 @@ const EMPTY: CategoriaCreate = {
   parent_id: null,
 }
 
-export default function CategoriaModal({ categoria, onClose }: Props) {
+/** Modal reutilizable para crear o editar una categoría; en modo edición pre-carga los datos existentes en el formulario. */
+export default function CategoriaModal({ categoria, defaultParentId, onClose }: Props) {
   const isEdit = !!categoria
   const qc = useQueryClient()
 
@@ -30,6 +32,7 @@ export default function CategoriaModal({ categoria, onClose }: Props) {
     queryFn: fetchCategoriasAll,
   })
 
+  /** Sincroniza el formulario con los datos de la categoría recibida por props al abrir el modal. */
   useEffect(() => {
     if (categoria) {
       setForm({
@@ -38,7 +41,7 @@ export default function CategoriaModal({ categoria, onClose }: Props) {
         parent_id: categoria.parent_id,
       })
     } else {
-      setForm(EMPTY)
+      setForm({ ...EMPTY, parent_id: defaultParentId ?? null })
     }
     setApiError('')
   }, [categoria])
@@ -68,6 +71,7 @@ export default function CategoriaModal({ categoria, onClose }: Props) {
     },
   })
 
+  /** Previene el comportamiento por defecto del formulario y dispara la mutación de creación o edición. */
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setApiError('')

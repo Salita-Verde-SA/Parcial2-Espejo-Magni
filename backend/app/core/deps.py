@@ -14,6 +14,7 @@ async def get_current_user(
     request: Request,
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ) -> tuple[Usuario, list[str]]:
+    """Extrae y valida el token del request y retorna el usuario activo con sus roles."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Credenciales inválidas o token expirado",
@@ -57,6 +58,7 @@ async def get_current_user(
 async def get_current_active_user(
     ctx: Annotated[tuple, Depends(get_current_user)],
 ) -> tuple[Usuario, list[str]]:
+    """Verifica que el usuario autenticado no esté desactivado."""
     user, roles = ctx
     if user.disabled:
         raise HTTPException(
@@ -67,9 +69,11 @@ async def get_current_active_user(
 
 
 def require_roles(allowed: list[str]):
+    """Retorna una dependencia que exige que el usuario tenga al menos uno de los roles indicados."""
     async def checker(
         ctx: Annotated[tuple, Depends(get_current_active_user)],
     ) -> tuple[Usuario, list[str]]:
+        """Verifica que el usuario posea uno de los roles requeridos."""
         user, roles = ctx
         if not any(r in allowed for r in roles):
             raise HTTPException(

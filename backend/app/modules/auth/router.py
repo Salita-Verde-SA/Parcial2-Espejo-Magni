@@ -12,6 +12,7 @@ router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
 def register(data: UserRegister, uow: Annotated[UnitOfWork, Depends(get_uow)], response: Response):
+    """POST /auth/register - registra un nuevo usuario y retorna los tokens de acceso."""
     token_data = register_user(data, uow)
     response.set_cookie(
         key="access_token",
@@ -27,6 +28,7 @@ def register(data: UserRegister, uow: Annotated[UnitOfWork, Depends(get_uow)], r
 
 @router.post("/login", response_model=Token)
 def login(data: UserLogin, uow: Annotated[UnitOfWork, Depends(get_uow)], response: Response):
+    """POST /auth/login - autentica al usuario y retorna los tokens de acceso."""
     token_data = login_user(data.email, data.password, uow)
     response.set_cookie(
         key="access_token",
@@ -42,6 +44,7 @@ def login(data: UserLogin, uow: Annotated[UnitOfWork, Depends(get_uow)], respons
 
 @router.post("/refresh", response_model=Token)
 def refresh(data: TokenRefresh, uow: Annotated[UnitOfWork, Depends(get_uow)], response: Response):
+    """POST /auth/refresh - renueva el access token usando el refresh token."""
     token_data = refresh_tokens(data.refresh_token, uow)
     response.set_cookie(
         key="access_token",
@@ -57,12 +60,14 @@ def refresh(data: TokenRefresh, uow: Annotated[UnitOfWork, Depends(get_uow)], re
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 def logout(data: TokenRefresh, uow: Annotated[UnitOfWork, Depends(get_uow)], response: Response):
+    """POST /auth/logout - revoca el refresh token y elimina la cookie de sesión."""
     logout_user(data.refresh_token, uow)
     response.delete_cookie(key="access_token", path="/")
 
 
 @router.get("/me", response_model=UserPublic)
 def me(ctx: Annotated[tuple, Depends(get_current_active_user)]):
+    """GET /auth/me - retorna los datos públicos del usuario autenticado."""
     user, roles = ctx
     return UserPublic(
         id=user.id,

@@ -10,10 +10,12 @@ if TYPE_CHECKING:
 
 
 def _utcnow() -> datetime:
+    """Retorna la fecha y hora UTC actual."""
     return datetime.utcnow()
 
 
 class Ingrediente(SQLModel, table=True):
+    """Modelo de tabla que representa un ingrediente disponible en el sistema."""
     id:          Optional[int] = Field(default=None, primary_key=True)
     nombre:      str           = Field(index=True, unique=True, max_length=100)
     descripcion: Optional[str] = Field(default=None)
@@ -28,6 +30,8 @@ class Ingrediente(SQLModel, table=True):
 
 
 class IngredienteCreate(SQLModel):
+    """Esquema de entrada para crear un nuevo ingrediente."""
+
     nombre:      str            = Field(min_length=1, max_length=100)
     descripcion: Optional[str]  = Field(default=None, max_length=500)
     es_alergeno: bool           = Field(default=False)
@@ -35,6 +39,8 @@ class IngredienteCreate(SQLModel):
 
 
 class IngredienteUpdate(SQLModel):
+    """Esquema de entrada para actualizar parcialmente un ingrediente existente."""
+
     nombre:      Optional[str]  = Field(default=None, min_length=1, max_length=100)
     descripcion: Optional[str]  = Field(default=None)
     es_alergeno: Optional[bool] = Field(default=None)
@@ -42,6 +48,8 @@ class IngredienteUpdate(SQLModel):
 
 
 class IngredientePublic(SQLModel):
+    """Esquema de salida con los datos públicos de un ingrediente."""
+
     id:          int
     nombre:      str
     descripcion: Optional[str]
@@ -53,6 +61,8 @@ class IngredientePublic(SQLModel):
 
 
 class PaginatedIngredientes(SQLModel):
+    """Respuesta paginada que contiene una lista de ingredientes públicos."""
+
     items:     list[IngredientePublic]
     total:     int
     page:      int

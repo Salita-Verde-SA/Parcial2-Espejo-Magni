@@ -12,10 +12,12 @@ if TYPE_CHECKING:
 
 
 def _utcnow() -> datetime:
+    """Retorna la fecha y hora actual en UTC."""
     return datetime.now(timezone.utc)
 
 
 class ProductoCategoria(SQLModel, table=True):
+    """Tabla de relación muchos-a-muchos entre productos y categorías."""
     __tablename__ = "producto_categoria"
 
     producto_id: int = Field(foreign_key="producto.id", primary_key=True)
@@ -24,6 +26,8 @@ class ProductoCategoria(SQLModel, table=True):
 
 
 class ProductoIngrediente(SQLModel, table=True):
+    """Tabla de relación entre productos e ingredientes con cantidad y unidad de medida."""
+
     __tablename__ = "producto_ingrediente"
 
     producto_id: int = Field(foreign_key="producto.id", primary_key=True)
@@ -35,6 +39,8 @@ class ProductoIngrediente(SQLModel, table=True):
 
 
 class Producto(SQLModel, table=True):
+    """Modelo de tabla que representa un producto del menú con precio, stock e ingredientes."""
+
     id: Optional[int] = Field(default=None, primary_key=True)
     nombre: str = Field(index=True, max_length=150)
     descripcion: Optional[str] = Field(default=None, max_length=1000)
@@ -54,6 +60,8 @@ class Producto(SQLModel, table=True):
 
 
 class IngredienteCantidadInput(SQLModel):
+    """Esquema para especificar un ingrediente con su cantidad y unidad al crear/actualizar un producto."""
+
     ingrediente_id: int
     cantidad: Decimal = Decimal("1")
     unidad_medida_id: int
@@ -61,6 +69,8 @@ class IngredienteCantidadInput(SQLModel):
 
 
 class ProductoCreate(SQLModel):
+    """Esquema de entrada para crear un nuevo producto con categorías e ingredientes."""
+
     nombre: str = Field(max_length=150)
     descripcion: Optional[str] = Field(default=None, max_length=1000)
     precio_base: Decimal
@@ -72,6 +82,8 @@ class ProductoCreate(SQLModel):
 
 
 class ProductoUpdate(SQLModel):
+    """Esquema de entrada para actualizar parcialmente un producto existente."""
+
     nombre: Optional[str] = Field(default=None, max_length=150)
     descripcion: Optional[str] = Field(default=None, max_length=1000)
     precio_base: Optional[Decimal] = None
@@ -83,12 +95,16 @@ class ProductoUpdate(SQLModel):
 
 
 class UnidadMedidaResumen(SQLModel):
+    """Representación resumida de una unidad de medida para incrustar en respuestas de producto."""
+
     id: int
     nombre: str
     simbolo: str
 
 
 class IngredienteResumen(SQLModel):
+    """Representación resumida de un ingrediente para incrustar en respuestas de producto."""
+
     id: int
     nombre: str
     es_alergeno: bool
@@ -100,6 +116,8 @@ class IngredienteResumen(SQLModel):
 
 
 class ProductoPublic(SQLModel):
+    """Esquema de salida con los datos completos de un producto incluyendo ingredientes y categorías."""
+
     id: int
     nombre: str
     descripcion: Optional[str]
@@ -116,15 +134,21 @@ class ProductoPublic(SQLModel):
 
 
 class StockUpdate(SQLModel):
+    """Esquema de entrada para actualizar el stock y disponibilidad de un producto."""
+
     stock_cantidad: int
     disponible: bool
 
 
 class DisponibilidadUpdate(SQLModel):
+    """Esquema de entrada para actualizar únicamente la disponibilidad de un producto."""
+
     disponible: bool
 
 
 class PaginatedProductos(SQLModel):
+    """Respuesta paginada que contiene una lista de productos públicos."""
+
     items: list[ProductoPublic]
     total: int
     page: int

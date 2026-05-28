@@ -3,24 +3,29 @@ import { useAuthStore } from '../stores/authStore'
 
 const RT_KEY = 'rt'
 
+/** Guarda el refresh token en sessionStorage bajo la clave 'rt'. */
 export function saveRefreshToken(rt: string) {
   sessionStorage.setItem(RT_KEY, rt)
 }
 
+/** Retorna el refresh token almacenado en sessionStorage, o null si no existe. */
 export function getRefreshToken(): string | null {
   return sessionStorage.getItem(RT_KEY)
 }
 
+/** Elimina el refresh token de sessionStorage. */
 export function clearRefreshToken() {
   sessionStorage.removeItem(RT_KEY)
 }
 
+/** Instancia de Axios preconfigurada con la base URL y Content-Type JSON, usada para todas las peticiones HTTP de la app. */
 export const apiClient = axios.create({
   baseURL: '/',
   headers: { 'Content-Type': 'application/json' },
   withCredentials: true,
 })
 
+/** Interceptor de request: agrega el Authorization Bearer token del store a cada petición saliente si el usuario está autenticado. */
 apiClient.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token
   if (token) {
@@ -32,6 +37,7 @@ apiClient.interceptors.request.use((config) => {
 let refreshing = false
 let waitQueue: Array<(token: string) => void> = []
 
+/** Interceptor de response: si recibe un 401, intenta renovar el access token con el refresh token; si falla, redirige al login. */
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {

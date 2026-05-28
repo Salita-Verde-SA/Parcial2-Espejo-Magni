@@ -20,6 +20,7 @@ from app.modules.productos.model import (
 
 
 def calcular_stock_producto(producto_id: int, uow: UnitOfWork) -> int:
+    """Calcula el stock disponible de un producto basado en el stock de sus ingredientes."""
     stocks_data = uow.productos.get_ingrediente_stocks(producto_id)
     if not stocks_data:
         p = uow.productos.get_by_id(producto_id)
@@ -37,6 +38,7 @@ def calcular_stock_producto(producto_id: int, uow: UnitOfWork) -> int:
 
 
 def validar_stock_ingredientes(ingredientes: list, uow: UnitOfWork) -> None:
+    """Valida que haya stock suficiente de cada ingrediente y lanza HTTP 400 si no lo hay."""
     if not ingredientes:
         return
     
@@ -74,6 +76,7 @@ def validar_stock_ingredientes(ingredientes: list, uow: UnitOfWork) -> None:
 
 
 def _enrich(producto: Producto, uow: UnitOfWork) -> ProductoPublic:
+    """Construye la representación pública de un producto con categorías, ingredientes y stock calculado."""
     cats = uow.productos.get_categoria_ids(producto.id)
     ings_raw = uow.productos.get_ingredientes(producto.id)
     ings = [IngredienteResumen(**i) for i in ings_raw]
@@ -116,6 +119,7 @@ def list_productos(
     page_size: int,
     uow: UnitOfWork,
 ) -> PaginatedProductos:
+    """Retorna una página de productos activos filtrados y enriquecidos con sus relaciones."""
     with uow:
         items, total = uow.productos.list_filtered(nombre, categoria_id, disponible, page, page_size)
         enriched = [_enrich(p, uow) for p in items]
@@ -124,6 +128,7 @@ def list_productos(
 
 
 def list_productos_all(uow: UnitOfWork) -> PaginatedProductos:
+    """Retorna todos los productos incluyendo eliminados, para uso administrativo."""
     with uow:
         items = uow.productos.get_all()
         enriched = [_enrich(p, uow) for p in items]
@@ -131,6 +136,7 @@ def list_productos_all(uow: UnitOfWork) -> PaginatedProductos:
 
 
 def get_producto(producto_id: int, uow: UnitOfWork) -> ProductoPublic:
+    """Retorna los datos completos de un producto activo o lanza HTTP 404 si no existe."""
     with uow:
         p = uow.productos.get_by_id_active(producto_id)
         if not p:
@@ -139,6 +145,7 @@ def get_producto(producto_id: int, uow: UnitOfWork) -> ProductoPublic:
 
 
 def create_producto(data: ProductoCreate, uow: UnitOfWork) -> ProductoPublic:
+    """Crea un nuevo producto con sus categorías e ingredientes y retorna la representación pública."""
     with uow:
         if data.ingredientes:
             validar_stock_ingredientes(data.ingredientes, uow)
@@ -169,6 +176,7 @@ def create_producto(data: ProductoCreate, uow: UnitOfWork) -> ProductoPublic:
 
 
 def update_producto(producto_id: int, data: ProductoUpdate, uow: UnitOfWork) -> ProductoPublic:
+    """Actualiza los campos de un producto existente y retorna la versión actualizada."""
     with uow:
         p = uow.productos.get_by_id_active(producto_id)
         if not p:
@@ -208,6 +216,7 @@ def update_producto(producto_id: int, data: ProductoUpdate, uow: UnitOfWork) -> 
 
 
 def update_stock(producto_id: int, data: StockUpdate, uow: UnitOfWork) -> ProductoPublic:
+    """Actualiza el stock y disponibilidad de un producto y retorna el producto actualizado."""
     with uow:
         p = uow.productos.get_by_id_active(producto_id)
         if not p:
@@ -220,6 +229,7 @@ def update_stock(producto_id: int, data: StockUpdate, uow: UnitOfWork) -> Produc
 
 
 def update_disponibilidad(producto_id: int, data: DisponibilidadUpdate, uow: UnitOfWork) -> ProductoPublic:
+    """Actualiza únicamente la disponibilidad de un producto y retorna el producto actualizado."""
     with uow:
         p = uow.productos.get_by_id_active(producto_id)
         if not p:
@@ -231,6 +241,7 @@ def update_disponibilidad(producto_id: int, data: DisponibilidadUpdate, uow: Uni
 
 
 def delete_producto(producto_id: int, uow: UnitOfWork) -> None:
+    """Elimina lógicamente un producto activo o lanza un error si ya está inactivo."""
     with uow:
         p = uow.productos.get_by_id_active(producto_id)
         if not p:
@@ -242,6 +253,7 @@ def delete_producto(producto_id: int, uow: UnitOfWork) -> None:
 
 
 def activate_producto(producto_id: int, uow: UnitOfWork) -> ProductoPublic:
+    """Reactiva un producto eliminado validando que sus categorías estén activas."""
     with uow:
         p = uow.productos.get_by_id(producto_id)
         if not p:
@@ -264,6 +276,7 @@ def activate_producto(producto_id: int, uow: UnitOfWork) -> ProductoPublic:
 
 
 def export_excel(uow: UnitOfWork) -> StreamingResponse:
+    """Genera y retorna un archivo Excel con todos los productos activos."""
     try:
         import openpyxl
         from openpyxl.styles import Font, PatternFill, Alignment

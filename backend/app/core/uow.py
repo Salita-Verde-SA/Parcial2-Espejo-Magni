@@ -16,10 +16,13 @@ from app.modules.pedidos.repository import (
 
 
 class UnitOfWork:
+    """Unidad de trabajo que gestiona la sesión y los repositorios de la aplicación."""
+
     def __init__(self):
         self.session: Session | None = None
 
     def __enter__(self):
+        """Abre la sesión e inicializa todos los repositorios."""
         self.session = Session(engine, expire_on_commit=False)
         self.usuarios = UsuarioRepository(self.session)
         self.refresh_tokens = RefreshTokenRepository(self.session)
@@ -34,6 +37,7 @@ class UnitOfWork:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        """Confirma o revierte la transacción y cierra la sesión al salir del contexto."""
         if exc_type is not None:
             self.session.rollback()
         else:
@@ -41,11 +45,14 @@ class UnitOfWork:
         self.session.close()
 
     def commit(self):
+        """Confirma la transacción actual en la base de datos."""
         self.session.commit()
 
     def rollback(self):
+        """Revierte la transacción actual sin aplicar los cambios."""
         self.session.rollback()
 
 
 def get_uow() -> UnitOfWork:
+    """Crea y retorna una nueva instancia de UnitOfWork para usar como dependencia."""
     return UnitOfWork()

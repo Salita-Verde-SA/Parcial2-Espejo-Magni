@@ -6,10 +6,12 @@ from sqlmodel import SQLModel, Field
 
 
 def _utcnow() -> datetime:
+    """Retorna la fecha y hora UTC actual."""
     return datetime.utcnow()
 
 
 class UnidadMedida(SQLModel, table=True):
+    """Modelo de tabla que representa una unidad de medida para ingredientes y productos."""
     __tablename__ = "unidad_medida"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -20,18 +22,24 @@ class UnidadMedida(SQLModel, table=True):
 
 
 class UnidadMedidaCreate(SQLModel):
+    """Esquema de entrada para crear una nueva unidad de medida."""
+
     nombre: str = Field(min_length=1, max_length=50)
     simbolo: str = Field(min_length=1, max_length=10)
     tipo: str = Field(min_length=1, max_length=20)
 
 
 class UnidadMedidaUpdate(SQLModel):
+    """Esquema de entrada para actualizar parcialmente una unidad de medida."""
+
     nombre: Optional[str] = Field(default=None, min_length=1, max_length=50)
     simbolo: Optional[str] = Field(default=None, min_length=1, max_length=10)
     tipo: Optional[str] = Field(default=None, min_length=1, max_length=20)
 
 
 class UnidadMedidaPublic(SQLModel):
+    """Esquema de salida con los datos públicos de una unidad de medida."""
+
     id: int
     nombre: str
     simbolo: str
@@ -40,6 +48,8 @@ class UnidadMedidaPublic(SQLModel):
 
 
 class PaginatedUnidades(SQLModel):
+    """Respuesta paginada que contiene una lista de unidades de medida."""
+
     items: list[UnidadMedidaPublic]
     total: int
     page: int

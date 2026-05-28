@@ -17,8 +17,10 @@ from app.modules.ingredientes.model import (
 
 
 class IngredienteService:
+    """Servicio que encapsula la lógica de negocio para la gestión de ingredientes."""
 
     def __init__(self, uow: UnitOfWork):
+        """Inicializa el servicio con la unidad de trabajo proporcionada."""
         self.uow = uow
 
     def list_filtered(
@@ -28,6 +30,7 @@ class IngredienteService:
         page:        int,
         page_size:   int,
     ) -> PaginatedIngredientes:
+        """Retorna una página de ingredientes activos filtrando por nombre y/o condición alérgeno."""
         items, total = self.uow.ingredientes.list_filtered(
             nombre, es_alergeno, page, page_size
         )
@@ -41,6 +44,7 @@ class IngredienteService:
         )
 
     def list_all(self) -> PaginatedIngredientes:
+        """Retorna todos los ingredientes incluyendo eliminados para uso administrativo."""
         items = self.uow.ingredientes.get_all()
         public_items = [
             IngredientePublic(
@@ -64,6 +68,7 @@ class IngredienteService:
         )
 
     def get_by_id(self, ingrediente_id: int) -> Ingrediente:
+        """Retorna un ingrediente activo por ID o lanza HTTP 404 si no existe."""
         ingrediente = self.uow.ingredientes.get_active_by_id(ingrediente_id)
         if not ingrediente:
             raise HTTPException(
@@ -73,6 +78,7 @@ class IngredienteService:
         return ingrediente
 
     def create(self, ing_in: IngredienteCreate) -> Ingrediente:
+        """Crea un nuevo ingrediente validando que el nombre no esté duplicado."""
         if self.uow.ingredientes.get_by_nombre(ing_in.nombre):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -87,6 +93,7 @@ class IngredienteService:
         return self.uow.ingredientes.add(ingrediente)
 
     def update(self, ingrediente_id: int, ing_in: IngredienteUpdate) -> Ingrediente:
+        """Actualiza los campos de un ingrediente existente validando unicidad de nombre."""
         ingrediente = self.uow.ingredientes.get_active_by_id(ingrediente_id)
         if not ingrediente:
             raise HTTPException(
@@ -111,6 +118,7 @@ class IngredienteService:
         return self.uow.ingredientes.update(ingrediente)
 
     def soft_delete(self, ingrediente_id: int) -> None:
+        """Elimina lógicamente un ingrediente activo por su ID."""
         ingrediente = self.uow.ingredientes.get_active_by_id(ingrediente_id)
         if not ingrediente:
             existente = self.uow.ingredientes.get_by_id(ingrediente_id)
@@ -126,6 +134,7 @@ class IngredienteService:
         self.uow.ingredientes.soft_delete(ingrediente)
 
     def activate(self, ingrediente_id: int) -> Ingrediente:
+        """Reactiva un ingrediente eliminado lógicamente por su ID."""
         ingrediente = self.uow.ingredientes.get_by_id(ingrediente_id)
         if not ingrediente:
             raise HTTPException(
@@ -140,6 +149,7 @@ class IngredienteService:
         return self.uow.ingredientes.activate(ingrediente)
 
     def export_excel(self) -> StreamingResponse:
+        """Genera y retorna un archivo Excel con todos los ingredientes activos."""
         try:
             import openpyxl
             from openpyxl.styles import Font, PatternFill, Alignment

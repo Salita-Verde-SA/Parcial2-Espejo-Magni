@@ -11,6 +11,7 @@ router = APIRouter(prefix="/api/v1/usuarios", tags=["usuarios"])
 
 
 def _to_public(u: Usuario, roles: list[str]) -> UserPublic:
+    """Convierte una instancia de Usuario en su representación pública con roles."""
     return UserPublic(
         id=u.id,
         nombre=u.nombre,
@@ -28,6 +29,7 @@ def update_me(
     ctx: Annotated[tuple, Depends(get_current_active_user)],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
+    """PATCH /usuarios/me - actualiza los datos del usuario autenticado y retorna el perfil actualizado."""
     user, _ = ctx
     with uow:
         u = uow.usuarios.get_by_id_active(user.id)

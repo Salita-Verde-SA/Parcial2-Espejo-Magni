@@ -15,6 +15,7 @@ from app.modules.categorias.model import (
 
 
 def _to_public(c: Categoria, uow: UnitOfWork) -> CategoriaPublic:
+    """Convierte una Categoria en su representación pública indicando si está en uso."""
     in_use = uow.categorias.has_active_products(c.id) if c.id else False
     return CategoriaPublic(
         id=c.id,
@@ -33,6 +34,7 @@ def list_categorias(
     page_size: int,
     uow: UnitOfWork,
 ) -> PaginatedCategorias:
+    """Retorna una página de categorías activas filtradas opcionalmente por padre."""
     with uow:
         items, total = uow.categorias.list_filtered(parent_id, page, page_size)
         public_items = [_to_public(c, uow) for c in items]
@@ -47,11 +49,13 @@ def list_categorias(
 
 
 def list_categorias_all(uow: UnitOfWork) -> list[CategoriaPublic]:
+    """Retorna todas las categorías incluyendo las eliminadas, para uso administrativo."""
     with uow:
         return [_to_public(c, uow) for c in uow.categorias.get_all()]
 
 
 def get_tree(uow: UnitOfWork) -> list[CategoriaTree]:
+    """Construye y retorna el árbol jerárquico de categorías activas."""
     with uow:
         cats = uow.categorias.get_all_active()
     nodes = {
@@ -73,6 +77,7 @@ def get_tree(uow: UnitOfWork) -> list[CategoriaTree]:
 
 
 def create_categoria(data: CategoriaCreate, uow: UnitOfWork) -> CategoriaPublic:
+    """Crea una nueva categoría validando unicidad de nombre y existencia del padre."""
     with uow:
         if uow.categorias.get_by_nombre(data.nombre):
             raise HTTPException(status_code=409, detail="Ya existe una categoría con ese nombre")
@@ -88,6 +93,7 @@ def create_categoria(data: CategoriaCreate, uow: UnitOfWork) -> CategoriaPublic:
 
 
 def update_categoria(cat_id: int, data: CategoriaUpdate, uow: UnitOfWork) -> CategoriaPublic:
+    """Actualiza los campos de una categoría existente y retorna la versión actualizada."""
     with uow:
         cat = uow.categorias.get_by_id_active(cat_id)
         if not cat:
@@ -105,6 +111,7 @@ def update_categoria(cat_id: int, data: CategoriaUpdate, uow: UnitOfWork) -> Cat
 
 
 def delete_categoria(cat_id: int, uow: UnitOfWork) -> None:
+    """Elimina lógicamente una categoría si no tiene productos activos asociados."""
     with uow:
         cat = uow.categorias.get_by_id_active(cat_id)
         if not cat:
@@ -121,6 +128,7 @@ def delete_categoria(cat_id: int, uow: UnitOfWork) -> None:
 
 
 def activate_categoria(cat_id: int, uow: UnitOfWork) -> CategoriaPublic:
+    """Reactiva una categoría eliminada lógicamente y retorna su representación pública."""
     with uow:
         cat = uow.categorias.get_by_id(cat_id)
         if not cat:

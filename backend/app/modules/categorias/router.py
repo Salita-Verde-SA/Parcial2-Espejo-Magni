@@ -31,6 +31,7 @@ def list_cats(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
 ):
+    """GET /categorias/ - retorna una página de categorías activas con soporte de filtro por padre."""
     return list_categorias(parent_id, page, page_size, uow)
 
 
@@ -40,12 +41,13 @@ def list_cats(
     dependencies=[Depends(require_roles(["ADMIN"]))],
 )
 def list_cats_all(uow: Annotated[UnitOfWork, Depends(get_uow)]):
-    """List all categorias including deleted ones (for admin management)."""
+    """GET /categorias/all - retorna todas las categorías incluyendo eliminadas, solo admin."""
     return list_categorias_all(uow)
 
 
 @router.get("/tree", response_model=list[CategoriaTree])
 def tree(uow: Annotated[UnitOfWork, Depends(get_uow)]):
+    """GET /categorias/tree - retorna el árbol jerárquico de categorías activas."""
     return get_tree(uow)
 
 
@@ -56,6 +58,7 @@ def tree(uow: Annotated[UnitOfWork, Depends(get_uow)]):
     dependencies=[Depends(require_roles(["ADMIN"]))],
 )
 def create(data: CategoriaCreate, uow: Annotated[UnitOfWork, Depends(get_uow)]):
+    """POST /categorias/ - crea una nueva categoría y retorna la categoría creada."""
     return create_categoria(data, uow)
 
 
@@ -65,6 +68,7 @@ def create(data: CategoriaCreate, uow: Annotated[UnitOfWork, Depends(get_uow)]):
     dependencies=[Depends(require_roles(["ADMIN"]))],
 )
 def update(cat_id: int, data: CategoriaUpdate, uow: Annotated[UnitOfWork, Depends(get_uow)]):
+    """PUT /categorias/{cat_id} - actualiza una categoría y retorna la versión actualizada."""
     return update_categoria(cat_id, data, uow)
 
 
@@ -74,6 +78,7 @@ def update(cat_id: int, data: CategoriaUpdate, uow: Annotated[UnitOfWork, Depend
     dependencies=[Depends(require_roles(["ADMIN"]))],
 )
 def delete(cat_id: int, uow: Annotated[UnitOfWork, Depends(get_uow)]):
+    """DELETE /categorias/{cat_id} - elimina lógicamente una categoría sin productos activos."""
     delete_categoria(cat_id, uow)
 
 
@@ -83,4 +88,5 @@ def delete(cat_id: int, uow: Annotated[UnitOfWork, Depends(get_uow)]):
     dependencies=[Depends(require_roles(["ADMIN"]))],
 )
 def activate(cat_id: int, uow: Annotated[UnitOfWork, Depends(get_uow)]):
+    """POST /categorias/{cat_id}/activate - reactiva una categoría eliminada y la retorna."""
     return activate_categoria(cat_id, uow)

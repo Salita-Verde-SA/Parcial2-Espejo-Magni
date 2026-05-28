@@ -18,6 +18,7 @@ const DEFAULT_FILTROS: FiltrosIngrediente = {
   page_size: 10,
 }
 
+/** Formatea una fecha ISO en formato dd/mm/aaaa para la zona horaria de Argentina. */
 function formatFecha(iso: string) {
   return new Date(iso).toLocaleDateString('es-AR', {
     day: '2-digit',
@@ -26,6 +27,7 @@ function formatFecha(iso: string) {
   })
 }
 
+/** Página de gestión de insumos/ingredientes para los roles ADMIN y STOCK; lista todos los insumos con filtros por nombre y tipo alérgeno, paginación, indicadores de estado y stock, y permite crear, editar, dar de baja, reactivar y exportar a Excel. */
 export default function IngredientesPage() {
   const isAdmin = useAuthStore((s) => s.isAdmin())
   const isStock = useAuthStore((s) => s.hasRole('STOCK'))
@@ -59,34 +61,41 @@ export default function IngredientesPage() {
     },
   })
 
+  /** Aplica los filtros del draft y reinicia la paginación a la primera página. */
   function handleSearch() {
     setFiltros({ ...filtrosDraft, page: 1 })
   }
 
+  /** Limpia todos los filtros y reinicia la paginación. */
   function handleReset() {
     setFiltrosDraft(DEFAULT_FILTROS)
     setFiltros(DEFAULT_FILTROS)
   }
 
+  /** Navega a la página indicada. */
   function handlePage(p: number) {
     setFiltros((prev) => ({ ...prev, page: p }))
   }
 
+  /** Abre el modal de edición con los datos del ingrediente seleccionado. */
   function handleEdit(ing: Ingrediente) {
     setEditTarget(ing)
     setModalOpen(true)
   }
 
+  /** Abre el modal de creación de nuevo ingrediente con el formulario vacío. */
   function handleNew() {
     setEditTarget(null)
     setModalOpen(true)
   }
 
+  /** Cierra el modal de creación/edición y limpia el target de edición. */
   function handleModalClose() {
     setModalOpen(false)
     setEditTarget(null)
   }
 
+  /** Llama a la función de exportación Excel y controla el estado de carga del botón. */
   async function handleExport() {
     setExporting(true)
     try {
@@ -116,6 +125,7 @@ export default function IngredientesPage() {
   const totalItems = sortedItems.length
   const totalPages = Math.ceil(totalItems / filtros.page_size) || 1
 
+  /** Genera los botones numéricos de paginación con elipsis para rangos lejanos. */
   function renderPageButtons() {
     const buttons: React.ReactNode[] = []
     const range = 2
@@ -292,9 +302,9 @@ export default function IngredientesPage() {
 
                 {!isLoading &&
                   paginatedItems.map((ing) => (
-                    <tr 
-                      key={ing.id} 
-                      style={{ 
+                    <tr
+                      key={ing.id}
+                      style={{
                         backgroundColor: ing.deleted_at ? 'rgba(220, 53, 69, 0.1)' : undefined,
                         opacity: ing.deleted_at ? 0.6 : 1,
                         transition: 'all 0.2s ease',
@@ -308,7 +318,7 @@ export default function IngredientesPage() {
                         )}
                       </td>
                       <td>
-                        <span style={{ 
+                        <span style={{
                           fontWeight: ing.stock_cantidad > 0 ? 500 : 700,
                           color: ing.stock_cantidad === 0 ? 'var(--danger)' : 'var(--text)',
                         }}>
@@ -384,37 +394,11 @@ export default function IngredientesPage() {
                 Mostrando {inicio}–{fin} de {totalItems} insumos
               </span>
               <div className="pagination-controls">
-                <button 
-                  className="page-btn" 
-                  disabled={currentPage === 1}
-                  onClick={() => { console.log('First page clicked'); handlePage(1); }}
-                  title="Primera página">
-                  «
-                </button>
-                <button 
-                  className="page-btn" 
-                  disabled={currentPage === 1}
-                  onClick={() => { console.log('Prev clicked'); handlePage(currentPage - 1); }}
-                  title="Anterior">
-                  ‹
-                </button>
-
+                <button className="page-btn" disabled={currentPage === 1} onClick={() => handlePage(1)} title="Primera página">«</button>
+                <button className="page-btn" disabled={currentPage === 1} onClick={() => handlePage(currentPage - 1)} title="Anterior">‹</button>
                 {renderPageButtons()}
-
-                <button 
-                  className="page-btn" 
-                  disabled={currentPage === totalPages}
-                  onClick={() => { console.log('Next clicked, current:', currentPage, 'total:', totalPages); handlePage(currentPage + 1); }}
-                  title="Siguiente">
-                  ›
-                </button>
-                <button 
-                  className="page-btn" 
-                  disabled={currentPage === totalPages}
-                  onClick={() => { console.log('Last page clicked'); handlePage(totalPages); }}
-                  title="Última página">
-                  »
-                </button>
+                <button className="page-btn" disabled={currentPage === totalPages} onClick={() => handlePage(currentPage + 1)} title="Siguiente">›</button>
+                <button className="page-btn" disabled={currentPage === totalPages} onClick={() => handlePage(totalPages)} title="Última página">»</button>
               </div>
             </div>
           )}

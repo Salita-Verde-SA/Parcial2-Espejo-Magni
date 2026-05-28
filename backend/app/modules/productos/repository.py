@@ -13,6 +13,8 @@ from app.modules.ingredientes.model import Ingrediente
 
 
 class ProductoRepository(BaseRepository[Producto]):
+    """Repositorio para operaciones de consulta y persistencia de productos."""
+
     def __init__(self, session: Session):
         super().__init__(Producto, session)
 
@@ -24,6 +26,7 @@ class ProductoRepository(BaseRepository[Producto]):
         page: int = 1,
         page_size: int = 10,
     ) -> tuple[list[Producto], int]:
+        """Retorna una página de productos activos filtrados por nombre, categoría y disponibilidad."""
         stmt = select(Producto).where(Producto.deleted_at.is_(None))
         if nombre:
             stmt = stmt.where(Producto.nombre.ilike(f"%{nombre}%"))
@@ -42,6 +45,7 @@ class ProductoRepository(BaseRepository[Producto]):
         return all_items[offset : offset + page_size], total
 
     def get_by_id_active(self, producto_id: int) -> Producto | None:
+        """Retorna un producto activo por ID o None si no existe o está eliminado."""
         stmt = (
             select(Producto)
             .where(Producto.id == producto_id)
@@ -50,6 +54,7 @@ class ProductoRepository(BaseRepository[Producto]):
         return self.session.exec(stmt).first()
 
     def get_all_active(self) -> list[Producto]:
+        """Retorna todos los productos que no han sido eliminados lógicamente."""
         return list(
             self.session.exec(
                 select(Producto).where(Producto.deleted_at.is_(None))
@@ -57,15 +62,18 @@ class ProductoRepository(BaseRepository[Producto]):
         )
 
     def get_all(self) -> list[Producto]:
+        """Retorna todos los productos incluyendo los eliminados lógicamente."""
         return list(self.session.exec(select(Producto)).all())
 
     def get_categoria_ids(self, producto_id: int) -> list[int]:
+        """Retorna la lista de IDs de categorías asociadas a un producto."""
         stmt = select(ProductoCategoria.categoria_id).where(
             ProductoCategoria.producto_id == producto_id
         )
         return list(self.session.exec(stmt).all())
 
     def get_ingredientes(self, producto_id: int) -> list[dict]:
+        """Retorna los ingredientes de un producto como lista de diccionarios enriquecidos."""
         pi_stmt = select(ProductoIngrediente).where(
             ProductoIngrediente.producto_id == producto_id
         )
@@ -109,6 +117,7 @@ class ProductoRepository(BaseRepository[Producto]):
         return result
 
     def set_categorias(self, producto_id: int, categoria_ids: list[int]) -> None:
+        """Reemplaza completamente las categorías asociadas al producto por la lista dada."""
         existing = self.session.exec(
             select(ProductoCategoria).where(
                 ProductoCategoria.producto_id == producto_id
@@ -126,6 +135,7 @@ class ProductoRepository(BaseRepository[Producto]):
     def set_ingredientes(
         self, producto_id: int, ingredientes: list[dict]
     ) -> None:
+        """Reemplaza completamente los ingredientes asociados al producto por la lista dada."""
         existing = self.session.exec(
             select(ProductoIngrediente).where(
                 ProductoIngrediente.producto_id == producto_id
@@ -147,19 +157,23 @@ class ProductoRepository(BaseRepository[Producto]):
         self.session.flush()
 
     def soft_delete(self, producto: Producto) -> None:
+        """Marca el producto como eliminado lógicamente registrando la fecha actual."""
         producto.deleted_at = datetime.now(timezone.utc)
         self.session.add(producto)
         self.session.flush()
 
     def get_by_id(self, producto_id: int) -> Producto | None:
+        """Retorna un producto por ID sin filtrar por estado de eliminación."""
         return self.session.get(Producto, producto_id)
 
     def activate(self, producto: Producto) -> None:
+        """Reactiva un producto eliminado lógicamente limpiando su deleted_at."""
         producto.deleted_at = None
         self.session.add(producto)
         self.session.flush()
 
     def get_ingrediente_stocks(self, producto_id: int) -> list[tuple[int, int, float]]:
+        """Retorna el stock y cantidad requerida de cada ingrediente activo del producto."""
         stmt = (
             select(Ingrediente.id, Ingrediente.stock_cantidad, ProductoIngrediente.cantidad)
             .join(

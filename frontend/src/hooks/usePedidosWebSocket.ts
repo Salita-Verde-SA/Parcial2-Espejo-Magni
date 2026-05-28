@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 
+/** Hook que establece y mantiene una conexión WebSocket con el endpoint /ws/pedidos; al recibir eventos NEW_PEDIDO o PEDIDO_UPDATED invalida las queries de pedidos en el caché de TanStack Query para forzar la recarga automática. Implementa reconexión automática cada 3 segundos ante desconexiones. */
 export function usePedidosWebSocket() {
   const qc = useQueryClient()
 
@@ -10,6 +11,7 @@ export function usePedidosWebSocket() {
     let ws: WebSocket | null = null
     let reconnectTimeout: ReturnType<typeof setTimeout>
 
+    /** Crea la conexión WebSocket y registra los handlers de eventos del ciclo de vida. */
     function connect() {
       ws = new WebSocket(wsUrl)
 

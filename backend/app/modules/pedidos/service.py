@@ -28,6 +28,7 @@ from app.modules.ingredientes.model import Ingrediente
 
 
 def _to_direccion_public(d: DireccionEntrega) -> DireccionPublic:
+    """Convierte una DireccionEntrega en su representación pública."""
     return DireccionPublic(
         id=d.id,
         usuario_id=d.usuario_id,
@@ -45,6 +46,7 @@ def _to_direccion_public(d: DireccionEntrega) -> DireccionPublic:
 
 
 def _enrich_pedido(p: Pedido, uow: UnitOfWork) -> PedidoPublic:
+    """Construye la representación pública completa de un pedido con ítems, dirección e historial."""
     user = uow.usuarios.get_by_id(p.usuario_id)
     usuario_nombre = f"{user.nombre} {user.apellido}" if user else "Usuario Desconocido"
 
@@ -103,12 +105,14 @@ def _enrich_pedido(p: Pedido, uow: UnitOfWork) -> PedidoPublic:
 
 
 def list_direcciones(usuario_id: int, uow: UnitOfWork) -> List[DireccionPublic]:
+    """Retorna la lista de direcciones de entrega activas de un usuario."""
     with uow:
         items = uow.direcciones.get_all_active_by_user(usuario_id)
         return [_to_direccion_public(d) for d in items]
 
 
 def create_direccion(usuario_id: int, data: DireccionCreate, uow: UnitOfWork) -> DireccionPublic:
+    """Crea una nueva dirección de entrega para el usuario y la marca como principal si es la primera."""
     with uow:
         existing = uow.direcciones.get_all_active_by_user(usuario_id)
         es_principal = data.principal or len(existing) == 0
@@ -135,6 +139,7 @@ def create_direccion(usuario_id: int, data: DireccionCreate, uow: UnitOfWork) ->
 def update_direccion(
     direccion_id: int, usuario_id: int, data: DireccionUpdate, uow: UnitOfWork
 ) -> DireccionPublic:
+    """Actualiza los campos de una dirección de entrega del usuario y retorna la versión actualizada."""
     with uow:
         d = uow.direcciones.get_by_id_active(direccion_id, usuario_id)
         if not d:
@@ -166,6 +171,7 @@ def update_direccion(
 
 
 def set_direccion_principal(direccion_id: int, usuario_id: int, uow: UnitOfWork) -> DireccionPublic:
+    """Marca una dirección como principal del usuario y desmarca las demás."""
     with uow:
         d = uow.direcciones.get_by_id_active(direccion_id, usuario_id)
         if not d:
@@ -181,6 +187,7 @@ def set_direccion_principal(direccion_id: int, usuario_id: int, uow: UnitOfWork)
 
 
 def delete_direccion(direccion_id: int, usuario_id: int, uow: UnitOfWork) -> None:
+    """Elimina lógicamente una dirección y reasigna la principal si era la dirección principal."""
     with uow:
         d = uow.direcciones.get_by_id_active(direccion_id, usuario_id)
         if not d:
@@ -198,6 +205,7 @@ def delete_direccion(direccion_id: int, usuario_id: int, uow: UnitOfWork) -> Non
 
 
 def _deduct_stock_ingredientes(pedido_id: int, uow: UnitOfWork) -> None:
+    """Descuenta el stock de ingredientes o productos según los ítems del pedido confirmado."""
     detalles = uow.pedidos.get_detalles(pedido_id)
     for d in detalles:
         stmt = select(ProductoIngrediente).where(ProductoIngrediente.producto_id == d.producto_id)
@@ -230,6 +238,7 @@ def _deduct_stock_ingredientes(pedido_id: int, uow: UnitOfWork) -> None:
 
 
 def _restore_stock_ingredientes(pedido_id: int, uow: UnitOfWork) -> None:
+    """Restaura el stock de ingredientes o productos cuando un pedido es cancelado."""
     detalles = uow.pedidos.get_detalles(pedido_id)
     for d in detalles:
         stmt = select(ProductoIngrediente).where(ProductoIngrediente.producto_id == d.producto_id)
@@ -252,7 +261,7 @@ def _restore_stock_ingredientes(pedido_id: int, uow: UnitOfWork) -> None:
 
 
 def _do_update_estado(pedido_id: int, nuevo_estado: str, actual_usuario_id: int, uow: UnitOfWork) -> PedidoPublic:
-    """Ejecuta la transición de estado dentro de un UoW ya abierto (sin abrir contexto propio)."""
+    """Ejecuta la transición de estado de un pedido dentro de un UoW ya abierto."""
     p = uow.pedidos.get_by_id_active(pedido_id)
     if not p:
         raise HTTPException(status_code=404, detail="Pedido no encontrado")
@@ -298,6 +307,7 @@ def _do_update_estado(pedido_id: int, nuevo_estado: str, actual_usuario_id: int,
 
 
 def create_pedido(usuario_id: int, data: PedidoCreate, uow: UnitOfWork) -> PedidoPublic:
+    """Crea un nuevo pedido validando stock y disponibilidad de los productos solicitados."""
     with uow:
         if data.direccion_id:
             d = uow.direcciones.get_by_id_active(data.direccion_id, usuario_id)
@@ -385,6 +395,7 @@ def create_pedido(usuario_id: int, data: PedidoCreate, uow: UnitOfWork) -> Pedid
 
 
 def get_pedido(pedido_id: int, usuario_id: int, roles: List[str], uow: UnitOfWork) -> PedidoPublic:
+    """Retorna los datos completos de un pedido verificando que el usuario tenga acceso."""
     with uow:
         p = uow.pedidos.get_by_id_active(pedido_id)
         if not p:
@@ -405,6 +416,7 @@ def list_pedidos(
     page_size: int,
     uow: UnitOfWork,
 ) -> PaginatedPedidos:
+    """Retorna una página de pedidos filtrada según el rol del usuario (admin ve todos)."""
     with uow:
         is_staff = any(r in ["ADMIN", "PEDIDOS"] for r in roles)
         user_filter = None if is_staff else usuario_id
@@ -424,11 +436,13 @@ def list_pedidos(
 def update_pedido_estado(
     pedido_id: int, nuevo_estado: str, actual_usuario_id: int, uow: UnitOfWork
 ) -> PedidoPublic:
+    """Aplica una transición de estado a un pedido y retorna el pedido actualizado."""
     with uow:
         return _do_update_estado(pedido_id, nuevo_estado, actual_usuario_id, uow)
 
 
 def cancelar_pedido_cliente(pedido_id: int, usuario_id: int, uow: UnitOfWork) -> PedidoPublic:
+    """Permite al cliente cancelar su pedido si está en estado PENDIENTE o CONFIRMADO."""
     with uow:
         p = uow.pedidos.get_by_id_active(pedido_id)
         if not p:

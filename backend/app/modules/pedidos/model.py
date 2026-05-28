@@ -10,10 +10,12 @@ if TYPE_CHECKING:
 
 
 def _utcnow() -> datetime:
+    """Retorna la fecha y hora actual en UTC."""
     return datetime.now(timezone.utc)
 
 
 class EstadoPedido(SQLModel, table=True):
+    """Modelo de tabla que representa un estado posible en el ciclo de vida de un pedido."""
     __tablename__ = "estado_pedido"
 
     codigo: str = Field(primary_key=True, max_length=50)
@@ -25,6 +27,8 @@ class EstadoPedido(SQLModel, table=True):
 
 
 class FormaPago(SQLModel, table=True):
+    """Modelo de tabla que representa una forma de pago disponible para los pedidos."""
+
     __tablename__ = "forma_pago"
 
     codigo: str = Field(primary_key=True, max_length=50)
@@ -36,6 +40,8 @@ class FormaPago(SQLModel, table=True):
 
 
 class DireccionEntrega(SQLModel, table=True):
+    """Modelo de tabla que representa una dirección de entrega guardada por un usuario."""
+
     __tablename__ = "direccion_entrega"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -57,6 +63,8 @@ class DireccionEntrega(SQLModel, table=True):
 
 
 class Pedido(SQLModel, table=True):
+    """Modelo de tabla que representa un pedido realizado por un usuario."""
+
     __tablename__ = "pedido"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -80,6 +88,8 @@ class Pedido(SQLModel, table=True):
 
 
 class DetallePedido(SQLModel, table=True):
+    """Modelo de tabla que representa una línea de detalle (producto) dentro de un pedido."""
+
     __tablename__ = "detalle_pedido"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -95,6 +105,8 @@ class DetallePedido(SQLModel, table=True):
 
 
 class HistorialEstadoPedido(SQLModel, table=True):
+    """Modelo de tabla que registra cada transición de estado ocurrida en un pedido."""
+
     __tablename__ = "historial_estado_pedido"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -109,6 +121,8 @@ class HistorialEstadoPedido(SQLModel, table=True):
 
 
 class DireccionCreate(SQLModel):
+    """Esquema de entrada para crear una nueva dirección de entrega."""
+
     calle: str = Field(min_length=1, max_length=200)
     numero: str = Field(min_length=1, max_length=50)
     piso: Optional[str] = Field(default=None, max_length=50)
@@ -119,6 +133,8 @@ class DireccionCreate(SQLModel):
 
 
 class DireccionUpdate(SQLModel):
+    """Esquema de entrada para actualizar parcialmente una dirección de entrega."""
+
     calle: Optional[str] = Field(default=None, max_length=200)
     numero: Optional[str] = Field(default=None, max_length=50)
     piso: Optional[str] = Field(default=None, max_length=50)
@@ -129,6 +145,8 @@ class DireccionUpdate(SQLModel):
 
 
 class DireccionPublic(SQLModel):
+    """Esquema de salida con los datos públicos de una dirección de entrega."""
+
     id: int
     usuario_id: int
     calle: str
@@ -144,17 +162,23 @@ class DireccionPublic(SQLModel):
 
 
 class DetallePedidoCreate(SQLModel):
+    """Esquema de entrada para un ítem dentro de la creación de un pedido."""
+
     producto_id: int
     cantidad: int = Field(ge=1)
 
 
 class PedidoCreate(SQLModel):
+    """Esquema de entrada para crear un nuevo pedido con sus ítems y dirección de entrega."""
+
     forma_pago_codigo: str = Field(min_length=1, max_length=50)
     direccion_id: Optional[int] = None
     items: List[DetallePedidoCreate] = Field(min_items=1)
 
 
 class DetallePedidoPublic(SQLModel):
+    """Esquema de salida con los datos de un ítem de pedido."""
+
     id: int
     pedido_id: int
     producto_id: int
@@ -164,6 +188,8 @@ class DetallePedidoPublic(SQLModel):
 
 
 class HistorialEstadoPedidoPublic(SQLModel):
+    """Esquema de salida con los datos de una transición de estado en el historial de un pedido."""
+
     id: int
     pedido_id: int
     estado_anterior_codigo: Optional[str]
@@ -174,6 +200,8 @@ class HistorialEstadoPedidoPublic(SQLModel):
 
 
 class PedidoPublic(SQLModel):
+    """Esquema de salida con los datos completos de un pedido incluyendo ítems e historial."""
+
     id: int
     usuario_id: int
     usuario_nombre: Optional[str] = None
@@ -191,10 +219,14 @@ class PedidoPublic(SQLModel):
 
 
 class EstadoPedidoUpdate(SQLModel):
+    """Esquema de entrada para actualizar el estado de un pedido."""
+
     estado_codigo: str = Field(min_length=1, max_length=50)
 
 
 class PaginatedPedidos(SQLModel):
+    """Respuesta paginada que contiene una lista de pedidos públicos."""
+
     items: List[PedidoPublic]
     total: int
     page: int

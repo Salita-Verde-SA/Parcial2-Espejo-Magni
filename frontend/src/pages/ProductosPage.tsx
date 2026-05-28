@@ -22,6 +22,7 @@ const DEFAULT_FILTROS: FiltrosProducto = {
   page_size: 10,
 }
 
+/** Formatea el precio de un producto en pesos argentinos; si se provee un símbolo de unidad, lo agrega al final. */
 function formatCurrency(precio: string, unidadSimbolo?: string) {
   const num = parseFloat(precio)
   const formatted = new Intl.NumberFormat('es-AR', {
@@ -34,6 +35,7 @@ function formatCurrency(precio: string, unidadSimbolo?: string) {
   return formatted
 }
 
+/** Formatea una fecha ISO en formato dd/mm/aaaa para la zona horaria de Argentina. */
 function formatFecha(iso: string) {
   return new Date(iso).toLocaleDateString('es-AR', {
     day: '2-digit',
@@ -42,6 +44,7 @@ function formatFecha(iso: string) {
   })
 }
 
+/** Página de gestión de productos para los roles ADMIN y STOCK; lista todos los productos con filtros, paginación, indicadores de disponibilidad y estado, y permite crear, editar, cambiar disponibilidad (STOCK), dar de baja, reactivar y exportar a Excel. */
 export default function ProductosPage() {
   const isAdmin = useAuthStore((s) => s.isAdmin())
   const isStock = useAuthStore((s) => s.hasRole('STOCK'))
@@ -94,19 +97,23 @@ export default function ProductosPage() {
     },
   })
 
+  /** Aplica los filtros del draft y reinicia la paginación a la primera página. */
   function handleSearch() {
     setFiltros({ ...filtrosDraft, page: 1 })
   }
 
+  /** Limpia todos los filtros y reinicia la paginación. */
   function handleReset() {
     setFiltrosDraft(DEFAULT_FILTROS)
     setFiltros(DEFAULT_FILTROS)
   }
 
+  /** Navega a la página indicada. */
   function handlePage(p: number) {
     setFiltros((prev) => ({ ...prev, page: p }))
   }
 
+  /** Obtiene el detalle completo del producto desde la API y abre el modal de edición. */
   function handleEdit(prod: Producto) {
     fetchProducto(prod.id).then(fullProducto => {
       setEditTarget(fullProducto)
@@ -114,26 +121,31 @@ export default function ProductosPage() {
     })
   }
 
+  /** Abre el modal de gestión rápida de disponibilidad para el producto seleccionado. */
   function handleStockEdit(prod: Producto) {
     setEditTarget(prod)
     setStockModalOpen(true)
   }
 
+  /** Abre el modal de creación de nuevo producto con el formulario vacío. */
   function handleNew() {
     setEditTarget(null)
     setModalOpen(true)
   }
 
+  /** Cierra el modal de creación/edición y limpia el target de edición. */
   function handleModalClose() {
     setModalOpen(false)
     setEditTarget(null)
   }
 
+  /** Cierra el modal de gestión de stock y limpia el target de edición. */
   function handleStockModalClose() {
     setStockModalOpen(false)
     setEditTarget(null)
   }
 
+  /** Llama a la función de exportación Excel y controla el estado de carga del botón. */
   async function handleExport() {
     setExporting(true)
     try {
@@ -167,6 +179,7 @@ export default function ProductosPage() {
     return a.id - b.id
   })
 
+  /** Genera los botones numéricos de paginación con elipsis para rangos lejanos. */
   function renderPageButtons() {
     const buttons: React.ReactNode[] = []
     const range = 2
@@ -187,7 +200,7 @@ export default function ProductosPage() {
   const totalItems = sortedItems.length
   const inicio = totalItems > 0 ? (filtros.page - 1) * filtros.page_size + 1 : 0
   const fin = Math.min(filtros.page * filtros.page_size, totalItems)
-  
+
   const start = (filtros.page - 1) * filtros.page_size
   const end = start + filtros.page_size
   const paginatedItems = sortedItems.slice(start, end)
@@ -326,9 +339,9 @@ export default function ProductosPage() {
                   </tr>
                 )}
                 {!isLoading && paginatedItems.map((prod) => (
-                  <tr 
-                    key={prod.id} 
-                    style={{ 
+                  <tr
+                    key={prod.id}
+                    style={{
                       backgroundColor: prod.deleted_at ? 'rgba(220, 53, 69, 0.1)' : undefined,
                       opacity: prod.deleted_at ? 0.6 : 1,
                       transition: 'all 0.2s ease',

@@ -20,10 +20,7 @@ function formatPrecio(precio: string, unidadSimbolo?: string) {
     currency: 'ARS',
     maximumFractionDigits: 0,
   }).format(Number(precio))
-  if (unidadSimbolo) {
-    return `${formatted} / ${unidadSimbolo}`
-  }
-  return formatted
+  return unidadSimbolo ? `${formatted} / ${unidadSimbolo}` : formatted
 }
 
 function ProductoCard({ producto }: { producto: Producto }) {
@@ -37,18 +34,13 @@ function ProductoCard({ producto }: { producto: Producto }) {
     openCart()
   }
 
-  return (
-    <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+  const sinStock = producto.stock_cantidad === 0 && producto.disponible
+  const noDisponible = !producto.disponible
 
-      <div
-        style={{
-          height: 160,
-          background: 'linear-gradient(135deg, var(--primary-light), var(--primary))',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
+  return (
+    <div className="card" style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
+
+      <div className="producto-thumb">
         {producto.imagen_url ? (
           <img
             src={producto.imagen_url}
@@ -56,23 +48,22 @@ function ProductoCard({ producto }: { producto: Producto }) {
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
         ) : (
-          <span style={{ fontSize: 36, fontWeight: 900, color: 'rgba(255,255,255,0.65)', letterSpacing: -1 }}>
+          <span className="producto-thumb-initial">
             {producto.nombre[0].toUpperCase()}
           </span>
         )}
       </div>
 
-      <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <strong style={{ fontSize: 15 }}>{producto.nombre}</strong>
-          <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--primary)', whiteSpace: 'nowrap', marginLeft: 8 }}>
+      <div className="producto-body">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+          <span className="producto-nombre">{producto.nombre}</span>
+          <span className="producto-precio" style={{ flexShrink: 0 }}>
             {formatPrecio(producto.precio_base, producto.unidad_venta?.simbolo)}
           </span>
         </div>
 
         {producto.descripcion && (
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
             {producto.descripcion}
           </p>
         )}
@@ -80,7 +71,7 @@ function ProductoCard({ producto }: { producto: Producto }) {
         {alergenos.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
             {alergenos.map((a) => (
-              <span key={a.id} className="badge badge-danger" style={{ fontSize: 10 }}>
+              <span key={a.id} className="badge badge-warning" style={{ fontSize: 10 }}>
                 {a.nombre}
               </span>
             ))}
@@ -88,21 +79,18 @@ function ProductoCard({ producto }: { producto: Producto }) {
         )}
 
         <div style={{ marginTop: 'auto', paddingTop: 8 }}>
-          {producto.stock_cantidad === 0 && producto.disponible ? (
-            <button className="btn btn-ghost" style={{ width: '100%' }} disabled>
-              Sin stock
-            </button>
-          ) : !producto.disponible ? (
-            <button className="btn btn-ghost" style={{ width: '100%' }} disabled>
-              No disponible
+          {sinStock || noDisponible ? (
+            <button className="btn btn-ghost" style={{ width: '100%', justifyContent: 'center' }} disabled>
+              {sinStock ? 'Sin stock' : 'No disponible'}
             </button>
           ) : (
-            <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleAgregar}>
-              Agregar
+            <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={handleAgregar}>
+              Agregar al carrito
             </button>
           )}
         </div>
       </div>
+
     </div>
   )
 }
@@ -123,56 +111,69 @@ export default function CatalogoPage() {
     staleTime: 5 * 60_000,
   })
 
+  function handleBuscar() {
+    setFiltros({ ...draft, page: 1 })
+  }
+
+  function handleLimpiar() {
+    setDraft(DEFAULT_FILTROS)
+    setFiltros(DEFAULT_FILTROS)
+  }
+
   return (
     <>
       <header className="topbar">
         <span className="topbar-title">Catálogo de Productos</span>
+        {data && (
+          <span style={{ marginLeft: 12, fontSize: 13, color: 'var(--text-muted)' }}>
+            {data.total} producto{data.total !== 1 ? 's' : ''}
+          </span>
+        )}
       </header>
 
-      <div className="page-wrapper">
+      <div className="page-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-        <div className="filtros-bar">
-          <div className="filtro-group">
-            <label className="filtro-label">Buscar</label>
-            <input
-              className="filtro-input"
-              type="text"
-              placeholder="Nombre del producto..."
-              value={draft.nombre}
-              onChange={(e) => setDraft({ ...draft, nombre: e.target.value })}
-              onKeyDown={(e) => e.key === 'Enter' && setFiltros({ ...draft, page: 1 })}
-            />
-          </div>
+        <div className="card">
+          <div className="filtros-bar">
+            <div className="filtro-group">
+              <label className="filtro-label">Buscar</label>
+              <input
+                className="filtro-input"
+                type="text"
+                placeholder="Nombre del producto..."
+                value={draft.nombre}
+                onChange={(e) => setDraft({ ...draft, nombre: e.target.value })}
+                onKeyDown={(e) => e.key === 'Enter' && handleBuscar()}
+              />
+            </div>
 
-          <div className="filtro-group">
-            <label className="filtro-label">Categoría</label>
-            <select
-              className="filtro-select"
-              value={draft.categoria_id ?? ''}
-              onChange={(e) =>
-                setDraft({ ...draft, categoria_id: e.target.value ? Number(e.target.value) : null })
-              }
-            >
-              <option value="">Todas</option>
-              {categorias?.map((c) => (
-                <option key={c.id} value={c.id}>{c.nombre}</option>
-              ))}
-            </select>
-          </div>
+            <div className="filtro-group">
+              <label className="filtro-label">Categoría</label>
+              <select
+                className="filtro-select"
+                value={draft.categoria_id ?? ''}
+                onChange={(e) =>
+                  setDraft({ ...draft, categoria_id: e.target.value ? Number(e.target.value) : null })
+                }
+              >
+                <option value="">Todas</option>
+                {categorias?.map((c) => (
+                  <option key={c.id} value={c.id}>{c.nombre}</option>
+                ))}
+              </select>
+            </div>
 
-          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-            <button className="btn btn-primary" onClick={() => setFiltros({ ...draft, page: 1 })}>
-              Buscar
-            </button>
-            <button className="btn btn-ghost" onClick={() => { setDraft(DEFAULT_FILTROS); setFiltros(DEFAULT_FILTROS) }}>
-              Limpiar
-            </button>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+              <button className="btn btn-primary" onClick={handleBuscar}>Buscar</button>
+              <button className="btn btn-ghost" onClick={handleLimpiar}>Limpiar</button>
+            </div>
           </div>
         </div>
 
         {isLoading ? (
-          <div style={{ textAlign: 'center', padding: 48 }}>
-            <span className="spinner spinner-dark" /> Cargando...
+          <div style={{ textAlign: 'center', padding: 56 }}>
+            <span className="spinner spinner-dark" />
+            <p style={{ marginTop: 12, color: 'var(--text-muted)' }}>Cargando productos...</p>
           </div>
         ) : data?.items.length === 0 ? (
           <div className="empty-state">
@@ -180,34 +181,31 @@ export default function CatalogoPage() {
             <p>No hay productos con los filtros aplicados.</p>
           </div>
         ) : (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-              gap: 16,
-            }}
-          >
+          <div className="catalogo-grid">
             {data?.items.map((p) => <ProductoCard key={p.id} producto={p} />)}
           </div>
         )}
 
         {data && data.total > data.page_size && (
-          <div className="pagination" style={{ marginTop: 24 }}>
-            <button
-              className="page-btn"
-              disabled={filtros.page === 1}
-              onClick={() => setFiltros({ ...filtros, page: filtros.page - 1 })}
-            >‹</button>
-            <span style={{ padding: '0 12px', fontSize: 13, color: 'var(--text-muted)' }}>
-              Página {filtros.page} de {data.pages}
-            </span>
-            <button
-              className="page-btn"
-              disabled={filtros.page === data.pages}
-              onClick={() => setFiltros({ ...filtros, page: filtros.page + 1 })}
-            >›</button>
+          <div className="pagination" style={{ background: 'transparent', border: 'none', justifyContent: 'center' }}>
+            <div className="pagination-controls">
+              <button
+                className="page-btn"
+                disabled={filtros.page === 1}
+                onClick={() => setFiltros({ ...filtros, page: filtros.page - 1 })}
+              >‹</button>
+              <span style={{ padding: '0 16px', fontSize: 13, color: 'var(--text-muted)' }}>
+                Página {filtros.page} de {data.pages}
+              </span>
+              <button
+                className="page-btn"
+                disabled={filtros.page === data.pages}
+                onClick={() => setFiltros({ ...filtros, page: filtros.page + 1 })}
+              >›</button>
+            </div>
           </div>
         )}
+
       </div>
     </>
   )

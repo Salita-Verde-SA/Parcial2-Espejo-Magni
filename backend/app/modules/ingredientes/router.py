@@ -17,6 +17,7 @@ router = APIRouter(prefix="/api/v1/ingredientes", tags=["ingredientes"])
 
 @router.get("/export", dependencies=[Depends(require_roles(["ADMIN"]))])
 def export_excel(uow: Annotated[UnitOfWork, Depends(get_uow)]):
+    """GET /ingredientes/export - exporta el listado de ingredientes activos como archivo Excel."""
     with uow:
         return IngredienteService(uow).export_excel()
 
@@ -30,6 +31,7 @@ def list_ingredientes(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=10, ge=1, le=100),
 ):
+    """GET /ingredientes/ - retorna una página de ingredientes activos con filtros opcionales."""
     with uow:
         return IngredienteService(uow).list_filtered(nombre, es_alergeno, page, page_size)
 
@@ -40,7 +42,7 @@ def list_ingredientes(
     dependencies=[Depends(require_roles(["ADMIN", "STOCK"]))],
 )
 def list_ingredientes_all(uow: Annotated[UnitOfWork, Depends(get_uow)]):
-    """List all ingredientes including deleted ones (for admin management)."""
+    """GET /ingredientes/all - retorna todos los ingredientes incluyendo eliminados, para admins."""
     with uow:
         return IngredienteService(uow).list_all()
 
@@ -51,6 +53,7 @@ def get_ingrediente(
     uow: Annotated[UnitOfWork, Depends(get_uow)],
     _: Annotated[tuple, Depends(get_current_active_user)],
 ):
+    """GET /ingredientes/{id} - retorna el detalle de un ingrediente activo por su ID."""
     with uow:
         return IngredienteService(uow).get_by_id(ingrediente_id)
 
@@ -65,6 +68,7 @@ def create_ingrediente(
     ing_in: IngredienteCreate,
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
+    """POST /ingredientes/ - crea un nuevo ingrediente y retorna el ingrediente creado."""
     with uow:
         return IngredienteService(uow).create(ing_in)
 
@@ -79,6 +83,7 @@ def update_ingrediente(
     ing_in: IngredienteUpdate,
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
+    """PATCH /ingredientes/{id} - actualiza un ingrediente y retorna la versión actualizada."""
     with uow:
         return IngredienteService(uow).update(ingrediente_id, ing_in)
 
@@ -92,6 +97,7 @@ def delete_ingrediente(
     ingrediente_id: int,
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
+    """DELETE /ingredientes/{id} - elimina lógicamente un ingrediente activo."""
     with uow:
         IngredienteService(uow).soft_delete(ingrediente_id)
 
@@ -105,5 +111,6 @@ def activate_ingrediente(
     ingrediente_id: int,
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
+    """POST /ingredientes/{id}/activate - reactiva un ingrediente eliminado y lo retorna."""
     with uow:
         return IngredienteService(uow).activate(ingrediente_id)

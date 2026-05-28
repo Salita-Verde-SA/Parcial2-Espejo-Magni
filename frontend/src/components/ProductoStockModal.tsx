@@ -8,6 +8,7 @@ interface Props {
   onClose: () => void
 }
 
+/** Modal de gestión rápida de disponibilidad de un producto; permite al rol STOCK activar o desactivar la disponibilidad para venta sin editar el producto completo. */
 export default function ProductoStockModal({ producto, onClose }: Props) {
   const qc = useQueryClient()
   const [disponible, setDisponible] = useState(producto.disponible)
@@ -28,6 +29,7 @@ export default function ProductoStockModal({ producto, onClose }: Props) {
     },
   })
 
+  /** Previene el comportamiento por defecto y dispara la mutación para actualizar la disponibilidad. */
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setApiError('')

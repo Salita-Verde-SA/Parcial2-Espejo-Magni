@@ -35,6 +35,7 @@ def list_dirs(
     ctx: Annotated[tuple, Depends(get_current_active_user)],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
+    """GET /direcciones/ - retorna todas las direcciones de entrega activas del usuario autenticado."""
     user, _ = ctx
     return list_direcciones(user.id, uow)
 
@@ -49,6 +50,7 @@ def create_dir(
     ctx: Annotated[tuple, Depends(get_current_active_user)],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
+    """POST /direcciones/ - crea una nueva dirección de entrega para el usuario autenticado."""
     user, _ = ctx
     return create_direccion(user.id, data, uow)
 
@@ -60,6 +62,7 @@ def update_dir(
     ctx: Annotated[tuple, Depends(get_current_active_user)],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
+    """PUT /direcciones/{id} - actualiza una dirección de entrega del usuario autenticado."""
     user, _ = ctx
     return update_direccion(direccion_id, user.id, data, uow)
 
@@ -70,6 +73,7 @@ def delete_dir(
     ctx: Annotated[tuple, Depends(get_current_active_user)],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
+    """DELETE /direcciones/{id} - elimina lógicamente una dirección del usuario autenticado."""
     user, _ = ctx
     delete_direccion(direccion_id, user.id, uow)
 
@@ -80,6 +84,7 @@ def set_principal_dir(
     ctx: Annotated[tuple, Depends(get_current_active_user)],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
+    """PATCH /direcciones/{id}/principal - marca una dirección como principal del usuario."""
     user, _ = ctx
     return set_direccion_principal(direccion_id, user.id, uow)
 
@@ -94,6 +99,7 @@ async def create_order(
     ctx: Annotated[tuple, Depends(get_current_active_user)],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
+    """POST /pedidos/ - crea un nuevo pedido y notifica por WebSocket a los conectados."""
     user, _ = ctx
     result = create_pedido(user.id, data, uow)
     await manager.broadcast({"type": "NEW_PEDIDO", "pedido_id": result.id})
@@ -108,6 +114,7 @@ def list_orders(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
 ):
+    """GET /pedidos/ - retorna una página de pedidos según el rol del usuario autenticado."""
     user, roles = ctx
     return list_pedidos(user.id, roles, estado_codigo, page, page_size, uow)
 
@@ -118,6 +125,7 @@ def get_order(
     ctx: Annotated[tuple, Depends(get_current_active_user)],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
+    """GET /pedidos/{id} - retorna el detalle completo de un pedido si el usuario tiene acceso."""
     user, roles = ctx
     return get_pedido(pedido_id, user.id, roles, uow)
 
@@ -133,6 +141,7 @@ async def patch_order_state(
     ctx: Annotated[tuple, Depends(get_current_active_user)],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
+    """PATCH /pedidos/{id}/estado - actualiza el estado de un pedido y notifica por WebSocket."""
     user, _ = ctx
     result = update_pedido_estado(pedido_id, data.estado_codigo, user.id, uow)
     await manager.broadcast({"type": "PEDIDO_UPDATED", "pedido_id": result.id, "nuevo_estado": result.estado_codigo})
@@ -145,6 +154,7 @@ async def cancel_order_client(
     ctx: Annotated[tuple, Depends(get_current_active_user)],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
+    """POST /pedidos/{id}/cancelar - permite al cliente cancelar su pedido y notifica por WebSocket."""
     user, _ = ctx
     result = cancelar_pedido_cliente(pedido_id, user.id, uow)
     await manager.broadcast({"type": "PEDIDO_UPDATED", "pedido_id": result.id, "nuevo_estado": result.estado_codigo})

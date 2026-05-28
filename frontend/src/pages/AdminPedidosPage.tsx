@@ -7,7 +7,7 @@ import type { PedidoPublic, PaginatedPedidos } from '../types'
 export default function AdminPedidosPage() {
   const queryClient = useQueryClient()
   usePedidosWebSocket()
-  
+
   const [page, setPage] = useState(1)
   const [estadoFiltro, setEstadoFiltro] = useState('')
   const [selectedPedidoId, setSelectedPedidoId] = useState<number | null>(null)
@@ -44,7 +44,7 @@ export default function AdminPedidosPage() {
   })
 
   function handleTransition(id: number, nuevoEstado: string) {
-    if (confirm(`¿Estás seguro de que deseas pasar el pedido a estado: ${nuevoEstado}?`)) {
+    if (confirm(`Confirmar cambio de estado a: ${nuevoEstado}`)) {
       stateMutation.mutate({ id, nuevoEstado })
     }
   }
@@ -56,25 +56,36 @@ export default function AdminPedidosPage() {
       maximumFractionDigits: 0,
     }).format(Number(n))
 
-  const formatFecha = (iso: string) => {
-    return new Date(iso).toLocaleString('es-AR', {
+  const formatFecha = (iso: string) =>
+    new Date(iso).toLocaleString('es-AR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     })
-  }
 
   const getBadgeClass = (estado: string) => {
     switch (estado) {
-      case 'PENDIENTE': return 'badge-secondary'
+      case 'PENDIENTE':  return 'badge-neutral'
       case 'CONFIRMADO': return 'badge-primary'
-      case 'EN_PREP': return 'badge-warning'
-      case 'EN_CAMINO': return 'badge-info'
-      case 'ENTREGADO': return 'badge-success'
-      case 'CANCELADO': return 'badge-danger'
-      default: return 'badge-secondary'
+      case 'EN_PREP':    return 'badge-warning'
+      case 'EN_CAMINO':  return 'badge-info'
+      case 'ENTREGADO':  return 'badge-success'
+      case 'CANCELADO':  return 'badge-danger'
+      default:           return 'badge-neutral'
+    }
+  }
+
+  const getEstadoLabel = (estado: string) => {
+    switch (estado) {
+      case 'PENDIENTE':  return 'Pendiente'
+      case 'CONFIRMADO': return 'Confirmado'
+      case 'EN_PREP':    return 'En preparación'
+      case 'EN_CAMINO':  return 'En camino'
+      case 'ENTREGADO':  return 'Entregado'
+      case 'CANCELADO':  return 'Cancelado'
+      default:           return estado
     }
   }
 
@@ -82,77 +93,42 @@ export default function AdminPedidosPage() {
     switch (p.estado_codigo) {
       case 'PENDIENTE':
         return (
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <button
-              className="btn btn-primary"
-              style={{ flex: 1 }}
-              onClick={() => handleTransition(p.id, 'CONFIRMADO')}
-            >
-              ✓ Confirmar Pedido
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => handleTransition(p.id, 'CONFIRMADO')}>
+              Confirmar pedido
             </button>
-            <button
-              className="btn btn-danger"
-              style={{ flex: 1 }}
-              onClick={() => handleTransition(p.id, 'CANCELADO')}
-            >
-              ✕ Cancelar
+            <button className="btn btn-danger" style={{ flex: 1 }} onClick={() => handleTransition(p.id, 'CANCELADO')}>
+              Cancelar
             </button>
           </div>
         )
       case 'CONFIRMADO':
         return (
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <button
-              className="btn btn-warning"
-              style={{ flex: 1, color: '#fff' }}
-              onClick={() => handleTransition(p.id, 'EN_PREP')}
-            >
-              👨‍🍳 Iniciar Preparación
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-warning" style={{ flex: 1 }} onClick={() => handleTransition(p.id, 'EN_PREP')}>
+              Iniciar preparación
             </button>
-            <button
-              className="btn btn-danger"
-              style={{ flex: 1 }}
-              onClick={() => handleTransition(p.id, 'CANCELADO')}
-            >
-              ✕ Cancelar
+            <button className="btn btn-danger" style={{ flex: 1 }} onClick={() => handleTransition(p.id, 'CANCELADO')}>
+              Cancelar
             </button>
           </div>
         )
       case 'EN_PREP':
         return (
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <button
-              className="btn btn-info"
-              style={{ flex: 1 }}
-              onClick={() => handleTransition(p.id, 'EN_CAMINO')}
-            >
-              🛵 Despachar / Enviar
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-info" style={{ flex: 1 }} onClick={() => handleTransition(p.id, 'EN_CAMINO')}>
+              Despachar
             </button>
-            <button
-              className="btn btn-danger"
-              style={{ flex: 1 }}
-              onClick={() => handleTransition(p.id, 'CANCELADO')}
-            >
-              ✕ Cancelar
+            <button className="btn btn-danger" style={{ flex: 1 }} onClick={() => handleTransition(p.id, 'CANCELADO')}>
+              Cancelar
             </button>
           </div>
         )
       case 'EN_CAMINO':
         return (
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <button
-              className="btn btn-success"
-              style={{ flex: 1 }}
-              onClick={() => handleTransition(p.id, 'ENTREGADO')}
-            >
-              🎁 Marcar como Entregado
-            </button>
-            <button
-              className="btn btn-danger"
-              style={{ flex: 1 }}
-              onClick={() => handleTransition(p.id, 'CANCELADO')}
-            >
-              ✕ Cancelar
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-success" style={{ flex: 1 }} onClick={() => handleTransition(p.id, 'ENTREGADO')}>
+              Marcar entregado
             </button>
           </div>
         )
@@ -167,25 +143,25 @@ export default function AdminPedidosPage() {
         <span className="topbar-title">Administración de Pedidos</span>
       </header>
 
-      <div className="page-wrapper" style={{ display: 'grid', gridTemplateColumns: '1fr 420px', gap: 24, alignItems: 'start' }}>
-        
-        <div className="card" style={{ padding: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h3 style={{ margin: 0, fontSize: 18 }}>Pedidos del Sistema</h3>
-            
+      <div className="page-wrapper" style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: 24, alignItems: 'start' }}>
+
+        {/* Lista de pedidos */}
+        <div className="card">
+          <div className="card-header">
+            <span className="card-title">Pedidos del sistema</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <label style={{ fontSize: 12, fontWeight: 600 }}>Filtrar Estado:</label>
+              <label className="filtro-label" style={{ marginBottom: 0 }}>Estado</label>
               <select
                 className="filtro-select"
-                style={{ width: 150, padding: '4px 8px' }}
+                style={{ minWidth: 160 }}
                 value={estadoFiltro}
                 onChange={(e) => { setEstadoFiltro(e.target.value); setPage(1) }}
               >
                 <option value="">Todos</option>
                 <option value="PENDIENTE">Pendiente</option>
                 <option value="CONFIRMADO">Confirmado</option>
-                <option value="EN_PREP">En Preparación</option>
-                <option value="EN_CAMINO">En Camino</option>
+                <option value="EN_PREP">En preparación</option>
+                <option value="EN_CAMINO">En camino</option>
                 <option value="ENTREGADO">Entregado</option>
                 <option value="CANCELADO">Cancelado</option>
               </select>
@@ -193,155 +169,164 @@ export default function AdminPedidosPage() {
           </div>
 
           {errorMsg && (
-            <div className="badge badge-danger" style={{ padding: 12, borderRadius: 8, fontSize: 13, display: 'block', textAlign: 'left', marginBottom: 16 }}>
-              ⚠️ {errorMsg}
+            <div className="alert alert-danger" style={{ margin: '12px 20px 0' }}>
+              {errorMsg}
             </div>
           )}
 
-          {isLoading ? (
-            <div style={{ textAlign: 'center', padding: 24 }}>
-              <span className="spinner spinner-dark" /> Cargando pedidos...
-            </div>
-          ) : !response || response.items.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>
-              No hay pedidos en el sistema para este estado.
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid var(--border)', color: 'var(--text-muted)' }}>
-                    <th style={{ padding: 12 }}>ID</th>
-                    <th style={{ padding: 12 }}>Cliente</th>
-                    <th style={{ padding: 12 }}>Fecha</th>
-                    <th style={{ padding: 12 }}>Estado</th>
-                    <th style={{ padding: 12 }}>Total</th>
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th style={{ width: 70 }}>ID</th>
+                  <th>Cliente</th>
+                  <th>Fecha</th>
+                  <th style={{ width: 130 }}>Estado</th>
+                  <th style={{ width: 110 }}>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading && (
+                  <tr className="loading-row">
+                    <td colSpan={5}><span className="spinner spinner-dark" /> Cargando...</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {response.items.map((p) => (
-                    <tr
-                      key={p.id}
-                      onClick={() => setSelectedPedidoId(p.id)}
-                      style={{
-                        borderBottom: '1px solid var(--border)',
-                        cursor: 'pointer',
-                        background: selectedPedidoId === p.id ? 'rgba(var(--primary-rgb), 0.03)' : 'transparent',
-                        transition: 'background 0.2s',
-                      }}
-                      onMouseEnter={(e) => { if (selectedPedidoId !== p.id) e.currentTarget.style.background = 'var(--bg-muted)' }}
-                      onMouseLeave={(e) => { if (selectedPedidoId !== p.id) e.currentTarget.style.background = 'transparent' }}
-                    >
-                      <td style={{ padding: 12, fontWeight: 700 }}>#{p.id}</td>
-                      <td style={{ padding: 12 }}>{p.usuario_nombre}</td>
-                      <td style={{ padding: 12 }}>{formatFecha(p.fecha)}</td>
-                      <td style={{ padding: 12 }}>
-                        <span className={`badge ${getBadgeClass(p.estado_codigo)}`} style={{ fontSize: 10 }}>
-                          {p.estado_codigo}
-                        </span>
-                      </td>
-                      <td style={{ padding: 12, fontWeight: 600 }}>{formatPrecio(p.total)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                )}
+                {!isLoading && (!response || response.items.length === 0) && (
+                  <tr>
+                    <td colSpan={5}>
+                      <div className="empty-state">
+                        <h3>Sin pedidos</h3>
+                        <p>No hay pedidos para el estado seleccionado.</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {!isLoading && response?.items.map((p) => (
+                  <tr
+                    key={p.id}
+                    onClick={() => setSelectedPedidoId(p.id)}
+                    style={{
+                      cursor: 'pointer',
+                      background: selectedPedidoId === p.id ? '#FEF2F2' : undefined,
+                      borderLeft: selectedPedidoId === p.id ? '3px solid var(--brand)' : '3px solid transparent',
+                    }}
+                  >
+                    <td className="col-id">#{p.id}</td>
+                    <td style={{ fontWeight: 500 }}>{p.usuario_nombre}</td>
+                    <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatFecha(p.fecha)}</td>
+                    <td>
+                      <span className={`badge ${getBadgeClass(p.estado_codigo)}`}>
+                        {getEstadoLabel(p.estado_codigo)}
+                      </span>
+                    </td>
+                    <td style={{ fontWeight: 700 }}>{formatPrecio(p.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-              {response.total > response.page_size && (
-                <div className="pagination" style={{ marginTop: 16 }}>
-                  <button
-                    className="page-btn"
-                    disabled={page === 1}
-                    onClick={() => setPage(page - 1)}
-                  >‹</button>
-                  <span style={{ padding: '0 12px', fontSize: 13, color: 'var(--text-muted)' }}>
-                    Página {page} de {response.pages}
-                  </span>
-                  <button
-                    className="page-btn"
-                    disabled={page === response.pages}
-                    onClick={() => setPage(page + 1)}
-                  >›</button>
-                </div>
-              )}
+          {response && response.total > response.page_size && (
+            <div className="pagination">
+              <span className="pagination-info">Página {page} de {response.pages}</span>
+              <div className="pagination-controls">
+                <button className="page-btn" disabled={page === 1} onClick={() => setPage(page - 1)}>‹</button>
+                <button className="page-btn" disabled={page === response.pages} onClick={() => setPage(page + 1)}>›</button>
+              </div>
             </div>
           )}
         </div>
 
-        <div className="card" style={{ padding: 24, position: 'sticky', top: 24 }}>
+        {/* Panel de detalle */}
+        <div className="card" style={{ position: 'sticky', top: 24 }}>
           {selectedPedido ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
-                <h3 style={{ margin: 0, fontSize: 18 }}>Pedido #{selectedPedido.id}</h3>
+            <div>
+              <div className="card-header">
+                <span className="card-title">Pedido #{selectedPedido.id}</span>
                 <span className={`badge ${getBadgeClass(selectedPedido.estado_codigo)}`}>
-                  {selectedPedido.estado_codigo}
+                  {getEstadoLabel(selectedPedido.estado_codigo)}
                 </span>
               </div>
 
-              <div>
-                <strong style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>CLIENTE</strong>
-                <div style={{ fontSize: 14 }}>{selectedPedido.usuario_nombre}</div>
-              </div>
+              <div style={{ padding: '0 20px 20px' }}>
 
-              <div>
-                <strong style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 8 }}>PRODUCTOS</strong>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {selectedPedido.items.map((item) => (
-                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                      <span>{item.cantidad} x {item.producto_nombre}</span>
-                      <strong>{formatPrecio(parseFloat(item.precio_unitario) * item.cantidad)}</strong>
-                    </div>
-                  ))}
+                <div className="detail-section">
+                  <div className="detail-label">Cliente</div>
+                  <div style={{ fontWeight: 500 }}>{selectedPedido.usuario_nombre}</div>
                 </div>
-              </div>
 
-              {selectedPedido.direccion && (
-                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
-                  <strong style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>DIRECCIÓN DE ENTREGA</strong>
-                  <div style={{ fontSize: 13 }}>
-                    {selectedPedido.direccion.calle} {selectedPedido.direccion.numero}
-                    {selectedPedido.direccion.piso && `, Piso ${selectedPedido.direccion.piso}`}
-                    {selectedPedido.direccion.departamento && `, Depto ${selectedPedido.direccion.departamento}`}
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{selectedPedido.direccion.ciudad} ({selectedPedido.direccion.alias})</div>
-                </div>
-              )}
-
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Forma de Pago</span>
-                  <strong>{selectedPedido.forma_pago_codigo}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, fontWeight: 700 }}>
-                  <span>Total Pedido</span>
-                  <span style={{ color: 'var(--primary)' }}>{formatPrecio(selectedPedido.total)}</span>
-                </div>
-              </div>
-
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
-                <strong style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 8 }}>AUDIT TRAIL / HISTORIAL</strong>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12 }}>
-                  {selectedPedido.historial.map((h) => (
-                    <div key={h.id} style={{ paddingLeft: 8, borderLeft: '2px solid var(--border)' }}>
-                      <div style={{ fontWeight: 600 }}>{h.estado_nuevo_codigo}</div>
-                      <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>
-                        {formatFecha(h.fecha)} por {h.usuario_nombre}
+                <div className="detail-section">
+                  <div className="detail-label">Productos</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {selectedPedido.items.map((item) => (
+                      <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                        <span style={{ color: 'var(--text-muted)' }}>{item.cantidad}x {item.producto_nombre}</span>
+                        <strong>{formatPrecio(parseFloat(item.precio_unitario) * item.cantidad)}</strong>
                       </div>
+                    ))}
+                  </div>
+                </div>
+
+                {selectedPedido.direccion && (
+                  <div className="detail-section">
+                    <div className="detail-label">Dirección de entrega</div>
+                    <div style={{ fontSize: 13 }}>
+                      {selectedPedido.direccion.calle} {selectedPedido.direccion.numero}
+                      {selectedPedido.direccion.piso && `, Piso ${selectedPedido.direccion.piso}`}
+                      {selectedPedido.direccion.departamento && `, Depto ${selectedPedido.direccion.departamento}`}
                     </div>
-                  ))}
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                      {selectedPedido.direccion.ciudad} · {selectedPedido.direccion.alias}
+                    </div>
+                  </div>
+                )}
+
+                <div className="detail-section">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Forma de pago</span>
+                    <strong>{selectedPedido.forma_pago_codigo}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, fontWeight: 800 }}>
+                    <span>Total</span>
+                    <span style={{ color: 'var(--brand)' }}>{formatPrecio(selectedPedido.total)}</span>
+                  </div>
                 </div>
+
+                <div className="detail-section">
+                  <div className="detail-label">Historial de estados</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {selectedPedido.historial.map((h) => (
+                      <div key={h.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                        <div style={{
+                          width: 8, height: 8, borderRadius: '50%',
+                          background: 'var(--brand)', flexShrink: 0, marginTop: 4,
+                        }} />
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 600 }}>
+                            {getEstadoLabel(h.estado_nuevo_codigo)}
+                          </div>
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                            {formatFecha(h.fecha)} · {h.usuario_nombre}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {renderBotonesFsm(selectedPedido) && (
+                  <div className="detail-section">
+                    <div className="detail-label">Avanzar estado</div>
+                    {renderBotonesFsm(selectedPedido)}
+                  </div>
+                )}
+
               </div>
-
-              {renderBotonesFsm(selectedPedido) && (
-                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-                  <strong style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 8 }}>AVANZAR ESTADO</strong>
-                  {renderBotonesFsm(selectedPedido)}
-                </div>
-              )}
-
             </div>
           ) : (
-            <div style={{ textAlign: 'center', padding: 48, color: 'var(--text-muted)' }}>
-              Selecciona un pedido de la tabla para ver el detalle completo, auditoría y poder cambiar su estado.
+            <div className="empty-state" style={{ padding: '56px 24px' }}>
+              <h3>Sin selección</h3>
+              <p>Seleccioná un pedido para ver el detalle y gestionar su estado.</p>
             </div>
           )}
         </div>

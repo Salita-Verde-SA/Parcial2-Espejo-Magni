@@ -1,10 +1,6 @@
-// ─── components/ProductoModal.tsx ─────────────────────────────────────────────
-// Modal para crear o editar un producto.
-// El mismo componente sirve para ambos casos.
-
 import { useState, useEffect, FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createProducto, updateProducto } from '../api/productos'
+import { createProducto, updateProducto, updateStock } from '../api/productos'
 import { fetchCategorias } from '../api/categorias'
 import { fetchIngredientesAll } from '../api/ingredientes'
 import { fetchUnidades } from '../api/unidades'
@@ -34,64 +30,56 @@ export default function ProductoModal({ producto, onClose }: Props) {
   const [apiError, setApiError] = useState('')
   const [stockWarning, setStockWarning] = useState<string | null>(null)
 
-  // Fetch categorias
+  // Modo venta directa: sin ingredientes, stock manual
+  const [ventaDirecta, setVentaDirecta] = useState(false)
+  const [stockDirecto, setStockDirecto] = useState(0)
+
   const { data: categorias = [] } = useQuery({
     queryKey: ['categorias', 'all'],
     queryFn: fetchCategorias,
   })
 
-  // Fetch ingredientes (using "all" endpoint to get all ingredients)
   const { data: ingredientesData } = useQuery({
     queryKey: ['ingredientes', 'all'],
     queryFn: fetchIngredientesAll,
   })
   const ingredientes: Ingrediente[] = ingredientesData?.items ?? []
 
-  // Fetch unidades de medida
   const { data: unidades = [] } = useQuery({
     queryKey: ['unidades'],
     queryFn: fetchUnidades,
   })
 
-  // Helper to check if an ingredient is selected
   function hasIngrediente(ingId: number): boolean {
     return form.ingredientes.some(i => i.ingrediente_id === ingId)
   }
 
-  // Get unidad symbol by id
   function getUnidadSimbolo(unidadId: number | null): string {
     if (!unidadId) return ''
-    const unidad = unidades.find(u => u.id === unidadId)
-    return unidad?.simbolo ?? ''
+    return unidades.find(u => u.id === unidadId)?.simbolo ?? ''
   }
 
-  // Calcular stock del producto en tiempo real
   function calcularStockEnTiempoReal(): number {
     if (form.ingredientes.length === 0) return 0
-    
     const maxProducts: number[] = []
-    
     for (const ing of form.ingredientes) {
       const ingData = ingredientes.find(i => i.id === ing.ingrediente_id)
       if (!ingData) continue
-      
       const stock = ingData.stock_cantidad ?? 0
       const cantidad = ing.cantidad > 0 ? ing.cantidad : 1
-      
-      // floor(stock / cantidad_necesaria)
-      const productosPosibles = Math.floor(stock / cantidad)
-      maxProducts.push(productosPosibles)
+      maxProducts.push(Math.floor(stock / cantidad))
     }
-    
     if (maxProducts.length === 0) return 0
     return Math.min(...maxProducts)
   }
 
   const stockCalculado = calcularStockEnTiempoReal()
 
-  // Load producto data in edit mode
   useEffect(() => {
     if (producto) {
+      const sinIngredientes = producto.ingredientes.length === 0
+      setVentaDirecta(sinIngredientes)
+      setStockDirecto(sinIngredientes ? (producto.stock_cantidad ?? 0) : 0)
       setForm({
         nombre: producto.nombre,
         descripcion: producto.descripcion ?? '',
@@ -108,29 +96,46 @@ export default function ProductoModal({ producto, onClose }: Props) {
         })),
       })
     } else {
+      setVentaDirecta(false)
+      setStockDirecto(0)
       setForm(EMPTY)
     }
     setApiError('')
   }, [producto])
 
+  function handleToggleVentaDirecta(valor: boolean) {
+    setVentaDirecta(valor)
+    if (valor) {
+      // Limpiar ingredientes al pasar a venta directa
+      setForm(prev => ({ ...prev, ingredientes: [] }))
+      setStockWarning(null)
+    }
+  }
+
   const mutation = useMutation({
-    mutationFn: () =>
-      isEdit
-        ? updateProducto(producto!.id, {
-            nombre: form.nombre,
-            descripcion: form.descripcion || undefined,
-            precio_base: form.precio_base,
-            unidad_venta_id: form.unidad_venta_id,
-            disponible: form.disponible,
-            imagen_url: form.imagen_url || undefined,
-            categoria_ids: form.categoria_ids,
-            ingredientes: form.ingredientes,
-          })
-        : createProducto({
-            ...form,
-            descripcion: form.descripcion || undefined,
-            imagen_url: form.imagen_url || undefined,
-          }),
+    mutationFn: async () => {
+      const payload = {
+        nombre: form.nombre,
+        descripcion: form.descripcion || undefined,
+        precio_base: form.precio_base,
+        unidad_venta_id: form.unidad_venta_id,
+        disponible: form.disponible,
+        imagen_url: form.imagen_url || undefined,
+        categoria_ids: form.categoria_ids,
+        ingredientes: ventaDirecta ? [] : form.ingredientes,
+      }
+
+      const saved = isEdit
+        ? await updateProducto(producto!.id, payload)
+        : await createProducto({ ...form, ...payload })
+
+      // El stock no está en ProductoCreate/ProductoUpdate — se actualiza por endpoint dedicado
+      if (ventaDirecta) {
+        await updateStock(saved.id, { stock_cantidad: stockDirecto, disponible: form.disponible })
+      }
+
+      return saved
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['productos'] })
       qc.invalidateQueries({ queryKey: ['productos-all'] })
@@ -138,8 +143,7 @@ export default function ProductoModal({ producto, onClose }: Props) {
     },
     onError: (err: unknown) => {
       const msg =
-        (err as { response?: { data?: { detail?: string } } })?.response?.data
-          ?.detail ?? 'Error al guardar'
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Error al guardar'
       setApiError(msg)
     },
   })
@@ -147,6 +151,10 @@ export default function ProductoModal({ producto, onClose }: Props) {
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setApiError('')
+    if (!ventaDirecta && form.ingredientes.length === 0) {
+      setApiError('Modo "Con receta" requiere al menos un ingrediente. Si el producto no tiene receta, seleccioná "Venta directa".')
+      return
+    }
     mutation.mutate()
   }
 
@@ -158,7 +166,6 @@ export default function ProductoModal({ producto, onClose }: Props) {
   }
 
   function addIngrediente(ingId: number) {
-    // Agregar ingrediente con cantidad por defecto 1 y unidad "u" (pieza)
     const unidadDefault = unidades.find(u => u.simbolo === 'u')
     const newIngrediente: IngredienteCantidadInput = {
       ingrediente_id: ingId,
@@ -166,15 +173,11 @@ export default function ProductoModal({ producto, onClose }: Props) {
       unidad_medida_id: unidadDefault?.id ?? 1,
       es_removible: false,
     }
-    
-    // Verificar stock y mostrar warning si no hay suficiente
     const ing = ingredientes.find(i => i.id === ingId)
     if (ing && ing.stock_cantidad < 1) {
-      const ingNombre = ing.nombre
-      setStockWarning(`⚠️ El ingrediente "${ingNombre}" no tiene stock disponible (stock: ${ing.stock_cantidad})`)
+      setStockWarning(`El ingrediente "${ing.nombre}" no tiene stock disponible (stock: ${ing.stock_cantidad})`)
       setTimeout(() => setStockWarning(null), 4000)
     }
-    
     setForm({ ...form, ingredientes: [...form.ingredientes, newIngrediente] })
   }
 
@@ -183,24 +186,30 @@ export default function ProductoModal({ producto, onClose }: Props) {
   }
 
   function updateCantidad(ingId: number, cantidad: number) {
-    const newIngredientes = form.ingredientes.map(i =>
-      i.ingrediente_id === ingId ? { ...i, cantidad: Math.max(0.001, cantidad) } : i
-    )
-    setForm({ ...form, ingredientes: newIngredientes })
+    setForm({
+      ...form,
+      ingredientes: form.ingredientes.map(i =>
+        i.ingrediente_id === ingId ? { ...i, cantidad: Math.max(0.001, cantidad) } : i
+      ),
+    })
   }
 
   function updateUnidadMedida(ingId: number, unidadId: number) {
-    const newIngredientes = form.ingredientes.map(i =>
-      i.ingrediente_id === ingId ? { ...i, unidad_medida_id: unidadId } : i
-    )
-    setForm({ ...form, ingredientes: newIngredientes })
+    setForm({
+      ...form,
+      ingredientes: form.ingredientes.map(i =>
+        i.ingrediente_id === ingId ? { ...i, unidad_medida_id: unidadId } : i
+      ),
+    })
   }
 
   function toggleEsRemovible(ingId: number) {
-    const newIngredientes = form.ingredientes.map(i =>
-      i.ingrediente_id === ingId ? { ...i, es_removible: !i.es_removible } : i
-    )
-    setForm({ ...form, ingredientes: newIngredientes })
+    setForm({
+      ...form,
+      ingredientes: form.ingredientes.map(i =>
+        i.ingrediente_id === ingId ? { ...i, es_removible: !i.es_removible } : i
+      ),
+    })
   }
 
   const loading = mutation.isPending
@@ -209,9 +218,7 @@ export default function ProductoModal({ producto, onClose }: Props) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 650 }}>
         <div className="modal-header">
-          <span className="modal-title">
-            {isEdit ? 'Editar Producto' : 'Nuevo Producto'}
-          </span>
+          <span className="modal-title">{isEdit ? 'Editar Producto' : 'Nuevo Producto'}</span>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
 
@@ -219,11 +226,10 @@ export default function ProductoModal({ producto, onClose }: Props) {
           <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
             {apiError && <div className="alert alert-danger">{apiError}</div>}
             {stockWarning && (
-              <div className="alert alert-warning" style={{ marginBottom: 12 }}>
-                {stockWarning}
-              </div>
+              <div className="alert alert-danger" style={{ marginBottom: 12 }}>{stockWarning}</div>
             )}
 
+            {/* Nombre */}
             <div className="form-group">
               <label className="form-label">
                 Nombre <span style={{ color: 'var(--danger)' }}>*</span>
@@ -240,6 +246,7 @@ export default function ProductoModal({ producto, onClose }: Props) {
               />
             </div>
 
+            {/* Descripción */}
             <div className="form-group">
               <label className="form-label">Descripción</label>
               <textarea
@@ -252,6 +259,7 @@ export default function ProductoModal({ producto, onClose }: Props) {
               />
             </div>
 
+            {/* Precio / Unidad / Stock */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
               <div className="form-group">
                 <label className="form-label">
@@ -278,36 +286,36 @@ export default function ProductoModal({ producto, onClose }: Props) {
                 >
                   <option value="">Sin unidad (por pieza)</option>
                   {unidades.map((u: UnidadMedida) => (
-                    <option key={u.id} value={u.id}>
-                      {u.simbolo} - {u.nombre}
-                    </option>
+                    <option key={u.id} value={u.id}>{u.simbolo} - {u.nombre}</option>
                   ))}
                 </select>
               </div>
 
               <div className="form-group">
                 <label className="form-label">Stock calculado</label>
-                {form.ingredientes.length > 0 ? (
-                  <div style={{ 
-                    padding: '8px 12px', 
-                    background: stockCalculado > 0 ? 'var(--bg-light)' : 'rgba(220, 53, 69, 0.1)', 
-                    borderRadius: 4,
-                    border: `1px solid ${stockCalculado > 0 ? 'var(--border)' : 'var(--danger)'}`,
-                    color: stockCalculado > 0 ? 'var(--success)' : 'var(--danger)',
-                    fontSize: 18,
-                    fontWeight: 'bold'
+                {ventaDirecta ? (
+                  <div style={{
+                    padding: '8px 12px', borderRadius: 6,
+                    background: 'var(--surface-alt)', border: '1px solid var(--border)',
+                    color: 'var(--text-muted)', fontSize: 13, fontStyle: 'italic',
                   }}>
-                    {stockCalculado} {stockCalculado === 1 ? 'unidad' : 'unidades'} disponibles
+                    Manual (venta directa)
+                  </div>
+                ) : form.ingredientes.length > 0 ? (
+                  <div style={{
+                    padding: '8px 12px', borderRadius: 6,
+                    background: stockCalculado > 0 ? 'var(--success-bg)' : 'var(--danger-bg)',
+                    border: `1px solid ${stockCalculado > 0 ? '#BBF7D0' : '#FECACA'}`,
+                    color: stockCalculado > 0 ? 'var(--success)' : 'var(--danger)',
+                    fontSize: 15, fontWeight: 700,
+                  }}>
+                    {stockCalculado} {stockCalculado === 1 ? 'unidad' : 'unidades'}
                   </div>
                 ) : (
-                  <div style={{ 
-                    padding: '8px 12px', 
-                    background: 'var(--bg-light)', 
-                    borderRadius: 4,
-                    border: '1px solid var(--border)',
-                    color: 'var(--danger)',
-                    fontSize: 13,
-                    fontStyle: 'italic'
+                  <div style={{
+                    padding: '8px 12px', borderRadius: 6,
+                    background: 'var(--surface-alt)', border: '1px solid var(--border)',
+                    color: 'var(--danger)', fontSize: 13, fontStyle: 'italic',
                   }}>
                     Sin ingredientes
                   </div>
@@ -315,6 +323,7 @@ export default function ProductoModal({ producto, onClose }: Props) {
               </div>
             </div>
 
+            {/* URL imagen */}
             <div className="form-group">
               <label className="form-label">URL de imagen</label>
               <input
@@ -326,6 +335,7 @@ export default function ProductoModal({ producto, onClose }: Props) {
               />
             </div>
 
+            {/* Disponible */}
             <div className="form-group">
               <label className="checkbox-row">
                 <input
@@ -333,12 +343,11 @@ export default function ProductoModal({ producto, onClose }: Props) {
                   checked={form.disponible}
                   onChange={(e) => setForm({ ...form, disponible: e.target.checked })}
                 />
-                <span className="form-label" style={{ marginBottom: 0 }}>
-                  Disponible para venta
-                </span>
+                <span className="form-label" style={{ marginBottom: 0 }}>Disponible para venta</span>
               </label>
             </div>
 
+            {/* Categorías */}
             <div className="form-group">
               <label className="form-label">Categorías</label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -355,113 +364,165 @@ export default function ProductoModal({ producto, onClose }: Props) {
               </div>
             </div>
 
+            {/* Toggle: Con receta vs Venta directa */}
             <div className="form-group">
-              <label className="form-label">Ingredientes de receta</label>
-              
-              {/* Lista de ingredientes seleccionados con cantidad y unidad */}
-              {form.ingredientes.length > 0 && (
-                <div style={{ marginBottom: 12, padding: 8, background: 'var(--bg-light)', borderRadius: 6 }}>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
-                    Ingredientes seleccionados:
-                  </div>
-                  {form.ingredientes.map((ing) => {
-                    const ingInfo = ingredientes.find(i => i.id === ing.ingrediente_id)
-                    const simbolo = getUnidadSimbolo(ing.unidad_medida_id)
-                    const stockActual = ingInfo?.stock_cantidad ?? 0
-                    const tieneStock = stockActual >= ing.cantidad
-                    
-                    return (
-                      <div key={ing.ingrediente_id} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        marginBottom: 6,
-                        flexWrap: 'wrap',
-                        padding: tieneStock ? 0 : '4px 8px',
-                        background: tieneStock ? 'transparent' : 'rgba(220, 53, 69, 0.1)',
-                        borderRadius: 4,
-                        border: tieneStock ? 'none' : '1px solid var(--danger)'
-                      }}>
-                        <span style={{ flex: 1, minWidth: 100, color: tieneStock ? 'inherit' : 'var(--danger)' }}>
-                          {ingInfo?.nombre ?? `ID ${ing.ingrediente_id}`}
-                          {!tieneStock && <span style={{ fontSize: 11, marginLeft: 4 }}>⚠️ Sin stock</span>}
-                        </span>
-                        
-                        {/* Stock actual del ingrediente */}
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)', marginRight: 4 }}>
-                          Stock: {stockActual}
-                        </span>
-                        
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
-                          Cant:
-                          <input
-                            type="number"
-                            min="0.001"
-                            step="0.001"
-                            style={{ width: 60, padding: '4px 6px', borderRadius: 4, border: '1px solid var(--border)' }}
-                            value={ing.cantidad}
-                            onChange={(e) => updateCantidad(ing.ingrediente_id, parseFloat(e.target.value) || 0.001)}
-                          />
-                        </label>
-                        {simbolo && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{simbolo}</span>}
-                        <select
-                          style={{ padding: '4px 6px', borderRadius: 4, border: '1px solid var(--border)', fontSize: 13 }}
-                          value={ing.unidad_medida_id}
-                          onChange={(e) => updateUnidadMedida(ing.ingrediente_id, Number(e.target.value))}
-                        >
-                          {unidades.map((u: UnidadMedida) => (
-                            <option key={u.id} value={u.id}>
-                              {u.simbolo}
-                            </option>
-                          ))}
-                        </select>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
-                          <input
-                            type="checkbox"
-                            checked={ing.es_removible}
-                            onChange={() => toggleEsRemovible(ing.ingrediente_id)}
-                          />
-                          Remov.
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => removeIngrediente(ing.ingrediente_id)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: 'var(--danger)',
-                            cursor: 'pointer',
-                            fontSize: 18,
-                            padding: '0 4px'
-                          }}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-              
-              {/* Checkboxes para agregar ingredientes */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: 120, overflowY: 'auto' }}>
-                {ingredientes.map((ing: Ingrediente) => (
-                  <label key={ing.id} className="checkbox-row" style={{ gap: 6, opacity: ing.stock_cantidad > 0 ? 1 : 0.5 }}>
-                    <input
-                      type="checkbox"
-                      checked={hasIngrediente(ing.id)}
-                      onChange={() => hasIngrediente(ing.id) ? removeIngrediente(ing.id) : addIngrediente(ing.id)}
-                      disabled={ing.stock_cantidad === 0}
-                    />
-                    <span title={`Stock: ${ing.stock_cantidad}`}>
-                      {ing.nombre}
-                      {ing.stock_cantidad > 0 && <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 4 }}>({ing.stock_cantidad})</span>}
-                      {ing.stock_cantidad === 0 && <span style={{ fontSize: 10, color: 'var(--danger)', marginLeft: 4 }}>(sin stock)</span>}
-                    </span>
-                  </label>
-                ))}
+              <label className="form-label">Tipo de stock</label>
+              <div className="view-toggle" style={{ width: 'fit-content' }}>
+                <button
+                  type="button"
+                  className={`view-toggle-btn ${!ventaDirecta ? 'active' : ''}`}
+                  onClick={() => handleToggleVentaDirecta(false)}
+                >
+                  Con receta
+                </button>
+                <button
+                  type="button"
+                  className={`view-toggle-btn ${ventaDirecta ? 'active' : ''}`}
+                  onClick={() => handleToggleVentaDirecta(true)}
+                >
+                  Venta directa
+                </button>
               </div>
+              <span className="form-hint" style={{ marginTop: 6 }}>
+                {ventaDirecta
+                  ? 'El stock se ingresa manualmente. Ideal para bebidas, productos envasados, etc.'
+                  : 'El stock se calcula automáticamente según los ingredientes de la receta.'}
+              </span>
             </div>
+
+            {/* Stock manual (solo en venta directa) */}
+            {ventaDirecta && (
+              <div className="form-group">
+                <label className="form-label">
+                  Stock disponible <span style={{ color: 'var(--danger)' }}>*</span>
+                </label>
+                <input
+                  className="form-input"
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="0"
+                  value={stockDirecto}
+                  max={99999}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value)
+                    if (isNaN(val) || val < 0) { setStockDirecto(0); return }
+                    if (val > 99999) { setApiError('El stock no puede superar 99.999 unidades.'); return }
+                    setApiError('')
+                    setStockDirecto(val)
+                  }}
+                  required={ventaDirecta}
+                  style={{ maxWidth: 180 }}
+                />
+                <span className="form-hint">Cantidad de unidades disponibles en stock.</span>
+              </div>
+            )}
+
+            {/* Ingredientes de receta (solo cuando NO es venta directa) */}
+            {!ventaDirecta && (
+              <div className="form-group">
+                <label className="form-label">Ingredientes de receta</label>
+
+                {form.ingredientes.length > 0 && (
+                  <div style={{
+                    marginBottom: 12, padding: 12,
+                    background: 'var(--surface-alt)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 8,
+                  }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 10 }}>
+                      Ingredientes seleccionados
+                    </div>
+                    {form.ingredientes.map((ing) => {
+                      const ingInfo = ingredientes.find(i => i.id === ing.ingrediente_id)
+                      const simbolo = getUnidadSimbolo(ing.unidad_medida_id)
+                      const stockActual = ingInfo?.stock_cantidad ?? 0
+                      const tieneStock = stockActual >= ing.cantidad
+
+                      return (
+                        <div key={ing.ingrediente_id} style={{
+                          display: 'flex', alignItems: 'center', gap: 8,
+                          marginBottom: 8, flexWrap: 'wrap',
+                          padding: '6px 8px',
+                          background: tieneStock ? 'var(--surface)' : 'var(--danger-bg)',
+                          borderRadius: 6,
+                          border: `1px solid ${tieneStock ? 'var(--border)' : '#FECACA'}`,
+                        }}>
+                          <span style={{ flex: 1, minWidth: 100, fontSize: 13, fontWeight: 500, color: tieneStock ? 'var(--text)' : 'var(--danger)' }}>
+                            {ingInfo?.nombre ?? `ID ${ing.ingrediente_id}`}
+                            {!tieneStock && <span style={{ fontSize: 11, marginLeft: 4, fontWeight: 400 }}>(sin stock)</span>}
+                          </span>
+
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                            Stock: {stockActual}
+                          </span>
+
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+                            Cant:
+                            <input
+                              type="number"
+                              min="0.001"
+                              step="0.001"
+                              style={{ width: 60, padding: '4px 6px', borderRadius: 6, border: '1.5px solid var(--border)', fontSize: 13 }}
+                              value={ing.cantidad}
+                              onChange={(e) => updateCantidad(ing.ingrediente_id, parseFloat(e.target.value) || 0.001)}
+                            />
+                          </label>
+
+                          {simbolo && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{simbolo}</span>}
+
+                          <select
+                            style={{ padding: '4px 6px', borderRadius: 6, border: '1.5px solid var(--border)', fontSize: 13 }}
+                            value={ing.unidad_medida_id}
+                            onChange={(e) => updateUnidadMedida(ing.ingrediente_id, Number(e.target.value))}
+                          >
+                            {unidades.map((u: UnidadMedida) => (
+                              <option key={u.id} value={u.id}>{u.simbolo}</option>
+                            ))}
+                          </select>
+
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-muted)' }}>
+                            <input
+                              type="checkbox"
+                              checked={ing.es_removible}
+                              onChange={() => toggleEsRemovible(ing.ingrediente_id)}
+                            />
+                            Removible
+                          </label>
+
+                          <button
+                            type="button"
+                            onClick={() => removeIngrediente(ing.ingrediente_id)}
+                            style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 18, padding: '0 4px', lineHeight: 1 }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: 130, overflowY: 'auto', padding: 4 }}>
+                  {ingredientes.map((ing: Ingrediente) => (
+                    <label key={ing.id} className="checkbox-row" style={{ gap: 6, opacity: ing.stock_cantidad > 0 ? 1 : 0.5 }}>
+                      <input
+                        type="checkbox"
+                        checked={hasIngrediente(ing.id)}
+                        onChange={() => hasIngrediente(ing.id) ? removeIngrediente(ing.id) : addIngrediente(ing.id)}
+                        disabled={ing.stock_cantidad === 0}
+                      />
+                      <span title={`Stock: ${ing.stock_cantidad}`} style={{ fontSize: 13 }}>
+                        {ing.nombre}
+                        <span style={{ fontSize: 10, color: ing.stock_cantidad > 0 ? 'var(--text-muted)' : 'var(--danger)', marginLeft: 4 }}>
+                          ({ing.stock_cantidad})
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="modal-footer">
