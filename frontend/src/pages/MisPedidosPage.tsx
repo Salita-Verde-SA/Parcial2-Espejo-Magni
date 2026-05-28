@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchPedidos, cancelarPedido } from '../api/pedidos'
 import { usePedidosWebSocket } from '../hooks/usePedidosWebSocket'
+import ConfirmDialog from '../features/ui/components/ConfirmDialog'
 import type { PedidoPublic, PaginatedPedidos } from '../types'
 
 export default function MisPedidosPage() {
@@ -11,6 +12,8 @@ export default function MisPedidosPage() {
   const [page, setPage] = useState(1)
   const [selectedPedido, setSelectedPedido] = useState<PedidoPublic | null>(null)
   const [errorMsg, setErrorMsg] = useState('')
+  // ID del pedido pendiente de confirmar cancelación (null → no hay diálogo abierto)
+  const [cancelTargetId, setCancelTargetId] = useState<number | null>(null)
 
   const { data: response, isLoading } = useQuery<PaginatedPedidos>({
     queryKey: ['pedidos', page],
@@ -33,16 +36,17 @@ export default function MisPedidosPage() {
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ['pedidos'] })
       setSelectedPedido(updated)
+      setCancelTargetId(null)
     },
     onError: (err: any) => {
       setErrorMsg(err.response?.data?.detail || 'Error al cancelar el pedido')
+      setCancelTargetId(null)
     },
   })
 
   function handleCancelar(id: number) {
-    if (confirm('¿Estás seguro de que deseas cancelar este pedido?')) {
-      cancelMutation.mutate(id)
-    }
+    // En vez del confirm() del navegador, abrimos el ConfirmDialog
+    setCancelTargetId(id)
   }
 
   const formatPrecio = (n: number | string) =>
@@ -234,6 +238,25 @@ export default function MisPedidosPage() {
         </div>
 
       </div>
+
+      {cancelTargetId !== null && (
+        <ConfirmDialog
+          message={
+            <>
+              ¿Confirmás la <strong>cancelación</strong> del pedido <strong>#{cancelTargetId}</strong>?
+              <br />
+              <span style={{ fontSize: 12, marginTop: 8, display: 'block' }}>
+                Esta acción no se puede deshacer.
+              </span>
+            </>
+          }
+          confirmLabel="Cancelar pedido"
+          confirmVariant="danger"
+          loading={cancelMutation.isPending}
+          onConfirm={() => cancelMutation.mutate(cancelTargetId)}
+          onCancel={() => setCancelTargetId(null)}
+        />
+      )}
     </>
   )
 }
