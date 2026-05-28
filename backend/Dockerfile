@@ -25,6 +25,7 @@ WORKDIR /app
 # Instalar solo runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar dependencias instaladas del builder
@@ -36,7 +37,7 @@ COPY app/ ./app/
 
 # Copiar script de entrypoint
 COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+RUN sed -i 's/\r$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
 
 # Exponer puerto
 EXPOSE 8000
