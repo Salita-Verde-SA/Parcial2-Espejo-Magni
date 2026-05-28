@@ -518,60 +518,7 @@ tbody td {
 .alert-danger  { background: var(--danger-bg);  color: #991B1B; border: 1px solid #FECACA; }
 .alert-success { background: var(--success-bg); color: #166534; border: 1px solid #BBF7D0; }
 
-/* ─── Login ─────────────────────────────────────────────────────────────────── */
-.login-page {
-  min-height: 100vh;
-  background: var(--navbar-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-
-.login-page::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: radial-gradient(ellipse at 65% 40%, rgba(204,31,31,.15) 0%, transparent 65%);
-  pointer-events: none;
-}
-
-.login-card {
-  background: var(--surface);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  padding: 40px 36px;
-  width: 100%;
-  max-width: 380px;
-  position: relative;
-  z-index: 1;
-}
-
-.login-logo {
-  text-align: center;
-  margin-bottom: 32px;
-}
-
-.login-logo-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px; height: 56px;
-  background: var(--brand);
-  border-radius: 16px;
-  margin-bottom: 14px;
-  font-size: 19px;
-  font-weight: 900;
-  color: #fff;
-  letter-spacing: -.5px;
-  box-shadow: 0 8px 24px rgba(204,31,31,.3);
-}
-
-.login-logo h1 { font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -.3px; }
-.login-logo p  { color: var(--text-muted); font-size: 13px; margin-top: 5px; }
-
-.login-card .form-input { width: 100%; }
-.login-card .btn-primary { width: 100%; justify-content: center; padding: 12px; font-size: 15px; margin-top: 4px; }
+/* ─── Login (Migrated to Tailwind in LoginPage.tsx) ────────────────────────── */
 
 /* ─── Empty state ───────────────────────────────────────────────────────────── */
 .empty-state {
