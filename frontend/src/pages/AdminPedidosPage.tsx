@@ -2,7 +2,17 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchPedidos, patchPedidoEstado, fetchPedido } from '../api/pedidos'
 import { usePedidosWebSocket } from '../hooks/usePedidosWebSocket'
+import ConfirmDialog from '../features/ui/components/ConfirmDialog'
 import type { PedidoPublic, PaginatedPedidos } from '../types'
+
+// Etiquetas legibles para mostrar en el diálogo de confirmación
+const ESTADO_LABELS: Record<string, string> = {
+  CONFIRMADO: 'Confirmado',
+  EN_PREP: 'En Preparación',
+  EN_CAMINO: 'En Camino',
+  ENTREGADO: 'Entregado',
+  CANCELADO: 'Cancelado',
+}
 
 export default function AdminPedidosPage() {
   const queryClient = useQueryClient()
@@ -12,6 +22,8 @@ export default function AdminPedidosPage() {
   const [estadoFiltro, setEstadoFiltro] = useState('')
   const [selectedPedidoId, setSelectedPedidoId] = useState<number | null>(null)
   const [errorMsg, setErrorMsg] = useState('')
+  // Transición pendiente de confirmar (null → no hay diálogo abierto)
+  const [pendingTransition, setPendingTransition] = useState<{ id: number; nuevoEstado: string } | null>(null)
 
   const { data: response, isLoading } = useQuery<PaginatedPedidos>({
     queryKey: ['admin-pedidos', estadoFiltro, page],
@@ -37,16 +49,17 @@ export default function AdminPedidosPage() {
       queryClient.setQueryData(['pedido-detalle', updated.id], updated)
       queryClient.invalidateQueries({ queryKey: ['admin-pedidos'] })
       setErrorMsg('')
+      setPendingTransition(null)
     },
     onError: (err: any) => {
       setErrorMsg(err.response?.data?.detail || 'Error al actualizar el estado del pedido')
+      setPendingTransition(null)
     },
   })
 
   function handleTransition(id: number, nuevoEstado: string) {
-    if (confirm(`¿Estás seguro de que deseas pasar el pedido a estado: ${nuevoEstado}?`)) {
-      stateMutation.mutate({ id, nuevoEstado })
-    }
+    // En vez del confirm() del navegador, abrimos el ConfirmDialog
+    setPendingTransition({ id, nuevoEstado })
   }
 
   const formatPrecio = (n: number | string) =>
@@ -347,6 +360,32 @@ export default function AdminPedidosPage() {
         </div>
 
       </div>
+
+      {pendingTransition && (
+        <ConfirmDialog
+          message={
+            pendingTransition.nuevoEstado === 'CANCELADO' ? (
+              <>
+                ¿Confirmás la <strong>cancelación</strong> del pedido <strong>#{pendingTransition.id}</strong>?
+                <br />
+                <span style={{ fontSize: 12, marginTop: 8, display: 'block' }}>
+                  Esta acción no se puede deshacer.
+                </span>
+              </>
+            ) : (
+              <>
+                ¿Confirmás pasar el pedido <strong>#{pendingTransition.id}</strong> al estado{' '}
+                <strong>"{ESTADO_LABELS[pendingTransition.nuevoEstado] ?? pendingTransition.nuevoEstado}"</strong>?
+              </>
+            )
+          }
+          confirmLabel={pendingTransition.nuevoEstado === 'CANCELADO' ? 'Cancelar pedido' : 'Confirmar'}
+          confirmVariant={pendingTransition.nuevoEstado === 'CANCELADO' ? 'danger' : 'primary'}
+          loading={stateMutation.isPending}
+          onConfirm={() => stateMutation.mutate(pendingTransition)}
+          onCancel={() => setPendingTransition(null)}
+        />
+      )}
     </>
   )
 }
