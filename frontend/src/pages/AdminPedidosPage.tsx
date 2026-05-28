@@ -7,7 +7,7 @@ import type { PedidoPublic, PaginatedPedidos } from '../types'
 export default function AdminPedidosPage() {
   const queryClient = useQueryClient()
   usePedidosWebSocket()
-  
+
   const [page, setPage] = useState(1)
   const [estadoFiltro, setEstadoFiltro] = useState('')
   const [selectedPedidoId, setSelectedPedidoId] = useState<number | null>(null)
@@ -103,8 +103,8 @@ export default function AdminPedidosPage() {
         return (
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
             <button
-              className="btn btn-warning"
-              style={{ flex: 1, color: '#fff' }}
+              className="btn btn-warning bg-orange-500"
+              style={{ flex: 1, color: '#ffffffff' }}
               onClick={() => handleTransition(p.id, 'EN_PREP')}
             >
               👨‍🍳 Iniciar Preparación
@@ -168,11 +168,11 @@ export default function AdminPedidosPage() {
       </header>
 
       <div className="page-wrapper" style={{ display: 'grid', gridTemplateColumns: '1fr 420px', gap: 24, alignItems: 'start' }}>
-        
+
         <div className="card" style={{ padding: 24 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h3 style={{ margin: 0, fontSize: 18 }}>Pedidos del Sistema</h3>
-            
+
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <label style={{ fontSize: 12, fontWeight: 600 }}>Filtrar Estado:</label>
               <select

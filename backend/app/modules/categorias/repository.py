@@ -49,6 +49,16 @@ class CategoriaRepository(BaseRepository[Categoria]):
             is not None
         )
 
+    def has_active_children(self, categoria_id: int) -> bool:
+        return (
+            self.session.exec(
+                select(Categoria)
+                .where(Categoria.parent_id == categoria_id)
+                .where(Categoria.deleted_at.is_(None))
+            ).first()
+            is not None
+        )
+
     def soft_delete(self, categoria: Categoria) -> None:
         categoria.deleted_at = datetime.now(timezone.utc)
         self.session.add(categoria)

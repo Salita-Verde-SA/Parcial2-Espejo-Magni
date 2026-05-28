@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { fetchDirecciones, createDireccion } from '../api/direcciones'
 import { createPedido } from '../api/pedidos'
 import { useCartStore } from '../stores/cartStore'
+import MercadoPagoForm from '../features/store/components/MercadoPagoForm'
 import type { DireccionCreate, DireccionPublic } from '../types'
 
 export default function CheckoutPage() {
@@ -13,6 +14,7 @@ export default function CheckoutPage() {
   
   const [selectedDirId, setSelectedDirId] = useState<number | null>(null)
   const [formaPago, setFormaPago] = useState<string>('EFECTIVO')
+  const [createdPedidoId, setCreatedPedidoId] = useState<number | null>(null)
   const [errorMsg, setErrorMsg] = useState<string>('')
 
   const [showNewDirForm, setShowNewDirForm] = useState(false)
@@ -65,9 +67,13 @@ export default function CheckoutPage() {
 
   const createPedidoMutation = useMutation({
     mutationFn: createPedido,
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       clearCart()
-      navigate('/mis-pedidos')
+      if (formaPago === 'MERCADOPAGO') {
+        setCreatedPedidoId(data.id)
+      } else {
+        navigate('/mis-pedidos')
+      }
     },
     onError: (err: any) => {
       setErrorMsg(err.response?.data?.detail || 'Error al procesar el pedido')
@@ -131,6 +137,15 @@ export default function CheckoutPage() {
         <span className="topbar-title">Finalizar Pedido</span>
       </header>
 
+      {createdPedidoId ? (
+        <div className="page-wrapper" style={{ maxWidth: 600, margin: '0 auto', paddingTop: 32 }}>
+          <h2 style={{ textAlign: 'center', marginBottom: 24 }}>Pagar Pedido #{createdPedidoId}</h2>
+          <MercadoPagoForm 
+            pedidoId={createdPedidoId} 
+            onSuccess={() => navigate('/mis-pedidos')} 
+          />
+        </div>
+      ) : (
       <div className="page-wrapper" style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 24, alignItems: 'start' }}>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -404,6 +419,7 @@ export default function CheckoutPage() {
         </div>
 
       </div>
+      )}
     </>
   )
 }

@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './stores/authStore'
 import LoginPage from './pages/LoginPage'
-import Layout from './components/Layout'
+import Layout from './features/ui/components/Layout'
 import CatalogoPage from './pages/CatalogoPage'
 import IngredientesPage from './pages/IngredientesPage'
 import ProductosPage from './pages/ProductosPage'
@@ -10,6 +10,23 @@ import CheckoutPage from './pages/CheckoutPage'
 import MisPedidosPage from './pages/MisPedidosPage'
 import AdminPedidosPage from './pages/AdminPedidosPage'
 import AdminUsuariosPage from './pages/AdminUsuariosPage'
+import DashboardPage from './pages/DashboardPage'
+import { initUser } from './api/auth'
+import { useEffect, useState } from 'react'
+
+function AppInitializer({ children }: { children: React.ReactNode }) {
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    initUser().finally(() => setLoading(false))
+  }, [])
+
+  if (loading) {
+    return <div style={{ display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center' }}>Cargando...</div>
+  }
+
+  return <>{children}</>
+}
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token)
@@ -27,6 +44,7 @@ function RequireRole({ roles, children }: { roles: string[]; children: React.Rea
 export default function App() {
   return (
     <BrowserRouter>
+      <AppInitializer>
       <Routes>
 
         <Route path="/login" element={<LoginPage />} />
@@ -66,11 +84,16 @@ export default function App() {
           <Route path="admin/pedidos" element={
             <RequireRole roles={['ADMIN', 'PEDIDOS']}><AdminPedidosPage /></RequireRole>
           } />
+
+          <Route path="admin/dashboard" element={
+            <RequireRole roles={['ADMIN']}><DashboardPage /></RequireRole>
+          } />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
 
       </Routes>
+      </AppInitializer>
     </BrowserRouter>
   )
 }

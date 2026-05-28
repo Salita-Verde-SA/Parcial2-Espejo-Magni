@@ -15,7 +15,9 @@ from app.modules.categorias.model import (
 
 
 def _to_public(c: Categoria, uow: UnitOfWork) -> CategoriaPublic:
-    in_use = uow.categorias.has_active_products(c.id) if c.id else False
+    has_prods = uow.categorias.has_active_products(c.id) if c.id else False
+    has_children = uow.categorias.has_active_children(c.id) if c.id else False
+    in_use = has_prods or has_children
     return CategoriaPublic(
         id=c.id,
         nombre=c.nombre,
@@ -116,6 +118,11 @@ def delete_categoria(cat_id: int, uow: UnitOfWork) -> None:
             raise HTTPException(
                 status_code=409,
                 detail="No se puede eliminar: la categoría tiene productos activos",
+            )
+        if uow.categorias.has_active_children(cat_id):
+            raise HTTPException(
+                status_code=409,
+                detail="No se puede eliminar: la categoría tiene subcategorías activas",
             )
         uow.categorias.soft_delete(cat)
 

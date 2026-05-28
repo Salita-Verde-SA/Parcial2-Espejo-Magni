@@ -3,6 +3,10 @@ from typing import Optional
 
 from app.core.uow import UnitOfWork
 from app.modules.usuarios.model import Usuario, UserUpdate, PaginatedUsuarios, UserPublic
+from app.modules.productos.model import Producto
+from app.modules.pedidos.model import Pedido
+from app.modules.admin.schema import DashboardData
+from sqlalchemy import func
 
 
 def _to_public(u: Usuario, roles: list[str]) -> UserPublic:
@@ -65,3 +69,27 @@ def delete_usuario_admin(user_id: int, uow: UnitOfWork) -> None:
         
         # Eliminación lógica (soft delete)
         uow.usuarios.soft_delete(user)
+
+def get_dashboard_data(uow: UnitOfWork) -> DashboardData:
+    with uow:
+        session = uow.session
+        
+        total_usuarios = session.query(Usuario).filter(Usuario.deleted_at == None).count()
+        total_productos = session.query(Producto).filter(Producto.deleted_at == None).count()
+        total_pedidos = session.query(Pedido).filter(Pedido.deleted_at == None).count()
+        
+        pedidos_estado_counts = (
+            session.query(Pedido.estado_codigo, func.count(Pedido.id))
+            .filter(Pedido.deleted_at == None)
+            .group_by(Pedido.estado_codigo)
+            .all()
+        )
+        
+        pedidos_por_estado = {k: v for k, v in pedidos_estado_counts}
+        
+        return DashboardData(
+            total_pedidos=total_pedidos,
+            total_productos=total_productos,
+            total_usuarios=total_usuarios,
+            pedidos_por_estado=pedidos_por_estado
+        )

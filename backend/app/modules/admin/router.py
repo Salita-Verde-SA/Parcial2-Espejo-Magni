@@ -9,9 +9,19 @@ from app.modules.admin.service import (
     list_usuarios_admin,
     update_usuario_admin,
     delete_usuario_admin,
+    get_dashboard_data,
 )
+from app.modules.admin.schema import DashboardData
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
+
+@router.get(
+    "/dashboard",
+    response_model=DashboardData,
+    dependencies=[Depends(require_roles(["ADMIN"]))],
+)
+def get_dashboard(uow: Annotated[UnitOfWork, Depends(get_uow)]):
+    return get_dashboard_data(uow)
 
 
 @router.get(

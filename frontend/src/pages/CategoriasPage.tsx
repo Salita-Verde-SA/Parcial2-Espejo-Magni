@@ -1,73 +1,55 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchCategoriasAll, fetchCategoriasTree, deleteCategoria, activateCategoria } from '../api/categorias'
+import { fetchCategoriasAll, deleteCategoria, activateCategoria } from '../api/categorias'
 import { useAuthStore } from '../stores/authStore'
-import CategoriaTreeModal from '../components/CategoriaTreeModal'
-import CategoriaModal from '../components/CategoriaModal'
-import ConfirmDialog from '../components/ConfirmDialog'
+import CategoriaModal from '../features/admin/components/CategoriaModal'
+import ConfirmDialog from '../features/ui/components/ConfirmDialog'
 import type { Categoria, CategoriaTree } from '../types'
-
-interface FiltrosCategorias {
-  nombre: string
-  page: number
-  page_size: number
-}
-
-const DEFAULT_FILTROS: FiltrosCategorias = {
-  nombre: '',
-  page: 1,
-  page_size: 10,
-}
-
-function formatFecha(iso: string) {
-  return new Date(iso).toLocaleDateString('es-AR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  })
-}
 
 export default function CategoriasPage() {
   const isAdmin = useAuthStore((s) => s.isAdmin())
   const qc = useQueryClient()
 
-  const [filtros, setFiltros] = useState<FiltrosCategorias>(DEFAULT_FILTROS)
-  const [filtrosDraft, setFiltrosDraft] = useState<FiltrosCategorias>(DEFAULT_FILTROS)
-
   const [modalOpen, setModalOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Categoria | null>(null)
+  const [initialParentId, setInitialParentId] = useState<number | null>(null)
+  
   const [deleteTarget, setDeleteTarget] = useState<Categoria | null>(null)
-  const [treeModalOpen, setTreeModalOpen] = useState(false)
-  const [selectedCategoria, setSelectedCategoria] = useState<CategoriaTree | null>(null)
+  
+  // Guardamos qué ramas están expandidas
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set())
 
   const { data: allCategorias = [], isLoading, isError } = useQuery({
     queryKey: ['categorias-all'],
-    queryFn: () => fetchCategoriasAll(),
+    queryFn: fetchCategoriasAll,
   })
 
-  const { data: treeData = [] } = useQuery({
-    queryKey: ['categorias-tree'],
-    queryFn: () => fetchCategoriasTree(),
-  })
+  const treeData = useMemo(() => {
+    const map = new Map<number, CategoriaTree>()
+    const roots: CategoriaTree[] = []
 
-  const filteredCategorias = allCategorias.filter(cat => {
-    if (filtros.nombre && !cat.nombre.toLowerCase().includes(filtros.nombre.toLowerCase())) {
-      return false
-    }
-    return true
-  })
+    // Asegurar ordenamiento consistente (ej. por ID)
+    const sorted = [...allCategorias].sort((a, b) => a.id - b.id)
 
-  const sortedCategorias = [...filteredCategorias].sort((a, b) => {
-    if (a.deleted_at && !b.deleted_at) return 1
-    if (!a.deleted_at && b.deleted_at) return -1
-    return a.id - b.id
-  })
+    sorted.forEach(cat => {
+      map.set(cat.id, { ...cat, hijos: [] })
+    })
 
-  const total = sortedCategorias.length
-  const totalPages = Math.ceil(total / filtros.page_size)
-  const start = (filtros.page - 1) * filtros.page_size
-  const end = start + filtros.page_size
-  const paginatedCategorias = sortedCategorias.slice(start, end)
+    sorted.forEach(cat => {
+      if (cat.parent_id !== null) {
+        const parent = map.get(cat.parent_id)
+        if (parent) {
+          parent.hijos.push(map.get(cat.id)!)
+        } else {
+          roots.push(map.get(cat.id)!)
+        }
+      } else {
+        roots.push(map.get(cat.id)!)
+      }
+    })
+
+    return roots
+  }, [allCategorias])
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteCategoria(id),
@@ -86,90 +68,166 @@ export default function CategoriasPage() {
     },
   })
 
-  function handleSearch() {
-    setFiltros({ ...filtrosDraft, page: 1 })
-  }
-
-  function handleReset() {
-    setFiltrosDraft(DEFAULT_FILTROS)
-    setFiltros(DEFAULT_FILTROS)
-  }
-
-  function handlePage(p: number) {
-    setFiltros((prev) => ({ ...prev, page: p }))
-  }
-
   function handleEdit(cat: Categoria) {
     setEditTarget(cat)
+    setInitialParentId(null)
     setModalOpen(true)
   }
 
-  function handleNew() {
+  function handleNew(parentId: number | null = null) {
     setEditTarget(null)
+    setInitialParentId(parentId)
     setModalOpen(true)
+    
+    // Si agregamos un hijo, auto-expandimos al padre
+    if (parentId !== null) {
+      setExpandedIds(prev => {
+        const next = new Set(prev)
+        next.add(parentId)
+        return next
+      })
+    }
   }
 
   function handleModalClose() {
     setModalOpen(false)
     setEditTarget(null)
+    setInitialParentId(null)
   }
 
-  function handleOpenTreeModal(cat: Categoria) {
-    const treeNode = findInTree(treeData, cat.id)
-    if (treeNode) {
-      setSelectedCategoria(treeNode)
-      setTreeModalOpen(true)
-    }
+  function toggleExpand(id: number) {
+    setExpandedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   }
 
-  function handleCloseTreeModal() {
-    setTreeModalOpen(false)
-    setSelectedCategoria(null)
+  function expandAll() {
+    const allIds = new Set(allCategorias.filter(c => c.parent_id === null || allCategorias.some(p => p.parent_id === c.id)).map(c => c.id))
+    setExpandedIds(allIds)
   }
 
-  function findInTree(nodes: CategoriaTree[], id: number): CategoriaTree | null {
-    for (const node of nodes) {
-      if (node.id === id) return node
-      if (node.hijos && node.hijos.length > 0) {
-        const found = findInTree(node.hijos, id)
-        if (found) return found
-      }
-    }
-    return null
+  function collapseAll() {
+    setExpandedIds(new Set())
   }
 
-  function hasTreeRelations(cat: Categoria): boolean {
-    if (cat.parent_id) return true
-    
-    const treeNode = findInTree(treeData, cat.id)
-    if (treeNode && treeNode.hijos && treeNode.hijos.length > 0) return true
-    
-    return allCategorias.some(c => c.parent_id === cat.id)
+  // Render recursivo del árbol
+  function renderTree(nodes: CategoriaTree[], depth = 0) {
+    return nodes.map(node => {
+      const hasChildren = node.hijos && node.hijos.length > 0
+      const isExpanded = expandedIds.has(node.id)
+      const isInactive = !!node.deleted_at
+
+      return (
+        <div key={node.id}>
+          <div 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              padding: '12px 16px',
+              borderBottom: '1px solid var(--border)',
+              backgroundColor: isInactive ? 'rgba(220, 53, 69, 0.04)' : 'transparent',
+              opacity: isInactive ? 0.8 : 1,
+              paddingLeft: `${16 + depth * 40}px`,
+              transition: 'all 0.2s ease',
+            }}
+            className="tree-row hover:bg-gray-50"
+          >
+            {/* Toggle Arrow */}
+            <div style={{ width: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {hasChildren ? (
+                <button 
+                  onClick={() => toggleExpand(node.id)}
+                  style={{ 
+                    background: 'none', border: 'none', cursor: 'pointer', padding: 4, 
+                    display: 'flex', alignItems: 'center', color: 'var(--text-muted)',
+                    transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.2s ease'
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              ) : (
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--border)', display: 'inline-block' }} />
+              )}
+            </div>
+
+            {/* Icono de Carpeta / Archivo (opcional para estilo premium) */}
+            <div style={{ marginRight: 12, color: hasChildren ? '#fbbf24' : '#9ca3af', display: 'flex', alignItems: 'center' }}>
+              {hasChildren ? (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                  <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+              )}
+            </div>
+
+            {/* Name and Info */}
+            <div style={{ flex: 1, minWidth: 0, paddingRight: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <strong style={{ fontSize: depth === 0 ? 15 : 14, color: '#111827', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                  {node.nombre}
+                </strong>
+                {isInactive && <span className="badge badge-danger">Inactivo</span>}
+                {node.in_use && <span className="badge badge-warning">En uso</span>}
+              </div>
+              {node.descripcion && (
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                  {node.descripcion}
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            {isAdmin && (
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button 
+                  className="btn btn-ghost btn-sm" 
+                  onClick={() => handleNew(node.id)}
+                  title="Añadir subcategoría"
+                  style={{ padding: '6px 12px', fontSize: 12, fontWeight: 600 }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4, display: 'inline' }}>
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  Hija
+                </button>
+                {isInactive ? (
+                  <button className="btn btn-success btn-sm" onClick={() => activateMutation.mutate(node.id)}>Activar</button>
+                ) : node.in_use ? (
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)', padding: '6px 12px', fontWeight: 500 }}>Bloqueado</span>
+                ) : (
+                  <>
+                    <button className="btn btn-ghost btn-sm" onClick={() => handleEdit(node)}>Editar</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => setDeleteTarget(node)}>Baja</button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+          
+          {/* Render Children if expanded */}
+          {hasChildren && isExpanded && (
+            <div style={{ animation: 'slideDown 0.2s ease-out' }}>
+              {renderTree(node.hijos, depth + 1)}
+            </div>
+          )}
+        </div>
+      )
+    })
   }
-
-  function renderPageButtons() {
-    const buttons: React.ReactNode[] = []
-    const range = 2
-    for (let i = 1; i <= totalPages; i++) {
-      if (i === 1 || i === totalPages || (i >= filtros.page - range && i <= filtros.page + range)) {
-        buttons.push(
-          <button key={i} className={`page-btn${i === filtros.page ? ' active' : ''}`} onClick={() => handlePage(i)}>
-            {i}
-          </button>
-        )
-      } else if (i === filtros.page - range - 1 || i === filtros.page + range + 1) {
-        buttons.push(<span key={`ellipsis-${i}`} style={{ padding: '0 4px', color: 'var(--text-muted)' }}>…</span>)
-      }
-    }
-    return buttons
-  }
-
-  const inicio = total > 0 ? start + 1 : 0
-  const fin = Math.min(end, total)
-
-  const parentMap = new Map<number | null, string>()
-  parentMap.set(null, '—')
-  allCategorias.forEach(cat => parentMap.set(cat.id, cat.nombre))
 
   return (
     <>
@@ -177,181 +235,50 @@ export default function CategoriasPage() {
         <span className="topbar-title">Gestión de Categorías</span>
       </header>
 
-      <div className="page-wrapper">
+      <div className="page-wrapper" style={{ maxWidth: 1000, margin: '0 auto' }}>
         <div className="card">
-          <div className="card-header">
-            <span className="card-title">
-              Categorías registradas
-              {total > 0 && (
-                <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>
-                  ({total} total)
-                </span>
-              )}
-            </span>
+          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <span className="card-title" style={{ margin: 0 }}>Estructura de Categorías</span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-ghost btn-sm" onClick={expandAll} style={{ fontSize: 12 }}>Expandir Todo</button>
+                <button className="btn btn-ghost btn-sm" onClick={collapseAll} style={{ fontSize: 12 }}>Colapsar Todo</button>
+              </div>
+            </div>
             {isAdmin && (
-              <button className="btn btn-primary" onClick={handleNew}>
-                Nueva categoría
+              <button className="btn btn-primary" onClick={() => handleNew(null)}>
+                + Nueva Categoría Raíz
               </button>
             )}
           </div>
 
-          <div className="filtros-bar">
-            <div className="filtro-group">
-              <label className="filtro-label">Nombre</label>
-              <input
-                className="filtro-input"
-                type="text"
-                placeholder="Buscar por nombre..."
-                value={filtrosDraft.nombre}
-                onChange={(e) => setFiltrosDraft({ ...filtrosDraft, nombre: e.target.value })}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              />
-            </div>
-
-            <div className="filtro-group">
-              <label className="filtro-label">Resultados / pág.</label>
-              <select
-                className="filtro-select"
-                style={{ minWidth: 80 }}
-                value={filtrosDraft.page_size}
-                onChange={(e) => setFiltrosDraft({ ...filtrosDraft, page_size: Number(e.target.value) })}
-              >
-                {[5, 10, 25, 50].map((n) => (
-                  <option key={n} value={n}>{n}</option>
-                ))}
-              </select>
-            </div>
-
-            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-              <button className="btn btn-primary" onClick={handleSearch}>Buscar</button>
-              <button className="btn btn-ghost" onClick={handleReset}>Limpiar</button>
-            </div>
-          </div>
-
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th style={{ width: 60 }}>ID</th>
-                  <th>Nombre</th>
-                  <th>Descripción</th>
-                  <th style={{ width: 150 }}>Árbol de categorías</th>
-                  <th style={{ width: 100 }}>Estado</th>
-                  <th style={{ width: 80 }}>En uso</th>
-                  <th style={{ width: 110 }}>Alta</th>
-                  {isAdmin && <th style={{ width: 130 }}>Acciones</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading && (
-                  <tr className="loading-row">
-                    <td colSpan={isAdmin ? 8 : 7}>
-                      <span className="spinner spinner-dark" /> Cargando...
-                    </td>
-                  </tr>
-                )}
-                {isError && (
-                  <tr>
-                    <td colSpan={isAdmin ? 8 : 7} style={{ textAlign: 'center', padding: 24, color: 'var(--danger)' }}>
-                      Error al cargar los datos. Intentá de nuevo.
-                    </td>
-                  </tr>
-                )}
-                {!isLoading && !isError && paginatedCategorias.length === 0 && (
-                  <tr>
-                    <td colSpan={isAdmin ? 8 : 7}>
-                      <div className="empty-state">
-                        <h3>Sin resultados</h3>
-                        <p>No se encontraron categorías con los filtros aplicados.</p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-                {!isLoading && !isError && paginatedCategorias.map((cat) => (
-                  <tr 
-                    key={cat.id} 
-                    style={{ 
-                      backgroundColor: cat.deleted_at ? 'rgba(220, 53, 69, 0.1)' : undefined,
-                      opacity: cat.deleted_at ? 0.6 : 1,
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <td className="col-id">#{cat.id}</td>
-                    <td><strong>{cat.nombre}</strong></td>
-                    <td className="col-desc" title={cat.descripcion ?? ''}>
-                      {cat.descripcion || <span style={{ color: 'var(--border)' }}>—</span>}
-                    </td>
-                    <td>
-                      {hasTreeRelations(cat) && (
-                        <button 
-                          className="btn btn-ghost btn-sm tree-view-btn"
-                          onClick={() => handleOpenTreeModal(cat)}
-                        >
-                          Ver arbol
-                        </button>
-                      )}
-                    </td>
-                    <td>
-                      {cat.deleted_at ? (
-                        <span className="badge badge-danger">Inactivo</span>
-                      ) : (
-                        <span className="badge badge-success">Activo</span>
-                      )}
-                    </td>
-                    <td>
-                      {cat.in_use && (
-                        <span className="badge badge-warning">En uso</span>
-                      )}
-                    </td>
-                    <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-                      {formatFecha(cat.created_at)}
-                    </td>
-                    {isAdmin && (
-                      <td>
-                        <div className="td-actions">
-                          {cat.deleted_at ? (
-                            <button className="btn btn-success btn-sm" onClick={() => activateMutation.mutate(cat.id)}>Activar</button>
-                          ) : cat.in_use ? (
-                            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Bloqueado</span>
-                          ) : (
-                            <>
-                              <button className="btn btn-ghost btn-sm" onClick={() => handleEdit(cat)}>Editar</button>
-                              <button className="btn btn-danger btn-sm" onClick={() => setDeleteTarget(cat)}>Baja</button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    )}
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-
-          {total > 0 && (
-            <div className="pagination">
-              <span className="pagination-info">
-                Mostrando {inicio}–{fin} de {total} categorías
-              </span>
-              <div className="pagination-controls">
-                <button className="page-btn" disabled={filtros.page === 1} onClick={() => handlePage(1)} title="Primera página">«</button>
-                <button className="page-btn" disabled={filtros.page === 1} onClick={() => handlePage(filtros.page - 1)} title="Anterior">‹</button>
-                {renderPageButtons()}
-                <button className="page-btn" disabled={filtros.page === totalPages} onClick={() => handlePage(filtros.page + 1)} title="Siguiente">›</button>
-                <button className="page-btn" disabled={filtros.page === totalPages} onClick={() => handlePage(totalPages)} title="Última página">»</button>
+          <div style={{ borderTop: '1px solid var(--border)', background: 'white', borderRadius: '0 0 12px 12px', overflow: 'hidden' }}>
+            {isLoading ? (
+              <div style={{ padding: 48, textAlign: 'center' }}>
+                <span className="spinner spinner-dark" /> Cargando árbol...
               </div>
-            </div>
-          )}
+            ) : isError ? (
+              <div style={{ padding: 48, textAlign: 'center', color: 'var(--danger)' }}>
+                Error al cargar los datos. Intentá de nuevo.
+              </div>
+            ) : treeData.length === 0 ? (
+              <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}>
+                No hay categorías registradas.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {renderTree(treeData)}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {modalOpen && <CategoriaModal categoria={editTarget} onClose={handleModalClose} />}
-
-      {treeModalOpen && selectedCategoria && (
-        <CategoriaTreeModal 
-          categoria={selectedCategoria} 
-          allCategorias={treeData} 
-          onClose={handleCloseTreeModal} 
+      {modalOpen && (
+        <CategoriaModal 
+          categoria={editTarget} 
+          initialParentId={initialParentId} 
+          onClose={handleModalClose} 
         />
       )}
 
@@ -374,25 +301,12 @@ export default function CategoriasPage() {
       )}
 
       <style>{`
-        .tree-view-btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          padding: 4px 10px;
-          font-size: 11px;
-          font-weight: 500;
-          background: transparent;
-          border: 1px solid #e5e7eb;
-          color: #4b5563;
-          border-radius: 6px;
-          cursor: pointer;
-          transition: all 0.15s;
+        @keyframes slideDown {
+          from { opacity: 0; transform: translateY(-8px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-        
-        .tree-view-btn:hover {
-          background: #f3f4f6;
-          border-color: #d1d5db;
-          color: #1f2937;
+        .tree-row:hover {
+          background-color: #f9fafb !important;
         }
       `}</style>
     </>

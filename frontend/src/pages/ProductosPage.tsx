@@ -9,9 +9,9 @@ import {
 } from '../api/productos'
 import { fetchCategorias } from '../api/categorias'
 import { useAuthStore } from '../stores/authStore'
-import ProductoModal from '../components/ProductoModal'
-import ProductoStockModal from '../components/ProductoStockModal'
-import ConfirmDialog from '../components/ConfirmDialog'
+import ProductoModal from '../features/admin/components/ProductoModal'
+import ProductoStockModal from '../features/admin/components/ProductoStockModal'
+import ConfirmDialog from '../features/ui/components/ConfirmDialog'
 import type { Producto, FiltrosProducto } from '../types'
 
 const DEFAULT_FILTROS: FiltrosProducto = {

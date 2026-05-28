@@ -16,6 +16,7 @@ export default function MisPedidosPage() {
     queryKey: ['pedidos', page],
     queryFn: () => fetchPedidos('', page, 5),
     placeholderData: (prev) => prev,
+    refetchInterval: 30_000,
   })
 
   useEffect(() => {

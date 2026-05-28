@@ -33,3 +33,18 @@ export async function logout(): Promise<void> {
   useAuthStore.getState().logout()
   clearRefreshToken()
 }
+
+export async function initUser(): Promise<void> {
+  const store = useAuthStore.getState()
+  if (!store.token || store.userId) return
+
+  try {
+    const payload = JSON.parse(atob(store.token.split('.')[1]))
+    const me = await apiClient.get<UserPublic>('/api/v1/auth/me', {
+      headers: { Authorization: `Bearer ${store.token}` },
+    })
+    store.setAuth(store.token, Number(payload.sub), me.data.email, me.data.nombre, payload.roles ?? [])
+  } catch {
+    logout()
+  }
+}

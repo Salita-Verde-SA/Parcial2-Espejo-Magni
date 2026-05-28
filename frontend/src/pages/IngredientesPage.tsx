@@ -7,8 +7,8 @@ import {
   activateIngrediente,
 } from '../api/ingredientes'
 import { useAuthStore } from '../stores/authStore'
-import IngredienteModal from '../components/IngredienteModal'
-import ConfirmDialog from '../components/ConfirmDialog'
+import IngredienteModal from '../features/admin/components/IngredienteModal'
+import ConfirmDialog from '../features/ui/components/ConfirmDialog'
 import type { Ingrediente, FiltrosIngrediente } from '../types'
 
 const DEFAULT_FILTROS: FiltrosIngrediente = {
