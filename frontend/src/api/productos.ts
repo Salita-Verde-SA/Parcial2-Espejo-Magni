@@ -5,6 +5,7 @@ import type {
   ProductoUpdate,
   PaginatedProductos,
   FiltrosProducto,
+  IngredienteCantidadInput,
 } from '../types'
 
 export async function fetchProductos(filtros: FiltrosProducto): Promise<PaginatedProductos> {
@@ -45,6 +46,14 @@ export async function updateStock(
   data: { stock_cantidad: number; disponible: boolean }
 ): Promise<Producto> {
   const res = await apiClient.patch<Producto>(`/api/v1/productos/${id}/stock`, data)
+  return res.data
+}
+
+export async function updateComposicion(
+  id: number,
+  data: { categoria_ids: number[]; ingredientes: IngredienteCantidadInput[] }
+): Promise<Producto> {
+  const res = await apiClient.patch<Producto>(`/api/v1/productos/${id}/composicion`, data)
   return res.data
 }
 

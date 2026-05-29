@@ -5,7 +5,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from '@tanstack/react-form'
-import { createProducto, updateProducto } from '../../../api/productos'
+import { createProducto, updateProducto, updateComposicion } from '../../../api/productos'
 import { fetchCategorias } from '../../../api/categorias'
 import { fetchIngredientesAll } from '../../../api/ingredientes'
 import { fetchUnidades } from '../../../api/unidades'
@@ -14,6 +14,9 @@ import type { Producto, ProductoCreate, CategoriaTree, Ingrediente, IngredienteC
 interface Props {
   producto?: Producto | null
   onClose: () => void
+  // Si es false, los campos comerciales (nombre, precio, etc.) quedan de solo
+  // lectura y solo se editan categorías e ingredientes (rol STOCK).
+  canEditComercial?: boolean
 }
 
 const EMPTY: Omit<ProductoCreate, 'stock_cantidad'> = {
@@ -27,7 +30,7 @@ const EMPTY: Omit<ProductoCreate, 'stock_cantidad'> = {
   ingredientes: [],
 }
 
-export default function ProductoModal({ producto, onClose }: Props) {
+export default function ProductoModal({ producto, onClose, canEditComercial = true }: Props) {
   const isEdit = !!producto
   const qc = useQueryClient()
 
@@ -206,16 +209,21 @@ export default function ProductoModal({ producto, onClose }: Props) {
   const mutation = useMutation({
     mutationFn: (value: Omit<ProductoCreate, 'stock_cantidad'>) =>
       isEdit
-        ? updateProducto(producto!.id, {
-            nombre: value.nombre,
-            descripcion: value.descripcion || undefined,
-            precio_base: value.precio_base,
-            unidad_venta_id: value.unidad_venta_id,
-            disponible: value.disponible,
-            imagen_url: value.imagen_url || undefined,
-            categoria_ids: value.categoria_ids,
-            ingredientes: value.ingredientes,
-          })
+        ? canEditComercial
+          ? updateProducto(producto!.id, {
+              nombre: value.nombre,
+              descripcion: value.descripcion || undefined,
+              precio_base: value.precio_base,
+              unidad_venta_id: value.unidad_venta_id,
+              disponible: value.disponible,
+              imagen_url: value.imagen_url || undefined,
+              categoria_ids: value.categoria_ids,
+              ingredientes: value.ingredientes,
+            })
+          : updateComposicion(producto!.id, {
+              categoria_ids: value.categoria_ids,
+              ingredientes: value.ingredientes,
+            })
         : createProducto({
             ...value,
             descripcion: value.descripcion || undefined,
@@ -317,6 +325,12 @@ export default function ProductoModal({ producto, onClose }: Props) {
                 {stockWarning}
               </div>
             )}
+            {!canEditComercial && (
+              <div className="alert alert-warning" style={{ marginBottom: 12 }}>
+                Como gestor de stock solo podés editar las <strong>categorías</strong> y los <strong>ingredientes</strong>.
+                Los datos comerciales (nombre, precio, etc.) son de solo lectura.
+              </div>
+            )}
 
             <form.Field
               name="nombre"
@@ -338,6 +352,7 @@ export default function ProductoModal({ producto, onClose }: Props) {
                     onBlur={field.handleBlur}
                     required
                     autoFocus
+                    disabled={!canEditComercial}
                   />
                   {field.state.meta.errors ? (
                     <em role="alert" style={{ color: 'var(--danger)', fontSize: 12 }}>
@@ -361,6 +376,7 @@ export default function ProductoModal({ producto, onClose }: Props) {
                     value={field.state.value ?? ''}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
+                    disabled={!canEditComercial}
                   />
                 </div>
               )}
@@ -387,6 +403,7 @@ export default function ProductoModal({ producto, onClose }: Props) {
                       onChange={(e) => field.handleChange(parseFloat(e.target.value) || 0)}
                       onBlur={field.handleBlur}
                       required
+                      disabled={!canEditComercial}
                     />
                     {field.state.meta.errors ? (
                       <em role="alert" style={{ color: 'var(--danger)', fontSize: 12 }}>
@@ -407,6 +424,7 @@ export default function ProductoModal({ producto, onClose }: Props) {
                       value={field.state.value ?? ''}
                       onChange={(e) => field.handleChange(e.target.value ? Number(e.target.value) : null)}
                       onBlur={field.handleBlur}
+                      disabled={!canEditComercial}
                     >
                       <option value="">Sin unidad (por pieza)</option>
                       {unidades.map((u: UnidadMedida) => (
@@ -468,6 +486,7 @@ export default function ProductoModal({ producto, onClose }: Props) {
                     value={field.state.value ?? ''}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
+                    disabled={!canEditComercial}
                   />
                 </div>
               )}
@@ -483,6 +502,7 @@ export default function ProductoModal({ producto, onClose }: Props) {
                       checked={field.state.value}
                       onChange={(e) => field.handleChange(e.target.checked)}
                       onBlur={field.handleBlur}
+                      disabled={!canEditComercial}
                     />
                     <span className="form-label" style={{ marginBottom: 0 }}>
                       Disponible para venta

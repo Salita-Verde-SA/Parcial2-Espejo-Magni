@@ -372,7 +372,10 @@ export default function ProductosPage() {
                             )
                           ) : (
                             !prod.deleted_at && (
-                              <button className="btn btn-primary btn-sm" onClick={() => handleStockEdit(prod)}>Stock/Disp.</button>
+                              <>
+                                <button className="btn btn-ghost btn-sm" onClick={() => handleEdit(prod)}>Editar</button>
+                                <button className="btn btn-primary btn-sm" onClick={() => handleStockEdit(prod)}>Stock/Disp.</button>
+                              </>
                             )
                           )}
                         </div>
@@ -401,7 +404,7 @@ export default function ProductosPage() {
         </div>
       </div>
 
-      {modalOpen && <ProductoModal producto={editTarget} onClose={handleModalClose} />}
+      {modalOpen && <ProductoModal producto={editTarget} onClose={handleModalClose} canEditComercial={isAdmin} />}
 
       {stockModalOpen && editTarget && (
         <ProductoStockModal producto={editTarget} onClose={handleStockModalClose} />

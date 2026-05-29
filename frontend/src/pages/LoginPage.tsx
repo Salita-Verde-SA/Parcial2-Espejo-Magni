@@ -7,6 +7,14 @@ import { useState, FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { login } from '../api/auth'
 
+// Usuarios sembrados (ver backend/app/db/seed.py). Click para autocompletar y probar rápido.
+const CUENTAS_DEMO = [
+  { rol: 'Admin',   email: 'admin@fastfood.com',   password: 'Admin1234!' },
+  { rol: 'Cliente', email: 'juan@fastfood.com',    password: 'Juan1234!'  },
+  { rol: 'Stock',   email: 'stock@fastfood.com',   password: 'Stock1234!' },
+  { rol: 'Pedidos', email: 'pedidos@fastfood.com', password: 'Ped1234!'   },
+]
+
 export default function LoginPage() {
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
@@ -103,11 +111,24 @@ export default function LoginPage() {
         </form>
 
         {/* Test Credentials */}
-        <div className="mt-8 text-center border-t border-white/5 pt-6">
-          <p className="text-[13px] text-neutral-500 font-medium">
-            <span className="block mb-1">admin@fastfood.com <span className="mx-1 opacity-50">|</span> Admin1234!</span>
-            <span className="block">juan@fastfood.com <span className="mx-1 opacity-50">|</span> Juan1234!</span>
+        <div className="mt-8 border-t border-white/5 pt-6">
+          <p className="text-[11px] text-neutral-500 font-semibold uppercase tracking-widest text-center mb-3">
+            Cuentas de prueba (click para usar)
           </p>
+          <div className="space-y-2">
+            {CUENTAS_DEMO.map((cuenta) => (
+              <button
+                key={cuenta.email}
+                type="button"
+                onClick={() => { setEmail(cuenta.email); setPassword(cuenta.password); setError('') }}
+                className="w-full flex items-center justify-between gap-3 bg-black/20 hover:bg-white/[0.06] border border-white/10 hover:border-red-500/40 rounded-lg px-3 py-2 transition-all duration-200 text-left appearance-none cursor-pointer"
+              >
+                <span className="text-[11px] font-bold uppercase tracking-wide text-amber-400 shrink-0 w-16">{cuenta.rol}</span>
+                <span className="text-[12px] text-neutral-300 font-medium truncate">{cuenta.email}</span>
+                <span className="text-[12px] text-neutral-500 font-mono shrink-0">{cuenta.password}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>

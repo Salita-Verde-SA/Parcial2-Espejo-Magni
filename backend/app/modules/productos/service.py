@@ -13,6 +13,7 @@ from app.modules.productos.model import (
     ProductoUpdate,
     StockUpdate,
     DisponibilidadUpdate,
+    ComposicionUpdate,
     PaginatedProductos,
     IngredienteResumen,
     UnidadMedidaResumen,
@@ -204,6 +205,32 @@ def update_producto(producto_id: int, data: ProductoUpdate, uow: UnitOfWork) -> 
                 for ing in data.ingredientes
             ]
             uow.productos.set_ingredientes(saved.id, ingredientes_list)
+        return _enrich(saved, uow)
+
+
+def update_composicion(producto_id: int, data: ComposicionUpdate, uow: UnitOfWork) -> ProductoPublic:
+    """Actualiza solo categorías e ingredientes. Pensado para el rol STOCK,
+    que no puede tocar datos comerciales (nombre, precio, etc.)."""
+    with uow:
+        p = uow.productos.get_by_id_active(producto_id)
+        if not p:
+            raise HTTPException(status_code=404, detail="Producto no encontrado")
+
+        validar_stock_ingredientes(data.ingredientes, uow)
+
+        p.updated_at = datetime.now(timezone.utc)
+        saved = uow.productos.update(p)
+        uow.productos.set_categorias(saved.id, data.categoria_ids)
+        ingredientes_list = [
+            {
+                "ingrediente_id": ing.ingrediente_id,
+                "cantidad": ing.cantidad,
+                "unidad_medida_id": ing.unidad_medida_id,
+                "es_removible": ing.es_removible,
+            }
+            for ing in data.ingredientes
+        ]
+        uow.productos.set_ingredientes(saved.id, ingredientes_list)
         return _enrich(saved, uow)
 
 

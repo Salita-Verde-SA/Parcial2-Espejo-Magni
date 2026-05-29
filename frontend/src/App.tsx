@@ -41,6 +41,20 @@ function RequireRole({ roles, children }: { roles: string[]; children: React.Rea
   return <>{children}</>
 }
 
+// Pantalla de inicio según el rol: cada perfil aterriza en su área de trabajo.
+function landingPathFor(roles: string[]): string {
+  if (roles.includes('ADMIN')) return '/admin/dashboard'
+  if (roles.includes('STOCK')) return '/productos'
+  if (roles.includes('PEDIDOS')) return '/admin/pedidos'
+  if (roles.includes('CLIENT')) return '/catalogo'
+  return '/catalogo'
+}
+
+function HomeRedirect() {
+  const roles = useAuthStore((s) => s.roles)
+  return <Navigate to={landingPathFor(roles)} replace />
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -57,13 +71,19 @@ export default function App() {
             </RequireAuth>
           }
         >
-          <Route index element={<Navigate to="/catalogo" replace />} />
+          <Route index element={<HomeRedirect />} />
 
-          <Route path="catalogo" element={<CatalogoPage />} />
+          <Route path="catalogo" element={
+            <RequireRole roles={['CLIENT', 'ADMIN']}><CatalogoPage /></RequireRole>
+          } />
 
-          <Route path="checkout" element={<CheckoutPage />} />
+          <Route path="checkout" element={
+            <RequireRole roles={['CLIENT', 'ADMIN']}><CheckoutPage /></RequireRole>
+          } />
 
-          <Route path="mis-pedidos" element={<MisPedidosPage />} />
+          <Route path="mis-pedidos" element={
+            <RequireRole roles={['CLIENT', 'ADMIN']}><MisPedidosPage /></RequireRole>
+          } />
 
           <Route path="ingredientes" element={
             <RequireRole roles={['ADMIN', 'STOCK']}><IngredientesPage /></RequireRole>

@@ -1,6 +1,6 @@
 import { useState, FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { updateDisponibilidad } from '../../../api/productos'
+import { updateStock } from '../../../api/productos'
 import type { Producto } from '../../../types'
 
 interface Props {
@@ -10,11 +10,12 @@ interface Props {
 
 export default function ProductoStockModal({ producto, onClose }: Props) {
   const qc = useQueryClient()
+  const [stockCantidad, setStockCantidad] = useState(producto.stock_cantidad)
   const [disponible, setDisponible] = useState(producto.disponible)
   const [apiError, setApiError] = useState('')
 
   const mutation = useMutation({
-    mutationFn: () => updateDisponibilidad(producto.id, { disponible }),
+    mutationFn: () => updateStock(producto.id, { stock_cantidad: stockCantidad, disponible }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['productos'] })
       qc.invalidateQueries({ queryKey: ['productos-all'] })
@@ -23,7 +24,7 @@ export default function ProductoStockModal({ producto, onClose }: Props) {
     onError: (err: unknown) => {
       const msg =
         (err as { response?: { data?: { detail?: string } } })?.response?.data
-          ?.detail ?? 'Error al actualizar disponibilidad'
+          ?.detail ?? 'Error al actualizar el stock'
       setApiError(msg)
     },
   })
@@ -31,6 +32,10 @@ export default function ProductoStockModal({ producto, onClose }: Props) {
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setApiError('')
+    if (stockCantidad < 0 || Number.isNaN(stockCantidad)) {
+      setApiError('La cantidad de stock no puede ser negativa')
+      return
+    }
     mutation.mutate()
   }
 
@@ -51,6 +56,21 @@ export default function ProductoStockModal({ producto, onClose }: Props) {
             <p style={{ marginBottom: 16 }}>
               Actualizando producto: <strong>{producto.nombre}</strong>
             </p>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="stock-cantidad">
+                Cantidad de stock
+              </label>
+              <input
+                id="stock-cantidad"
+                className="form-input"
+                type="number"
+                min={0}
+                step={1}
+                value={stockCantidad}
+                onChange={(e) => setStockCantidad(e.target.valueAsNumber)}
+              />
+            </div>
 
             <div className="form-group">
               <label className="checkbox-row">

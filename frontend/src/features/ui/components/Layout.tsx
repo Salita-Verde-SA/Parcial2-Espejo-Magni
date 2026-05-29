@@ -23,6 +23,10 @@ export default function Layout() {
 
   const initial = (nombre ?? 'U')[0].toUpperCase()
 
+  // La tienda (catálogo, carrito, mis pedidos) solo aplica a clientes.
+  // Los perfiles operadores (STOCK, PEDIDOS) no la ven.
+  const canShop = roles.includes('CLIENT') || isAdmin()
+
   return (
     <div className="app-shell">
 
@@ -34,19 +38,23 @@ export default function Layout() {
         </div>
 
         <div className="navbar-nav">
-          <NavLink
-            to="/catalogo"
-            className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}
-          >
-            Catálogo
-          </NavLink>
+          {canShop && (
+            <>
+              <NavLink
+                to="/catalogo"
+                className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}
+              >
+                Catálogo
+              </NavLink>
 
-          <NavLink
-            to="/mis-pedidos"
-            className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}
-          >
-            Mis Pedidos
-          </NavLink>
+              <NavLink
+                to="/mis-pedidos"
+                className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}
+              >
+                Mis Pedidos
+              </NavLink>
+            </>
+          )}
 
           {(isAdmin() || roles.includes('STOCK')) && (
             <>
@@ -100,30 +108,34 @@ export default function Layout() {
 
         <div className="navbar-end">
 
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={toggleCart}
-            style={{ position: 'relative' }}
-          >
-            Carrito
-            {itemCount > 0 && (
-              <span style={{
-                position: 'absolute',
-                top: -7, right: -7,
-                background: 'var(--gold)',
-                color: '#1C1917',
-                borderRadius: '50%',
-                width: 18, height: 18,
-                fontSize: 10,
-                fontWeight: 800,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                {itemCount}
-              </span>
-            )}
-          </button>
+          {canShop && (
+            <>
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={toggleCart}
+                style={{ position: 'relative' }}
+              >
+                Carrito
+                {itemCount > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: -7, right: -7,
+                    background: 'var(--gold)',
+                    color: '#1C1917',
+                    borderRadius: '50%',
+                    width: 18, height: 18,
+                    fontSize: 10,
+                    fontWeight: 800,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {itemCount}
+                  </span>
+                )}
+              </button>
 
-          <div className="navbar-divider" />
+              <div className="navbar-divider" />
+            </>
+          )}
 
           <div className="navbar-user">
             <div className="avatar">{initial}</div>

@@ -11,6 +11,7 @@ from app.modules.productos.model import (
     ProductoUpdate,
     StockUpdate,
     DisponibilidadUpdate,
+    ComposicionUpdate,
 )
 from app.modules.productos.service import (
     activate_producto,
@@ -23,6 +24,7 @@ from app.modules.productos.service import (
     update_producto,
     update_stock,
     update_disponibilidad,
+    update_composicion,
 )
 
 router = APIRouter(prefix="/api/v1/productos", tags=["productos"])
@@ -86,6 +88,15 @@ def update(producto_id: int, data: ProductoUpdate, uow: Annotated[UnitOfWork, De
 )
 def patch_stock(producto_id: int, data: StockUpdate, uow: Annotated[UnitOfWork, Depends(get_uow)]):
     return update_stock(producto_id, data, uow)
+
+
+@router.patch(
+    "/{producto_id}/composicion",
+    response_model=ProductoPublic,
+    dependencies=[Depends(require_roles(["ADMIN", "STOCK"]))],
+)
+def patch_composicion(producto_id: int, data: ComposicionUpdate, uow: Annotated[UnitOfWork, Depends(get_uow)]):
+    return update_composicion(producto_id, data, uow)
 
 
 @router.patch(

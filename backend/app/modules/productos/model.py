@@ -120,6 +120,12 @@ class StockUpdate(SQLModel):
     disponible: bool
 
 
+class ComposicionUpdate(SQLModel):
+    """Actualización acotada para el rol STOCK: solo categorías e ingredientes."""
+    categoria_ids: list[int] = []
+    ingredientes: list[IngredienteCantidadInput] = []
+
+
 class DisponibilidadUpdate(SQLModel):
     disponible: bool
 
