@@ -1,0 +1,45 @@
+MAGNI 15/05
+
+PEDIDO 1--* Producto 1--* Detalle 1--* Insumo (unidad, kilograma, litros)
+
+Se podria hacer en producto o mejor en insumos
+pero solo seria 1 en insumo por ser producto terminado en insumo
+Producto (terminado con un check si es x ejemplo una bebida que solo se revende) venta de la coca
+
+Insumo (terminado con un check si es x ejemplo una bebida que solo se revende) bloqueo el detalle para no midificar la cantidad de coca
+
+
+Stock del Producto va a ser controlado en Insumo
+cuando creo un producto tengo que saber cuantos Insumos hay un Producto
+cantidad es una lista de insumos
+el precio de un producto es costo de los insumos mas el margen de ganacia (lo que quiero ganar) Precio de venta y cuantos puedo realizar caculado con el disponible de insumos
+
+
+tercera presentacion la del pedido
+aqui si piden 3 pizzas los insumos deben ser suficiente o avisar que no alcanza (200 gr de queso x3, harina x3, etc)
+-interface de carga en el carrito
+-
+
+A nivel Interface / UI / pagina web
+es un maestro detalle
+debe ser una grilla
+DEBE TENER
+cabecera, fecha vigencia, detalle,
+para guardar un objeto debe tener al menos 1 detalle
+se le podria poner un descuento (opcionnal)
+debe ser TRANSACCIONAL
+en la logica no puede guardar la cabecera sin los detalles
+maestro detalle es UNA SOLA COSA
+NO se puede crear una pizza en un solo paso, debe crearse todo junto la pizza y los ingredientes
+debemos mandar todo un json con la cabecera, detalle(array objetos), (cada producto, cada ingrediente en cada producto)
+todo esto lo recibe el backend y lo manda a guardar en un solo paso, si ocurre un error no se guarda nada, si sale bien se guarda completo
+las categorias tenemos que armar un arbol, estructura gerarquica si se complica que sea grilla, debe presentar la cantidad de niveles que se quiera
+ej: vinos y espumantes - vinos tintos (su padre sera vinos y espumantes) realacion padre e hija luego se podria crear Malbec como hija de Vinos tintos y asi, las que se requiera
+
+MAYO
+PROXIMO 22 ULTIMO TRABAJO PRACTICO
+DIA 29 PRESENTACION INTEGRADOR (SEGUNDA ENTREGA)
+JUNIO
+DIA 5 PARCIAL SIN IA SOLO FRONTEND REACT SIN IA UNA HORA
+DIA 12 REVISION TRABAJOS PRACTICOS
+DIA 19 TERCERA PRESENTACION (ALTA DE PEDIDO) Y SI LO TIENE LISTO EL SISTEMA TOTAL SINO PASAMOS A PRESENTARLO EN UNA MESA DE EXAMENES

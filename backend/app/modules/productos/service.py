@@ -79,6 +79,7 @@ def _enrich(producto: Producto, uow: UnitOfWork) -> ProductoPublic:
     ings_raw = uow.productos.get_ingredientes(producto.id)
     ings = [IngredienteResumen(**i) for i in ings_raw]
     stock_calculado = calcular_stock_producto(producto.id, uow)
+    costo_total = uow.productos.get_ingrediente_costos(producto.id)
     
     unidad_venta = None
     if producto.unidad_venta_id:
@@ -97,6 +98,8 @@ def _enrich(producto: Producto, uow: UnitOfWork) -> ProductoPublic:
         nombre=producto.nombre,
         descripcion=producto.descripcion,
         precio_base=producto.precio_base,
+        margen_ganancia=producto.margen_ganancia,
+        costo_total=costo_total,
         unidad_venta_id=producto.unidad_venta_id,
         unidad_venta=unidad_venta,
         stock_cantidad=stock_calculado,
@@ -148,6 +151,7 @@ def create_producto(data: ProductoCreate, uow: UnitOfWork) -> ProductoPublic:
             nombre=data.nombre,
             descripcion=data.descripcion,
             precio_base=data.precio_base,
+            margen_ganancia=data.margen_ganancia,
             unidad_venta_id=data.unidad_venta_id,
             disponible=data.disponible,
             imagen_url=data.imagen_url,
@@ -184,6 +188,8 @@ def update_producto(producto_id: int, data: ProductoUpdate, uow: UnitOfWork) -> 
             p.descripcion = data.descripcion
         if data.precio_base is not None:
             p.precio_base = data.precio_base
+        if data.margen_ganancia is not None:
+            p.margen_ganancia = data.margen_ganancia
         if data.unidad_venta_id is not None:
             p.unidad_venta_id = data.unidad_venta_id
         if data.disponible is not None:

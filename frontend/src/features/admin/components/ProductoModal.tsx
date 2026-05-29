@@ -23,6 +23,7 @@ const EMPTY: Omit<ProductoCreate, 'stock_cantidad'> = {
   nombre: '',
   descripcion: '',
   precio_base: 0,
+  margen_ganancia: 0,
   unidad_venta_id: null,
   disponible: true,
   imagen_url: '',
@@ -184,12 +185,26 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
     return Math.min(...maxProducts)
   }
 
+  // Calcular costo sugerido
+  function calcularCostoYPrecioSugerido(selectedIngs: any[], margenGanancia: number) {
+    let costoTotal = 0
+    for (const ing of selectedIngs) {
+      const ingData = ingredientes.find(i => i.id === ing.ingrediente_id)
+      if (!ingData) continue
+      const costoUnitario = parseFloat(ingData.costo_unitario) || 0
+      costoTotal += costoUnitario * ing.cantidad
+    }
+    const precioSugerido = costoTotal * (1 + (margenGanancia / 100))
+    return { costoTotal, precioSugerido }
+  }
+
   // Cargar datos del producto en modo edición
   useEffect(() => {
     if (producto) {
       form.setFieldValue('nombre', producto.nombre)
       form.setFieldValue('descripcion', producto.descripcion ?? '')
       form.setFieldValue('precio_base', parseFloat(producto.precio_base))
+      form.setFieldValue('margen_ganancia', parseFloat(producto.margen_ganancia))
       form.setFieldValue('unidad_venta_id', producto.unidad_venta_id ?? null)
       form.setFieldValue('disponible', producto.disponible)
       form.setFieldValue('imagen_url', producto.imagen_url ?? '')
@@ -214,6 +229,7 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
               nombre: value.nombre,
               descripcion: value.descripcion || undefined,
               precio_base: value.precio_base,
+              margen_ganancia: value.margen_ganancia,
               unidad_venta_id: value.unidad_venta_id,
               disponible: value.disponible,
               imagen_url: value.imagen_url || undefined,
@@ -278,6 +294,10 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
   }
 
   function updateCantidad(ingId: number, cantidad: number) {
+    const ingData = ingredientes.find(i => i.id === ingId)
+    if (ingData?.es_terminado) {
+      cantidad = 1 // No se puede cambiar cantidad de producto terminado
+    }
     const currentIngs = form.getFieldValue('ingredientes')
     const newIngredientes = currentIngs.map((i: any) =>
       i.ingrediente_id === ingId ? { ...i, cantidad: Math.max(0.001, cantidad) } : i
@@ -350,6 +370,7 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
+                    style={{ width: '100%' }}
                     required
                     autoFocus
                     disabled={!canEditComercial}
@@ -393,18 +414,56 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
                     <label className="form-label">
                       Precio base <span style={{ color: 'var(--danger)' }}>*</span>
                     </label>
-                    <input
-                      className="form-input"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="0.00"
-                      value={field.state.value || ''}
-                      onChange={(e) => field.handleChange(parseFloat(e.target.value) || 0)}
-                      onBlur={field.handleBlur}
-                      required
-                      disabled={!canEditComercial}
-                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>$</span>
+                      <input
+                        className="form-input"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={field.state.value || ''}
+                        onChange={(e) => field.handleChange(parseFloat(e.target.value) || 0)}
+                        onBlur={field.handleBlur}
+                        style={{ width: '100%' }}
+                        required
+                        disabled={!canEditComercial}
+                      />
+                    </div>
+                    {field.state.meta.errors ? (
+                      <em role="alert" style={{ color: 'var(--danger)', fontSize: 12 }}>
+                        {field.state.meta.errors.join(', ')}
+                      </em>
+                    ) : null}
+                  </div>
+                )}
+              />
+
+              <form.Field
+                name="margen_ganancia"
+                validators={{
+                  onChange: ({ value }) => (value < 0 ? 'El margen no puede ser negativo' : undefined),
+                }}
+                children={(field) => (
+                  <div className="form-group">
+                    <label className="form-label">
+                      Margen de ganancia
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <input
+                        className="form-input"
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        placeholder="0"
+                        value={field.state.value || ''}
+                        onChange={(e) => field.handleChange(parseFloat(e.target.value) || 0)}
+                        onBlur={field.handleBlur}
+                        style={{ width: '100%' }}
+                        disabled={!canEditComercial}
+                      />
+                      <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>%</span>
+                    </div>
                     {field.state.meta.errors ? (
                       <em role="alert" style={{ color: 'var(--danger)', fontSize: 12 }}>
                         {field.state.meta.errors.join(', ')}
@@ -437,37 +496,50 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
                 )}
               />
 
-              <form.Subscribe selector={(state) => state.values.ingredientes}>
-                {(ingredientesList) => {
+              <form.Subscribe selector={(state) => ({ ingredientes: state.values.ingredientes, margen: state.values.margen_ganancia })}>
+                {({ ingredientes: ingredientesList, margen }) => {
                   const stockCalculado = calcularStockEnTiempoReal(ingredientesList)
+                  const { costoTotal, precioSugerido } = calcularCostoYPrecioSugerido(ingredientesList, margen)
+                  
                   return (
-                    <div className="form-group">
-                      <label className="form-label">Stock calculado</label>
-                      {ingredientesList.length > 0 ? (
-                        <div style={{ 
-                          padding: '8px 12px', 
-                          background: stockCalculado > 0 ? 'var(--bg-light)' : 'rgba(220, 53, 69, 0.1)', 
-                          borderRadius: 4,
-                          border: `1px solid ${stockCalculado > 0 ? 'var(--border)' : 'var(--danger)'}`,
-                          color: stockCalculado > 0 ? 'var(--success)' : 'var(--danger)',
-                          fontSize: 18,
-                          fontWeight: 'bold'
-                        }}>
-                          {stockCalculado} {stockCalculado === 1 ? 'unidad' : 'unidades'} disponibles
-                        </div>
-                      ) : (
+                    <div className="form-group" style={{ gridColumn: '1 / -1', display: 'flex', gap: 16 }}>
+                      <div style={{ flex: 1 }}>
+                        <label className="form-label">Stock calculado</label>
+                        {ingredientesList.length > 0 ? (
+                          <div style={{ 
+                            padding: '8px 12px', 
+                            background: stockCalculado > 0 ? 'var(--bg-light)' : 'rgba(220, 53, 69, 0.1)', 
+                            borderRadius: 4,
+                            border: `1px solid ${stockCalculado > 0 ? 'var(--border)' : 'var(--danger)'}`,
+                            color: stockCalculado > 0 ? 'var(--success)' : 'var(--danger)',
+                            fontSize: 14,
+                            fontWeight: 'bold'
+                          }}>
+                            {stockCalculado} {stockCalculado === 1 ? 'unidad' : 'unidades'} disponibles
+                          </div>
+                        ) : (
+                          <div style={{ padding: '8px 12px', background: 'var(--bg-light)', borderRadius: 4, border: '1px solid var(--border)', color: 'var(--danger)', fontSize: 13, fontStyle: 'italic' }}>
+                            Sin ingredientes
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div style={{ flex: 1 }}>
+                        <label className="form-label">Costo y Precio Sugerido</label>
                         <div style={{ 
                           padding: '8px 12px', 
                           background: 'var(--bg-light)', 
                           borderRadius: 4,
                           border: '1px solid var(--border)',
-                          color: 'var(--danger)',
                           fontSize: 13,
-                          fontStyle: 'italic'
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 4
                         }}>
-                          Sin ingredientes
+                          <div>Costo total: <strong>${costoTotal.toFixed(2)}</strong></div>
+                          <div style={{ color: 'var(--primary)' }}>Sugerido ({margen}%): <strong>${precioSugerido.toFixed(2)}</strong></div>
                         </div>
-                      )}
+                      </div>
                     </div>
                   )
                 }}
@@ -575,14 +647,26 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
                             
                             <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
                               Cant:
-                              <input
-                                type="number"
-                                min="0.001"
-                                step="0.001"
-                                style={{ width: 60, padding: '4px 6px', borderRadius: 4, border: '1px solid var(--border)' }}
-                                value={ing.cantidad}
-                                onChange={(e) => updateCantidad(ing.ingrediente_id, parseFloat(e.target.value) || 0.001)}
-                              />
+                              {ingInfo?.es_terminado ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                  <input
+                                    type="number"
+                                    style={{ width: 60, padding: '4px 6px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--bg-light)' }}
+                                    value={1}
+                                    disabled
+                                  />
+                                  <span title="Producto terminado (cantidad fija)">🔒</span>
+                                </div>
+                              ) : (
+                                <input
+                                  type="number"
+                                  min="0.001"
+                                  step="0.001"
+                                  style={{ width: 60, padding: '4px 6px', borderRadius: 4, border: '1px solid var(--border)' }}
+                                  value={ing.cantidad}
+                                  onChange={(e) => updateCantidad(ing.ingrediente_id, parseFloat(e.target.value) || 0.001)}
+                                />
+                              )}
                             </label>
                             {simbolo && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{simbolo}</span>}
                             <select

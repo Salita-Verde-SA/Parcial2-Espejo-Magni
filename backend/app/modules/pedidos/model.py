@@ -66,6 +66,7 @@ class Pedido(SQLModel, table=True):
     forma_pago_codigo: str = Field(foreign_key="forma_pago.codigo")
     direccion_id: Optional[int] = Field(default=None, foreign_key="direccion_entrega.id")
     total: Decimal = Field(sa_column=Column(Numeric(10, 2), nullable=False))
+    descuento: Decimal = Field(default=Decimal("0"), sa_column=Column(Numeric(10, 2), nullable=False, server_default="0"))
     created_at: datetime = Field(default_factory=_utcnow)
     updated_at: datetime = Field(default_factory=_utcnow)
     deleted_at: Optional[datetime] = Field(default=None)
@@ -151,6 +152,7 @@ class DetallePedidoCreate(SQLModel):
 class PedidoCreate(SQLModel):
     forma_pago_codigo: str = Field(min_length=1, max_length=50)
     direccion_id: Optional[int] = None
+    descuento: Decimal = Decimal("0")
     items: List[DetallePedidoCreate] = Field(min_items=1)
 
 
@@ -183,6 +185,7 @@ class PedidoPublic(SQLModel):
     direccion_id: Optional[int]
     direccion: Optional[DireccionPublic] = None
     total: Decimal
+    descuento: Decimal = Decimal("0")
     created_at: datetime
     updated_at: datetime
     deleted_at: Optional[datetime] = None

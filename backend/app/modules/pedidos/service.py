@@ -94,6 +94,7 @@ def _enrich_pedido(p: Pedido, uow: UnitOfWork) -> PedidoPublic:
         direccion_id=p.direccion_id,
         direccion=direccion,
         total=p.total,
+        descuento=p.descuento,
         created_at=p.created_at,
         updated_at=p.updated_at,
         deleted_at=p.deleted_at,
@@ -264,6 +265,7 @@ def create_pedido(usuario_id: int, data: PedidoCreate, uow: UnitOfWork) -> Pedid
 
         total = Decimal("0.00")
         items_a_crear = []
+        descuento = data.descuento if data.descuento and data.descuento > 0 else Decimal("0")
         
         for item in data.items:
             prod = uow.productos.get_by_id_active(item.producto_id)
@@ -307,12 +309,20 @@ def create_pedido(usuario_id: int, data: PedidoCreate, uow: UnitOfWork) -> Pedid
                 }
             )
 
+        if descuento > total:
+            raise HTTPException(
+                status_code=400,
+                detail=f"El descuento (${descuento}) no puede ser mayor al total (${total})",
+            )
+        total_final = total - descuento
+
         p = Pedido(
             usuario_id=usuario_id,
             estado_codigo="PENDIENTE",
             forma_pago_codigo=data.forma_pago_codigo,
             direccion_id=data.direccion_id,
-            total=total,
+            total=total_final,
+            descuento=descuento,
         )
         uow.pedidos.add(p)
 

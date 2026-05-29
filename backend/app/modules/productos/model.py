@@ -39,6 +39,7 @@ class Producto(SQLModel, table=True):
     nombre: str = Field(index=True, max_length=150)
     descripcion: Optional[str] = Field(default=None, max_length=1000)
     precio_base: Decimal = Field(sa_column=Column(Numeric(10, 2), nullable=False))
+    margen_ganancia: Decimal = Field(default=Decimal("0"), sa_column=Column(Numeric(5, 2), nullable=False, server_default="0"))
     unidad_venta_id: Optional[int] = Field(default=None, foreign_key="unidad_medida.id")
     stock_cantidad: int = Field(default=0)
     disponible: bool = Field(default=True)
@@ -64,6 +65,7 @@ class ProductoCreate(SQLModel):
     nombre: str = Field(max_length=150)
     descripcion: Optional[str] = Field(default=None, max_length=1000)
     precio_base: Decimal
+    margen_ganancia: Decimal = Decimal("0")
     unidad_venta_id: Optional[int] = None
     disponible: bool = True
     imagen_url: Optional[str] = Field(default=None, max_length=500)
@@ -75,6 +77,7 @@ class ProductoUpdate(SQLModel):
     nombre: Optional[str] = Field(default=None, max_length=150)
     descripcion: Optional[str] = Field(default=None, max_length=1000)
     precio_base: Optional[Decimal] = None
+    margen_ganancia: Optional[Decimal] = None
     unidad_venta_id: Optional[int] = None
     disponible: Optional[bool] = None
     imagen_url: Optional[str] = Field(default=None, max_length=500)
@@ -92,11 +95,13 @@ class IngredienteResumen(SQLModel):
     id: int
     nombre: str
     es_alergeno: bool
+    es_terminado: bool = False
     cantidad: Decimal
     unidad_medida_id: int
     simbolo: str
     es_removible: bool
     stock_insumo: int = 0
+    costo_unitario: Decimal = Decimal("0")
 
 
 class ProductoPublic(SQLModel):
@@ -104,6 +109,8 @@ class ProductoPublic(SQLModel):
     nombre: str
     descripcion: Optional[str]
     precio_base: Decimal
+    margen_ganancia: Decimal = Decimal("0")
+    costo_total: Decimal = Decimal("0")
     unidad_venta_id: Optional[int] = None
     unidad_venta: Optional[UnidadMedidaResumen] = None
     stock_cantidad: int

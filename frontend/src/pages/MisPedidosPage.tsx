@@ -199,6 +199,12 @@ export default function MisPedidosPage() {
                   <span style={{ color: 'var(--text-muted)' }}>Forma de Pago</span>
                   <strong>{selectedPedido.forma_pago_codigo}</strong>
                 </div>
+                {parseFloat(selectedPedido.descuento) > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--success)' }}>
+                    <span>Descuento</span>
+                    <strong>-{formatPrecio(selectedPedido.descuento)}</strong>
+                  </div>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, fontWeight: 700 }}>
                   <span>Total Pagado</span>
                   <span style={{ color: 'var(--primary)' }}>{formatPrecio(selectedPedido.total)}</span>

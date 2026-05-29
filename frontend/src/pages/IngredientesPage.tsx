@@ -254,7 +254,9 @@ export default function IngredientesPage() {
                   <th>Nombre</th>
                   <th>Descripción</th>
                   <th style={{ width: 80 }}>Stock</th>
+                  <th style={{ width: 90 }}>Costo</th>
                   <th style={{ width: 110 }}>Alérgeno</th>
+                  <th style={{ width: 100 }}>Terminado</th>
                   <th style={{ width: 100 }}>Estado</th>
                   <th style={{ width: 110 }}>Alta</th>
                   {(isAdmin || isStock) && <th style={{ width: 130 }}>Acciones</th>}
@@ -316,10 +318,18 @@ export default function IngredientesPage() {
                         </span>
                       </td>
                       <td>
+                        <strong>${parseFloat(ing.costo_unitario).toFixed(2)}</strong>
+                      </td>
+                      <td>
                         {ing.es_alergeno ? (
                           <span className="badge badge-danger">Alérgeno</span>
                         ) : (
                           <span className="badge badge-success">Seguro</span>
+                        )}
+                      </td>
+                      <td>
+                        {ing.es_terminado && (
+                          <span className="badge badge-primary">Terminado</span>
                         )}
                       </td>
                       <td>

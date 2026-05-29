@@ -1,6 +1,6 @@
 import io
 import math
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import HTTPException, status
@@ -48,7 +48,9 @@ class IngredienteService:
                 nombre=ing.nombre,
                 descripcion=ing.descripcion,
                 es_alergeno=ing.es_alergeno,
+                es_terminado=ing.es_terminado,
                 stock_cantidad=ing.stock_cantidad,
+                costo_unitario=ing.costo_unitario,
                 created_at=ing.created_at,
                 updated_at=ing.updated_at,
                 deleted_at=ing.deleted_at,
@@ -106,7 +108,7 @@ class IngredienteService:
 
         for key, value in update_data.items():
             setattr(ingrediente, key, value)
-        ingrediente.updated_at = datetime.utcnow()
+        ingrediente.updated_at = datetime.now(timezone.utc)
 
         return self.uow.ingredientes.update(ingrediente)
 

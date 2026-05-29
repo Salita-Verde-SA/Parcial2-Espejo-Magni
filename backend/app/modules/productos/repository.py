@@ -99,11 +99,13 @@ class ProductoRepository(BaseRepository[Producto]):
                     "id": ing.id,
                     "nombre": ing.nombre,
                     "es_alergeno": ing.es_alergeno,
+                    "es_terminado": ing.es_terminado,
                     "cantidad": cantidad_val,
                     "unidad_medida_id": rel.unidad_medida_id,
                     "simbolo": unidades.get(rel.unidad_medida_id, ""),
                     "es_removible": rel.es_removible,
                     "stock_insumo": ing.stock_cantidad or 0,
+                    "costo_unitario": float(ing.costo_unitario) if ing.costo_unitario else 0.0,
                 })
         
         return result
@@ -176,3 +178,21 @@ class ProductoRepository(BaseRepository[Producto]):
                 cantidad_necesaria = float(cantidad) if cantidad and float(cantidad) > 0 else 1.0
                 result.append((ing_id, stock or 0, cantidad_necesaria))
         return result
+
+    def get_ingrediente_costos(self, producto_id: int) -> Decimal:
+        """Calcula el costo total del producto sumando (costo_unitario × cantidad) de cada ingrediente."""
+        stmt = (
+            select(Ingrediente.costo_unitario, ProductoIngrediente.cantidad)
+            .join(
+                ProductoIngrediente,
+                ProductoIngrediente.ingrediente_id == Ingrediente.id,
+            )
+            .where(ProductoIngrediente.producto_id == producto_id)
+            .where(Ingrediente.deleted_at.is_(None))
+        )
+        rows = self.session.exec(stmt).all()
+        costo_total = Decimal("0")
+        for costo, cantidad in rows:
+            if costo and cantidad:
+                costo_total += Decimal(str(costo)) * Decimal(str(cantidad))
+        return costo_total

@@ -40,7 +40,9 @@ export interface Ingrediente {
   nombre: string
   descripcion: string | null
   es_alergeno: boolean
+  es_terminado: boolean
   stock_cantidad: number
+  costo_unitario: string
   created_at: string
   deleted_at: string | null
 }
@@ -49,14 +51,18 @@ export interface IngredienteCreate {
   nombre: string
   descripcion?: string
   es_alergeno: boolean
+  es_terminado: boolean
   stock_cantidad?: number
+  costo_unitario?: number
 }
 
 export interface IngredienteUpdate {
   nombre?: string
   descripcion?: string
   es_alergeno?: boolean
+  es_terminado?: boolean
   stock_cantidad?: number
+  costo_unitario?: number
 }
 
 export interface FiltrosIngrediente {
@@ -98,11 +104,13 @@ export interface IngredienteResumen {
   id: number
   nombre: string
   es_alergeno: boolean
+  es_terminado: boolean
   cantidad: number
   unidad_medida_id: number
   simbolo: string
   es_removible: boolean
   stock_insumo: number
+  costo_unitario: number
 }
 
 export interface IngredienteCantidadInput {
@@ -117,6 +125,8 @@ export interface Producto {
   nombre: string
   descripcion: string | null
   precio_base: string
+  margen_ganancia: string
+  costo_total: string
   unidad_venta_id: number | null
   unidad_venta: UnidadMedida | null
   stock_cantidad: number
@@ -132,6 +142,7 @@ export interface ProductoCreate {
   nombre: string
   descripcion?: string
   precio_base: number
+  margen_ganancia: number
   unidad_venta_id?: number | null
   disponible: boolean
   imagen_url?: string
@@ -143,6 +154,7 @@ export interface ProductoUpdate {
   nombre?: string
   descripcion?: string
   precio_base?: number
+  margen_ganancia?: number
   unidad_venta_id?: number | null
   disponible?: boolean
   imagen_url?: string
@@ -201,6 +213,7 @@ export interface PedidoPublic {
   direccion_id: number | null
   direccion?: DireccionPublic | null
   total: string
+  descuento: string
   created_at: string
   updated_at: string
   deleted_at: string | null
@@ -224,6 +237,7 @@ export interface DetallePedidoCreate {
 export interface PedidoCreate {
   forma_pago_codigo: string
   direccion_id?: number | null
+  descuento?: number
   items: DetallePedidoCreate[]
 }
 

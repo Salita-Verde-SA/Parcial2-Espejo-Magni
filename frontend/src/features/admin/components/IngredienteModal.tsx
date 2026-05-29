@@ -17,7 +17,7 @@ interface Props {
 }
 
 // Valores iniciales del formulario cuando se crea uno nuevo
-const EMPTY: IngredienteCreate = { nombre: '', descripcion: '', es_alergeno: false, stock_cantidad: 0 }
+const EMPTY: IngredienteCreate = { nombre: '', descripcion: '', es_alergeno: false, es_terminado: false, stock_cantidad: 0, costo_unitario: 0 }
 
 export default function IngredienteModal({ ingrediente, onClose }: Props) {
   // isEdit: true si se recibió un ingrediente existente
@@ -41,7 +41,9 @@ export default function IngredienteModal({ ingrediente, onClose }: Props) {
         nombre:          ingrediente.nombre,
         descripcion:     ingrediente.descripcion ?? '',
         es_alergeno:     ingrediente.es_alergeno,
+        es_terminado:    ingrediente.es_terminado,
         stock_cantidad:  ingrediente.stock_cantidad,
+        costo_unitario:  parseFloat(ingrediente.costo_unitario) || 0,
       })
     } else {
       setForm(EMPTY)
@@ -60,7 +62,9 @@ export default function IngredienteModal({ ingrediente, onClose }: Props) {
             nombre:         form.nombre,
             descripcion:    form.descripcion || undefined,  // "" se convierte a undefined (no se envía)
             es_alergeno:    form.es_alergeno,
+            es_terminado:   form.es_terminado,
             stock_cantidad: form.stock_cantidad,
+            costo_unitario: form.costo_unitario,
           })
         : createIngrediente({
             ...form,
@@ -122,6 +126,7 @@ export default function IngredienteModal({ ingrediente, onClose }: Props) {
                 className="form-input"
                 type="text"
                 maxLength={100}
+                style={{ width: '100%' }}
                 placeholder="ej. Carne vacuna"
                 value={form.nombre}
                 onChange={(e) => setForm({ ...form, nombre: e.target.value })}
@@ -170,23 +175,74 @@ export default function IngredienteModal({ ingrediente, onClose }: Props) {
               </span>
             </div>
 
-            {/* Campo: Stock */}
+            {/* Campo: Checkbox de producto terminado */}
             <div className="form-group">
-              <label className="form-label" htmlFor="ing-stock">
-                Stock
+              <label className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={form.es_terminado}
+                  disabled={!isAdmin}
+                  onChange={(e) =>
+                    setForm({ ...form, es_terminado: e.target.checked })
+                  }
+                />
+                <span className="form-label" style={{ marginBottom: 0 }}>
+                  Es producto terminado
+                  {form.es_terminado && (
+                    <span className="badge badge-primary" style={{ marginLeft: 8, fontSize: 10 }}>Se revende tal cual</span>
+                  )}
+                </span>
               </label>
-              <input
-                id="ing-stock"
-                className="form-input"
-                type="number"
-                min="0"
-                placeholder="0"
-                value={form.stock_cantidad || ''}
-                onChange={(e) => setForm({ ...form, stock_cantidad: parseInt(e.target.value) || 0 })}
-              />
               <span className="form-hint">
-                Cantidad disponible en inventario (opcional).
+                Marcá si este producto no tiene receta (ej: bebida) y la cantidad consumida no es modificable.
               </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              {/* Campo: Costo unitario */}
+              <div className="form-group">
+                <label className="form-label" htmlFor="ing-costo">
+                  Costo Unitario <span style={{ color: 'var(--danger)' }}>*</span>
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>$</span>
+                  <input
+                    id="ing-costo"
+                    className="form-input"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    style={{ width: '100%' }}
+                    value={form.costo_unitario || ''}
+                    disabled={!isAdmin}
+                    onChange={(e) => setForm({ ...form, costo_unitario: parseFloat(e.target.value) || 0 })}
+                  />
+                </div>
+                <span className="form-hint">
+                  Costo de compra para cálculo de precios.
+                </span>
+              </div>
+
+              {/* Campo: Stock */}
+              <div className="form-group">
+                <label className="form-label" htmlFor="ing-stock">
+                  Stock
+                </label>
+                <input
+                  id="ing-stock"
+                  className="form-input"
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  style={{ width: '100%' }}
+                  value={form.stock_cantidad || ''}
+                  onChange={(e) => setForm({ ...form, stock_cantidad: parseInt(e.target.value) || 0 })}
+                />
+                <span className="form-hint">
+                  Cantidad disponible.
+                </span>
+              </div>
             </div>
           </div>
 
