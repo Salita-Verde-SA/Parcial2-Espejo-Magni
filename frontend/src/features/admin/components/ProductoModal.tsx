@@ -42,6 +42,8 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
     defaultValues: EMPTY,
     onSubmit: async ({ value }) => {
       setApiError('')
+      const { precioSugerido } = calcularCostoYPrecioSugerido(value.ingredientes, value.margen_ganancia)
+      value.precio_base = precioSugerido
       mutation.mutate(value)
     },
   })
@@ -124,6 +126,7 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
                 type="checkbox"
                 checked={currentIds.includes(cat.id)}
                 onChange={() => toggleCategoria(cat.id)}
+                disabled={!canEditComercial}
               />
               <span>{cat.nombre}</span>
             </label>
@@ -260,9 +263,7 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
 
   function toggleCategoria(catId: number) {
     const currentIds = form.getFieldValue('categoria_ids')
-    const ids = currentIds.includes(catId)
-      ? currentIds.filter((id: number) => id !== catId)
-      : [...currentIds, catId]
+    const ids = currentIds.includes(catId) ? [] : [catId]
     form.setFieldValue('categoria_ids', ids)
   }
 
@@ -404,40 +405,7 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
             />
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
-              <form.Field
-                name="precio_base"
-                validators={{
-                  onChange: ({ value }) => (value < 0 ? 'El precio no puede ser negativo' : undefined),
-                }}
-                children={(field) => (
-                  <div className="form-group">
-                    <label className="form-label">
-                      Precio base <span style={{ color: 'var(--danger)' }}>*</span>
-                    </label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>$</span>
-                      <input
-                        className="form-input"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0.00"
-                        value={field.state.value || ''}
-                        onChange={(e) => field.handleChange(parseFloat(e.target.value) || 0)}
-                        onBlur={field.handleBlur}
-                        style={{ width: '100%' }}
-                        required
-                        disabled={!canEditComercial}
-                      />
-                    </div>
-                    {field.state.meta.errors ? (
-                      <em role="alert" style={{ color: 'var(--danger)', fontSize: 12 }}>
-                        {field.state.meta.errors.join(', ')}
-                      </em>
-                    ) : null}
-                  </div>
-                )}
-              />
+              {/* El precio_base se calcula automáticamente al hacer submit */}
 
               <form.Field
                 name="margen_ganancia"

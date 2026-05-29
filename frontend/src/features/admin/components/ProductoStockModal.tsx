@@ -10,12 +10,11 @@ interface Props {
 
 export default function ProductoStockModal({ producto, onClose }: Props) {
   const qc = useQueryClient()
-  const [stockCantidad, setStockCantidad] = useState(producto.stock_cantidad)
   const [disponible, setDisponible] = useState(producto.disponible)
   const [apiError, setApiError] = useState('')
 
   const mutation = useMutation({
-    mutationFn: () => updateStock(producto.id, { stock_cantidad: stockCantidad, disponible }),
+    mutationFn: () => updateStock(producto.id, { stock_cantidad: producto.stock_cantidad, disponible }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['productos'] })
       qc.invalidateQueries({ queryKey: ['productos-all'] })
@@ -32,10 +31,6 @@ export default function ProductoStockModal({ producto, onClose }: Props) {
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setApiError('')
-    if (stockCantidad < 0 || Number.isNaN(stockCantidad)) {
-      setApiError('La cantidad de stock no puede ser negativa')
-      return
-    }
     mutation.mutate()
   }
 
@@ -57,19 +52,13 @@ export default function ProductoStockModal({ producto, onClose }: Props) {
               Actualizando producto: <strong>{producto.nombre}</strong>
             </p>
 
-            <div className="form-group">
-              <label className="form-label" htmlFor="stock-cantidad">
-                Cantidad de stock
-              </label>
-              <input
-                id="stock-cantidad"
-                className="form-input"
-                type="number"
-                min={0}
-                step={1}
-                value={stockCantidad}
-                onChange={(e) => setStockCantidad(e.target.valueAsNumber)}
-              />
+            <div style={{ marginBottom: 16 }}>
+              <span className="badge badge-info" style={{ fontSize: 13, padding: '6px 12px' }}>
+                Stock actual: <strong>{producto.stock_cantidad}</strong>
+              </span>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>
+                El stock de los productos se calcula automáticamente en base a la disponibilidad de sus ingredientes.
+              </p>
             </div>
 
             <div className="form-group">
