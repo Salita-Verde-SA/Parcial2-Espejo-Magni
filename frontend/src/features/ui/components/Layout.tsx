@@ -28,9 +28,14 @@ export default function Layout() {
   const canShop = roles.includes('CLIENT') || isAdmin()
 
   return (
-    <div className="app-shell">
+    <div className="app-shell relative overflow-hidden font-sans">
+      {/* Background image */}
+      <div
+        className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-20 pointer-events-none"
+        style={{ backgroundImage: "url('/bg-food.png')" }}
+      />
 
-      <nav className="navbar">
+      <nav className="navbar relative z-10">
 
         <div className="navbar-brand">
           <div className="navbar-logo-mark">FF</div>
@@ -151,7 +156,7 @@ export default function Layout() {
         </div>
       </nav>
 
-      <div className="main-content">
+      <div className="main-content relative z-10">
         <Outlet />
       </div>
 

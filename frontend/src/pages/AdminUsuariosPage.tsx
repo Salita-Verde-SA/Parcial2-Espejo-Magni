@@ -44,23 +44,23 @@ export default function AdminUsuariosPage() {
         </h1>
       </div>
 
-      <div className="bg-surface rounded-xl border border-white/10 overflow-hidden shadow-xl">
+      <div className="bg-black/60 backdrop-blur-xl rounded-xl border border-white/10 overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-white/10 bg-white/5">
-                <th className="p-4 font-semibold text-black/70">Nombre</th>
-                <th className="p-4 font-semibold text-black/70">Email</th>
+                <th className="p-4 font-semibold text-neutral-300">Nombre</th>
+                <th className="p-4 font-semibold text-neutral-300">Email</th>
                 {ROLES_DISPONIBLES.map(role => (
-                  <th key={role} className="p-4 font-semibold text-black/70 text-center">{role}</th>
+                  <th key={role} className="p-4 font-semibold text-neutral-300 text-center">{role}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {usuarios?.map((user) => (
                 <tr key={user.id} className="border-b border-white/10 hover:bg-white/5 transition-colors">
-                  <td className="p-4 font-medium text-black/70">{user.nombre} {user.apellido}</td>
-                  <td className="p-4 text-black/70">{user.email}</td>
+                  <td className="p-4 font-medium text-neutral-300">{user.nombre} {user.apellido}</td>
+                  <td className="p-4 text-neutral-300">{user.email}</td>
                   {ROLES_DISPONIBLES.map(role => {
                     const hasRole = user.roles.includes(role)
                     const isOwnAdmin = user.id === currentUserId && role === 'ADMIN'

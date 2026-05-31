@@ -38,70 +38,90 @@ function ProductoCard({ producto }: { producto: Producto }) {
   }
 
   return (
-    <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-
-      <div
-        style={{
-          height: 160,
-          background: 'linear-gradient(135deg, var(--primary-light), var(--primary))',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
+    <div className="group relative bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden shadow-lg hover:shadow-[0_8px_30px_rgba(220,38,38,0.2)] hover:-translate-y-1 transition-all duration-300 flex flex-col animate-fade-in-up">
+      
+      <div className="h-48 overflow-hidden relative bg-gradient-to-br from-neutral-900 to-black flex items-center justify-center">
         {producto.imagen_url ? (
           <img
             src={producto.imagen_url}
             alt={producto.nombre}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
           />
         ) : (
-          <span style={{ fontSize: 36, fontWeight: 900, color: 'rgba(255,255,255,0.65)', letterSpacing: -1 }}>
-            {producto.nombre[0].toUpperCase()}
-          </span>
+          <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-tr from-red-900/20 to-black/80">
+            <svg className="w-12 h-12 text-white/20 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-xl font-black text-white/30 tracking-tighter">
+              {producto.nombre[0].toUpperCase()}
+            </span>
+          </div>
         )}
+        {/* Overlay gradient para que el título resalte si montamos algo encima */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </div>
 
-      <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <strong style={{ fontSize: 15 }}>{producto.nombre}</strong>
-          <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--primary)', whiteSpace: 'nowrap', marginLeft: 8 }}>
-            {formatPrecio(producto.precio_base, producto.unidad_venta?.simbolo)}
-          </span>
+      <div className="p-5 flex flex-col flex-1 gap-3 relative z-10 bg-gradient-to-b from-transparent to-black/40">
+        <div className="flex justify-between items-start gap-2">
+          <h3 className="font-bold text-lg leading-tight text-white group-hover:text-red-400 transition-colors">
+            {producto.nombre}
+          </h3>
         </div>
 
         {producto.descripcion && (
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
+          <p className="text-sm text-neutral-400 line-clamp-2 leading-relaxed">
             {producto.descripcion}
           </p>
         )}
 
         {alergenos.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+          <div className="flex flex-wrap gap-1.5 mt-1">
             {alergenos.map((a) => (
-              <span key={a.id} className="badge badge-danger" style={{ fontSize: 10 }}>
+              <span key={a.id} className="px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-bold uppercase tracking-wider">
                 {a.nombre}
               </span>
             ))}
           </div>
         )}
 
-        <div style={{ marginTop: 'auto', paddingTop: 8 }}>
+        <div className="mt-auto pt-4">
           {producto.stock_cantidad === 0 && producto.disponible ? (
-            <button className="btn btn-ghost" style={{ width: '100%' }} disabled>
+            <button className="w-full bg-white/5 text-neutral-500 font-bold rounded-xl px-4 py-3 uppercase tracking-widest text-xs cursor-not-allowed" disabled>
               Sin stock
             </button>
           ) : !producto.disponible ? (
-            <button className="btn btn-ghost" style={{ width: '100%' }} disabled>
+            <button className="w-full bg-white/5 text-neutral-500 font-bold rounded-xl px-4 py-3 uppercase tracking-widest text-xs cursor-not-allowed" disabled>
               No disponible
             </button>
           ) : (
-            <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleAgregar}>
-              Agregar
+            <button 
+              onClick={handleAgregar}
+              className="w-full appearance-none border-none bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl px-4 py-3 shadow-[0_4px_15px_rgba(220,38,38,0.3)] hover:shadow-[0_8px_25px_rgba(220,38,38,0.5)] transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 uppercase tracking-wider text-sm"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              {formatPrecio(producto.precio_base, producto.unidad_venta?.simbolo)}
             </button>
           )}
         </div>
+      </div>
+    </div>
+  )
+}
+
+function SkeletonCard() {
+  return (
+    <div className="bg-white/5 backdrop-blur-md border border-white/5 rounded-2xl overflow-hidden flex flex-col animate-pulse h-[380px]">
+      <div className="h-48 bg-white/5"></div>
+      <div className="p-5 flex flex-col flex-1 gap-4">
+        <div className="flex justify-between">
+          <div className="h-5 bg-white/10 rounded w-1/2"></div>
+          <div className="h-5 bg-white/10 rounded w-1/4"></div>
+        </div>
+        <div className="h-3 bg-white/5 rounded w-full"></div>
+        <div className="h-3 bg-white/5 rounded w-4/5"></div>
+        <div className="mt-auto h-11 bg-white/10 rounded-xl w-full"></div>
       </div>
     </div>
   )
@@ -123,92 +143,176 @@ export default function CatalogoPage() {
     staleTime: 5 * 60_000,
   })
 
+  const handleCategorySelect = (id: number | null) => {
+    const newFiltros = { ...filtros, categoria_id: id, page: 1 }
+    setDraft(newFiltros)
+    setFiltros(newFiltros)
+  }
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setFiltros({ ...draft, page: 1 })
+  }
+
   return (
     <>
-      <header className="topbar">
-        <span className="topbar-title">Catálogo de Productos</span>
-      </header>
+      <div className="pt-10 pb-6 text-center">
+        <h1 className="text-4xl sm:text-5xl font-black text-white drop-shadow-lg tracking-tight mb-3">
+          Nuestro Menú
+        </h1>
+        <p className="text-neutral-300 text-lg font-medium drop-shadow-md">
+          Descubre los mejores sabores de la ciudad.
+        </p>
+      </div>
 
-      <div className="page-wrapper">
-
-        <div className="filtros-bar">
-          <div className="filtro-group">
-            <label className="filtro-label">Buscar</label>
+      <div className="page-wrapper pt-0" style={{ maxWidth: 1400, margin: '0 auto' }}>
+        
+        {/* Filtros Modernos */}
+        <div className="mb-8 space-y-6">
+          {/* Búsqueda */}
+          <form onSubmit={handleSearchSubmit} className="relative max-w-xl">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
             <input
-              className="filtro-input"
               type="text"
-              placeholder="Nombre del producto..."
+              placeholder="Buscar hamburguesas, bebidas, etc..."
               value={draft.nombre}
               onChange={(e) => setDraft({ ...draft, nombre: e.target.value })}
-              onKeyDown={(e) => e.key === 'Enter' && setFiltros({ ...draft, page: 1 })}
+              className="w-full bg-black/40 backdrop-blur-xl border border-white/10 text-white placeholder-neutral-500 rounded-2xl pl-12 pr-4 py-4 focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 transition-all shadow-lg"
             />
-          </div>
+            {draft.nombre && (
+              <button 
+                type="button"
+                onClick={() => { setDraft({ ...draft, nombre: '' }); setFiltros({ ...filtros, nombre: '', page: 1 }) }}
+                className="absolute inset-y-0 right-0 pr-4 flex items-center text-neutral-400 hover:text-white"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </form>
 
-          <div className="filtro-group">
-            <label className="filtro-label">Categoría</label>
-            <select
-              className="filtro-select"
-              value={draft.categoria_id ?? ''}
-              onChange={(e) =>
-                setDraft({ ...draft, categoria_id: e.target.value ? Number(e.target.value) : null })
-              }
+          {/* Categorías (Pills horizontales) */}
+          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide" style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+            <button
+              onClick={() => handleCategorySelect(null)}
+              className={`appearance-none border-none whitespace-nowrap px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 ${
+                filtros.categoria_id === null 
+                  ? 'bg-red-600 text-white shadow-[0_4px_15px_rgba(220,38,38,0.4)]' 
+                  : 'bg-white/5 border border-white/10 text-neutral-300 hover:bg-white/10 hover:text-white'
+              }`}
             >
-              <option value="">Todas</option>
-              {categorias?.map((c) => (
-                <option key={c.id} value={c.id}>{c.nombre}</option>
-              ))}
-            </select>
-          </div>
-
-          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-            <button className="btn btn-primary" onClick={() => setFiltros({ ...draft, page: 1 })}>
-              Buscar
+              Todos
             </button>
-            <button className="btn btn-ghost" onClick={() => { setDraft(DEFAULT_FILTROS); setFiltros(DEFAULT_FILTROS) }}>
-              Limpiar
-            </button>
+            {categorias?.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => handleCategorySelect(c.id)}
+                className={`appearance-none border-none whitespace-nowrap px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 ${
+                  filtros.categoria_id === c.id
+                    ? 'bg-red-600 text-white shadow-[0_4px_15px_rgba(220,38,38,0.4)]' 
+                    : 'bg-white/5 border border-white/10 text-neutral-300 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                {c.nombre}
+              </button>
+            ))}
           </div>
         </div>
 
+        {/* Grilla de Productos */}
         {isLoading ? (
-          <div style={{ textAlign: 'center', padding: 48 }}>
-            <span className="spinner spinner-dark" /> Cargando...
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: 24,
+            }}
+          >
+            {Array.from({ length: 8 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
           </div>
         ) : data?.items.length === 0 ? (
-          <div className="empty-state">
-            <h3>Sin resultados</h3>
-            <p>No hay productos con los filtros aplicados.</p>
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mb-6">
+              <svg className="w-10 h-10 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-2">No encontramos nada</h3>
+            <p className="text-neutral-400 max-w-md">
+              Intenta buscar con otros términos o selecciona una categoría diferente.
+            </p>
+            <button 
+              onClick={() => { setDraft(DEFAULT_FILTROS); setFiltros(DEFAULT_FILTROS) }}
+              className="mt-6 text-red-400 font-bold hover:text-red-300 transition-colors"
+            >
+              Limpiar filtros
+            </button>
           </div>
         ) : (
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-              gap: 16,
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: 24,
             }}
           >
             {data?.items.map((p) => <ProductoCard key={p.id} producto={p} />)}
           </div>
         )}
 
+        {/* Paginación */}
         {data && data.total > data.page_size && (
-          <div className="pagination" style={{ marginTop: 24 }}>
+          <div className="flex justify-center items-center gap-4 mt-12 mb-8">
             <button
-              className="page-btn"
+              className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-colors disabled:opacity-30 disabled:hover:bg-white/5"
               disabled={filtros.page === 1}
-              onClick={() => setFiltros({ ...filtros, page: filtros.page - 1 })}
-            >‹</button>
-            <span style={{ padding: '0 12px', fontSize: 13, color: 'var(--text-muted)' }}>
-              Página {filtros.page} de {data.pages}
+              onClick={() => {
+                setFiltros({ ...filtros, page: filtros.page - 1 })
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <span className="text-sm font-bold text-neutral-400">
+              Página <span className="text-white">{filtros.page}</span> de {data.pages}
             </span>
             <button
-              className="page-btn"
+              className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-colors disabled:opacity-30 disabled:hover:bg-white/5"
               disabled={filtros.page === data.pages}
-              onClick={() => setFiltros({ ...filtros, page: filtros.page + 1 })}
-            >›</button>
+              onClick={() => {
+                setFiltros({ ...filtros, page: filtros.page + 1 })
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
           </div>
         )}
       </div>
+
+      <style>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(15px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up {
+          animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+      `}</style>
     </>
   )
 }

@@ -62,13 +62,12 @@ export default function DashboardPage() {
               display: 'flex',
               flexDirection: 'column',
               gap: 8,
-              borderLeft: '4px solid #3b82f6',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)'
+              borderLeft: '4px solid #3b82f6'
             }}>
               <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Total Pedidos Registrados
               </span>
-              <span style={{ fontSize: 42, fontWeight: 900, color: '#111827', lineHeight: 1 }}>
+              <span style={{ fontSize: 42, fontWeight: 900, color: 'var(--text)', lineHeight: 1 }}>
                 {data.total_pedidos}
               </span>
             </div>
@@ -78,13 +77,12 @@ export default function DashboardPage() {
               display: 'flex',
               flexDirection: 'column',
               gap: 8,
-              borderLeft: '4px solid #10b981',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)'
+              borderLeft: '4px solid #10b981'
             }}>
               <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Catálogo de Productos
               </span>
-              <span style={{ fontSize: 42, fontWeight: 900, color: '#111827', lineHeight: 1 }}>
+              <span style={{ fontSize: 42, fontWeight: 900, color: 'var(--text)', lineHeight: 1 }}>
                 {data.total_productos}
               </span>
             </div>
@@ -94,13 +92,12 @@ export default function DashboardPage() {
               display: 'flex',
               flexDirection: 'column',
               gap: 8,
-              borderLeft: '4px solid #8b5cf6',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)'
+              borderLeft: '4px solid #8b5cf6'
             }}>
               <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Usuarios Activos
               </span>
-              <span style={{ fontSize: 42, fontWeight: 900, color: '#111827', lineHeight: 1 }}>
+              <span style={{ fontSize: 42, fontWeight: 900, color: 'var(--text)', lineHeight: 1 }}>
                 {data.total_usuarios}
               </span>
             </div>
@@ -110,11 +107,10 @@ export default function DashboardPage() {
           {/* Columna Derecha: Gráfico Principal */}
           <div className="card" style={{
             padding: 32,
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02)',
             height: '100%'
           }}>
             <div style={{ marginBottom: 32 }}>
-              <h3 style={{ margin: 0, fontSize: 20, color: '#111827', fontWeight: 700 }}>Flujo de Pedidos por Estado</h3>
+              <h3 style={{ margin: 0, fontSize: 20, color: 'var(--text)', fontWeight: 700 }}>Flujo de Pedidos por Estado</h3>
               <p style={{ margin: '8px 0 0 0', color: 'var(--text-muted)', fontSize: 14 }}>
                 Distribución en tiempo real de los pedidos según su etapa actual.
               </p>
@@ -124,12 +120,12 @@ export default function DashboardPage() {
               <div style={{ height: 400, width: '100%' }}>
                 <ResponsiveContainer>
                   <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#000000ff" />
-                    <XAxis dataKey="estado" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280', fontWeight: 600 }} dy={16} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280', fontWeight: 600 }} allowDecimals={false} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
+                    <XAxis dataKey="estado" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#a3a3a3', fontWeight: 600 }} dy={16} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#a3a3a3', fontWeight: 600 }} allowDecimals={false} />
                     <Tooltip
-                      cursor={{ fill: 'rgba(0,0,0,0.02)' }}
-                      contentStyle={{ borderRadius: 12, border: '1px solid #f3f4f6', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', fontWeight: 600, padding: '12px 16px' }}
+                      cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                      contentStyle={{ borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.8)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)', fontWeight: 600, padding: '12px 16px', color: 'white' }}
                     />
                     <Bar dataKey="cantidad" radius={[6, 6, 0, 0]} maxBarSize={50} animationDuration={1500}>
                       {chartData.map((entry, index) => (
