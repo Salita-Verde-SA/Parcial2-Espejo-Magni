@@ -65,8 +65,7 @@ class Token(SQLModel):
     expires_in: int
 
 
-class TokenRefresh(SQLModel):
-    refresh_token: str
+
 
 
 class PaginatedUsuarios(SQLModel):
