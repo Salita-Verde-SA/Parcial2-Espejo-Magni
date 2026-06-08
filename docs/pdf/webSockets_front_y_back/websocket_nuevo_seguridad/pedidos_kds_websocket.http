@@ -1,0 +1,205 @@
+# =============================================================================
+# KDS & Pedidos con WebSockets — REST Client
+# Módulo Pedidos · Máquina de Estados (FSM) · Notificaciones Live
+# =============================================================================
+#
+# Plugin requerido: REST Client (Huachao Mao)
+#   Instalar: Ctrl+Shift+P → "ext install humao.rest-client"
+#
+# Setup previo:
+#   1. uvicorn app.main:app --reload
+#   2. Asegurarse de tener los usuarios creados (admin, juan, cocina) ejecutando:
+#      python -m app.db.seed
+#
+# Flujo de uso:
+#   1. Ejecutar el login del bloque 1 para obtener los tokens de los roles.
+#   2. Copiar los tokens y pegarlos en las variables globales correspondientes.
+#   3. Crear un pedido con el usuario común (juan).
+#   4. Probar las transiciones de estado y observar cómo la pantalla KDS recibe
+#      actualizaciones live si estás conectado al WebSocket (ws://localhost:8000/api/v1/cocina/ws).
+#
+# Convención de comentarios:
+#   ✅ = respuesta exitosa esperada
+#   ❌ = error esperado (el comportamiento correcto ES ese error)
+# =============================================================================
+
+# ─── Variables globales ───────────────────────────────────────────────────────
+@baseUrl       = http://localhost:8000
+@api           = {{baseUrl}}/api/v1
+
+# Completar después de ejecutar el BLOQUE 1:
+@tokenAdmin    = PEGAR_TOKEN_ADMIN_AQUI
+@tokenJuan     = PEGAR_TOKEN_JUAN_AQUI
+@tokenCocina   = PEGAR_TOKEN_COCINA_AQUI
+
+
+# =============================================================================
+# BLOQUE 1 — Login / obtención de JWT (POST /auth/token)
+# =============================================================================
+
+### 1a. Login administrador
+# ✅ HTTP 200 (Copiar access_token a @tokenAdmin)
+POST {{api}}/auth/token
+Content-Type: application/x-www-form-urlencoded
+
+username=admin&password=Admin1234!
+
+###
+
+### 1b. Login usuario común (Juan)
+# ✅ HTTP 200 (Copiar access_token a @tokenJuan)
+POST {{api}}/auth/token
+Content-Type: application/x-www-form-urlencoded
+
+username=juan&password=Juan1234!
+
+###
+
+### 1c. Login cocinero (Cocina)
+# ✅ HTTP 200 (Copiar access_token a @tokenCocina)
+POST {{api}}/auth/token
+Content-Type: application/x-www-form-urlencoded
+
+username=cocina&password=Cocina1234!
+
+
+# =============================================================================
+# BLOQUE 2 — Flujo Completo de Pedidos
+# =============================================================================
+
+### 2a. Juan crea un nuevo pedido
+# ✅ HTTP 201 Created (Copiar el "id" retornado para usar en las siguientes llamadas)
+POST {{api}}/pedidos
+Content-Type: application/json
+Cookie: access_token={{tokenJuan}}
+
+{
+  "descripcion": "Pizza Napolitana Familiar + Coca Cola 1.5L",
+  "total": 2400.0
+}
+
+###
+
+# Cambiar este valor por el ID del pedido creado en el paso anterior (2a):
+@pedidoId = 1
+
+
+### 2b. Ver detalles del pedido creado
+# ✅ HTTP 200
+GET {{api}}/pedidos/{{pedidoId}}
+Cookie: access_token={{tokenJuan}}
+
+###
+
+### 2c. Cocinero intenta ver la lista del KDS REST de respaldo
+# ✅ HTTP 200 (Solo muestra pedidos 'confirmado' o 'preparando' filtrados/ordenados)
+GET {{api}}/cocina/pedidos
+Cookie: access_token={{tokenCocina}}
+
+
+# =============================================================================
+# BLOQUE 3 — Máquina de Estados (FSM) y RBAC
+# =============================================================================
+
+### 3a. Cocinero intenta confirmar el pedido recién creado (pendiente -> confirmado)
+# ❌ HTTP 403 Forbidden (Cocina solo tiene permiso para confirmado->preparando->enviado)
+PATCH {{api}}/pedidos/{{pedidoId}}/estado
+Content-Type: application/json
+Cookie: access_token={{tokenCocina}}
+
+{
+  "nuevo_estado": "confirmado",
+  "motivo": "Intento de confirmación por parte de cocina"
+}
+
+###
+
+### 3b. Administrador confirma el pedido (pendiente -> confirmado)
+# ✅ HTTP 200 OK (Dispara el broadcast "PEDIDO_CONFIRMADO" en tiempo real a KDS)
+PATCH {{api}}/pedidos/{{pedidoId}}/estado
+Content-Type: application/json
+Cookie: access_token={{tokenAdmin}}
+
+{
+  "nuevo_estado": "confirmado",
+  "motivo": "Pago verificado y aprobado"
+}
+
+###
+
+### 3c. El cocinero consulta el KDS para ver si aparece el pedido confirmado
+# ✅ HTTP 200 (El pedidoId ahora debe listarse aquí ya que está en estado 'confirmado')
+GET {{api}}/cocina/pedidos
+Cookie: access_token={{tokenCocina}}
+
+###
+
+### 3d. Cocinero avanza el pedido a preparación (confirmado -> preparando)
+# ✅ HTTP 200 OK (Dispara el broadcast "PEDIDO_EN_PREPARACION" a KDS)
+PATCH {{api}}/pedidos/{{pedidoId}}/estado
+Content-Type: application/json
+Cookie: access_token={{tokenCocina}}
+
+{
+  "nuevo_estado": "preparando",
+  "motivo": "Pedido ingresado a los hornos"
+}
+
+###
+
+### 3e. Cocinero intenta avanzar directamente de preparando a entregado
+# ❌ HTTP 403 Forbidden (La transición directa 'preparando' -> 'entregado' no es válida en FSM)
+PATCH {{api}}/pedidos/{{pedidoId}}/estado
+Content-Type: application/json
+Cookie: access_token={{tokenCocina}}
+
+{
+  "nuevo_estado": "entregado",
+  "motivo": "Intento de salto de estado directo"
+}
+
+###
+
+### 3f. Cocinero despacha el pedido (preparando -> enviado)
+# ✅ HTTP 200 OK (Dispara el broadcast "PEDIDO_EN_CAMINO" a KDS)
+PATCH {{api}}/pedidos/{{pedidoId}}/estado
+Content-Type: application/json
+Cookie: access_token={{tokenCocina}}
+
+{
+  "nuevo_estado": "enviado",
+  "motivo": "Entregado al repartidor asignado"
+}
+
+###
+
+### 3g. Administrador/Repartidor marca el pedido como entregado (enviado -> entregado)
+# ✅ HTTP 200 OK
+PATCH {{api}}/pedidos/{{pedidoId}}/estado
+Content-Type: application/json
+Cookie: access_token={{tokenAdmin}}
+
+{
+  "nuevo_estado": "entregado",
+  "motivo": "Recibido conforme en el domicilio del cliente"
+}
+
+
+# =============================================================================
+# BLOQUE 4 — Pruebas de Conectividad WebSockets (Manual)
+# =============================================================================
+# NOTA: Los WebSockets no se pueden testear directamente con REST Client usando
+# sintaxis HTTP ordinaria. El handshake del WebSocket en este sistema valida 
+# la autenticación EXCLUSIVAMENTE mediante la cookie 'access_token'.
+#
+# Para probarlo manualmente:
+#   1. Si conectas desde el navegador (en el mismo origen o con credenciales habilitadas),
+#      la cookie 'access_token' establecida en el login se envía automáticamente:
+#      `new WebSocket("ws://localhost:8000/api/v1/cocina/ws")`
+#
+#   2. Si usas herramientas de terminal como wscat, debes enviar el header Cookie:
+#      `wscat -c ws://localhost:8000/api/v1/cocina/ws -H "Cookie: access_token=tu_token_aqui"`
+#
+# El servidor rechazará la conexión con el código 1008 si la cookie no está o pertenece
+# a un usuario no autorizado (por ejemplo, Juan).
+# =============================================================================
