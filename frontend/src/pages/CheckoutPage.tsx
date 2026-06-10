@@ -16,7 +16,6 @@ export default function CheckoutPage() {
   const [formaPago, setFormaPago] = useState<string>('EFECTIVO')
   const [createdPedidoId, setCreatedPedidoId] = useState<number | null>(null)
   const [errorMsg, setErrorMsg] = useState<string>('')
-  const [descuento, setDescuento] = useState<number>(0)
 
   const [showNewDirForm, setShowNewDirForm] = useState(false)
   const [newDir, setNewDir] = useState<DireccionCreate>({
@@ -117,7 +116,6 @@ export default function CheckoutPage() {
     const orderData = {
       forma_pago_codigo: formaPago,
       direccion_id: selectedDirId,
-      descuento: descuento,
       items: items.map((i) => ({
         producto_id: i.producto.id,
         cantidad: i.cantidad,
@@ -410,27 +408,13 @@ export default function CheckoutPage() {
               <span>Subtotal</span>
               <span>{formatPrecio(total())}</span>
             </div>
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, color: 'var(--text-muted)' }}>
-              <span>Descuento ($)</span>
-              <input 
-                type="number"
-                min="0"
-                max={total()}
-                value={descuento || ''}
-                onChange={(e) => setDescuento(Math.min(total(), parseFloat(e.target.value) || 0))}
-                style={{ width: 80, padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border)', textAlign: 'right' }}
-                placeholder="0"
-              />
-            </div>
-
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--text-muted)' }}>
               <span>Envío</span>
               <span style={{ color: 'var(--success)', fontWeight: 600 }}>Gratis</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, fontWeight: 700, marginTop: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 18, fontWeight: 700, marginTop: 16 }}>
               <span>Total</span>
-              <span style={{ color: 'var(--primary)' }}>{formatPrecio(Math.max(0, total() - descuento))}</span>
+              <span style={{ color: 'var(--primary)' }}>{formatPrecio(total())}</span>
             </div>
           </div>
 
