@@ -1,17 +1,15 @@
 import { apiClient } from './client'
 
-export async function createPago(token: string, pedidoId: number, issuerId?: string, paymentMethodId?: string, installments?: number) {
+export async function createPago(pedidoId: number) {
   const response = await apiClient.post('/api/v1/pagos/crear', {
-    token,
-    pedido_id: pedidoId,
-    issuer_id: issuerId,
-    payment_method_id: paymentMethodId,
-    installments: installments || 1,
+    pedido_id: pedidoId
   })
-  return response.data
+  return response.data // { init_point: string }
 }
 
-export async function getPagoStatus(pedidoId: number) {
-  const response = await apiClient.get(`/api/v1/pagos/${pedidoId}`)
+export async function confirmarPagoManual(pedidoId: number) {
+  const response = await apiClient.post('/api/v1/pagos/confirmar', {
+    pedido_id: pedidoId
+  })
   return response.data
 }

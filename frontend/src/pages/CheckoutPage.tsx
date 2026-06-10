@@ -3,8 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { fetchDirecciones, createDireccion } from '../api/direcciones'
 import { createPedido } from '../api/pedidos'
+import { createPago } from '../api/pagos'
 import { useCartStore } from '../stores/cartStore'
-import MercadoPagoForm from '../features/store/components/MercadoPagoForm'
 import type { DireccionCreate, DireccionPublic } from '../types'
 
 export default function CheckoutPage() {
@@ -66,13 +66,26 @@ export default function CheckoutPage() {
     },
   })
 
+  const createPagoMutation = useMutation({
+    mutationFn: createPago,
+    onSuccess: (data: any) => {
+      clearCart()
+      window.location.href = data.init_point
+    },
+    onError: (err: any) => {
+      setErrorMsg(err.response?.data?.detail || 'Error al iniciar pago con MercadoPago')
+      setCreatedPedidoId(null)
+    },
+  })
+
   const createPedidoMutation = useMutation({
     mutationFn: createPedido,
     onSuccess: (data: any) => {
-      clearCart()
       if (formaPago === 'MERCADOPAGO') {
         setCreatedPedidoId(data.id)
+        createPagoMutation.mutate(data.id)
       } else {
+        clearCart()
         navigate('/mis-pedidos')
       }
     },
@@ -139,13 +152,10 @@ export default function CheckoutPage() {
         <span className="topbar-title">Finalizar Pedido</span>
       </header>
 
-      {createdPedidoId ? (
+      {createdPedidoId && formaPago === 'MERCADOPAGO' ? (
         <div className="page-wrapper" style={{ maxWidth: 600, margin: '0 auto', paddingTop: 32 }}>
-          <h2 style={{ textAlign: 'center', marginBottom: 24 }}>Pagar Pedido #{createdPedidoId}</h2>
-          <MercadoPagoForm 
-            pedidoId={createdPedidoId} 
-            onSuccess={() => navigate('/mis-pedidos')} 
-          />
+          <h2 style={{ textAlign: 'center', marginBottom: 24 }}>Redirigiendo a Mercado Pago...</h2>
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Por favor, espera un momento mientras preparamos tu pago seguro.</div>
         </div>
       ) : (
       <div className="page-wrapper" style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 24, alignItems: 'start' }}>
@@ -427,10 +437,10 @@ export default function CheckoutPage() {
           <button
             className="btn btn-primary"
             onClick={handleConfirmarPedido}
-            disabled={createPedidoMutation.isPending || !selectedDirId}
+            disabled={createPedidoMutation.isPending || createPagoMutation.isPending || !selectedDirId}
             style={{ width: '100%', marginTop: 24, padding: 12, fontSize: 15 }}
           >
-            {createPedidoMutation.isPending ? 'Procesando...' : 'Confirmar Pedido'}
+            {createPedidoMutation.isPending || createPagoMutation.isPending ? 'Procesando...' : 'Confirmar Pedido'}
           </button>
         </div>
 

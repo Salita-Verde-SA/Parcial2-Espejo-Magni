@@ -29,6 +29,7 @@ class Settings(BaseSettings):
 
     MP_ACCESS_TOKEN: str = ""
     MP_WEBHOOK_SECRET: str = ""
+    NGROK_URL: str = ""
 
     model_config = {
         "env_file": ".env",

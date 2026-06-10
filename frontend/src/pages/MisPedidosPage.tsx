@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
 import { fetchPedidos, cancelarPedido } from '../api/pedidos'
+import { confirmarPagoManual } from '../api/pagos'
 import { usePedidosWebSocket } from '../hooks/usePedidosWebSocket'
 import ConfirmDialog from '../features/ui/components/ConfirmDialog'
 import type { PedidoPublic, PaginatedPedidos } from '../types'
 
 export default function MisPedidosPage() {
   const queryClient = useQueryClient()
+  const [searchParams, setSearchParams] = useSearchParams()
   usePedidosWebSocket()
 
   const [page, setPage] = useState(1)
@@ -21,6 +24,22 @@ export default function MisPedidosPage() {
     placeholderData: (prev) => prev,
     refetchInterval: 30_000,
   })
+
+  useEffect(() => {
+    const status = searchParams.get('status') || searchParams.get('collection_status')
+    const externalReference = searchParams.get('external_reference')
+    
+    if (status === 'approved' && externalReference) {
+      const pedidoId = parseInt(externalReference)
+      if (!isNaN(pedidoId)) {
+        confirmarPagoManual(pedidoId).then(() => {
+          queryClient.invalidateQueries({ queryKey: ['pedidos'] })
+          // Limpiar URL
+          setSearchParams({})
+        }).catch(err => console.error('Error al confirmar el pedido:', err))
+      }
+    }
+  }, [searchParams, setSearchParams, queryClient])
 
   useEffect(() => {
     if (response && selectedPedido) {
