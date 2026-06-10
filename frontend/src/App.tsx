@@ -14,6 +14,8 @@ import DashboardPage from './pages/DashboardPage'
 import { initUser } from './api/auth'
 import { useEffect, useState } from 'react'
 
+import AdminLayout from './features/ui/components/AdminLayout'
+
 function AppInitializer({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
@@ -63,6 +65,7 @@ export default function App() {
 
         <Route path="/login" element={<LoginPage />} />
 
+        {/* Tienda y layout general */}
         <Route
           path="/"
           element={
@@ -84,7 +87,17 @@ export default function App() {
           <Route path="mis-pedidos" element={
             <RequireRole roles={['CLIENT', 'ADMIN']}><MisPedidosPage /></RequireRole>
           } />
+        </Route>
 
+        {/* Administracion layout */}
+        <Route
+          path="/"
+          element={
+            <RequireAuth>
+              <AdminLayout />
+            </RequireAuth>
+          }
+        >
           <Route path="ingredientes" element={
             <RequireRole roles={['ADMIN', 'STOCK']}><IngredientesPage /></RequireRole>
           } />

@@ -54,3 +54,7 @@ coverage/
 Thumbs.db
 desktop.ini
 docker-compose.override.yml
+
+# Agents & Skills
+.agents
+skills-lock.json

@@ -28,18 +28,29 @@ function formatPrecio(precio: string, unidadSimbolo?: string) {
 
 function ProductoCard({ producto }: { producto: Producto }) {
   const addItem = useCartStore((s) => s.addItem)
-  const openCart = useUiStore((s) => s.openCart)
+  const [showToast, setShowToast] = useState(false)
 
   const alergenos = producto.ingredientes.filter((i) => i.es_alergeno)
 
   function handleAgregar() {
     addItem(producto, 1, [])
-    openCart()
+    setShowToast(true)
+    setTimeout(() => setShowToast(false), 2500)
   }
 
   return (
     <div className="group relative bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden shadow-lg hover:shadow-[0_8px_30px_rgba(220,38,38,0.2)] hover:-translate-y-1 transition-all duration-300 flex flex-col animate-fade-in-up">
       
+      {/* Toast de agregado al carrito */}
+      {showToast && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-green-600/95 text-white px-4 py-2 rounded-full text-xs font-bold shadow-2xl z-50 animate-bounce backdrop-blur-md border border-green-400/30 whitespace-nowrap flex items-center gap-2">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+          ¡Agregado!
+        </div>
+      )}
+
       <div className="h-48 overflow-hidden relative bg-gradient-to-br from-neutral-900 to-black flex items-center justify-center">
         {producto.imagen_url ? (
           <img
@@ -94,7 +105,7 @@ function ProductoCard({ producto }: { producto: Producto }) {
               No disponible
             </button>
           ) : (
-            <button 
+            <button
               onClick={handleAgregar}
               className="w-full appearance-none border-none bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl px-4 py-3 shadow-[0_4px_15px_rgba(220,38,38,0.3)] hover:shadow-[0_8px_25px_rgba(220,38,38,0.5)] transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 uppercase tracking-wider text-sm"
             >
@@ -166,7 +177,7 @@ export default function CatalogoPage() {
       </div>
 
       <div className="page-wrapper pt-0" style={{ maxWidth: 1400, margin: '0 auto' }}>
-        
+
         {/* Filtros Modernos */}
         <div className="mb-8 space-y-6">
           {/* Búsqueda */}
@@ -184,7 +195,7 @@ export default function CatalogoPage() {
               className="w-full bg-black/40 backdrop-blur-xl border border-white/10 text-white placeholder-neutral-500 rounded-2xl pl-12 pr-4 py-4 focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 transition-all shadow-lg"
             />
             {draft.nombre && (
-              <button 
+              <button
                 type="button"
                 onClick={() => { setDraft({ ...draft, nombre: '' }); setFiltros({ ...filtros, nombre: '', page: 1 }) }}
                 className="absolute inset-y-0 right-0 pr-4 flex items-center text-neutral-400 hover:text-white"
@@ -200,11 +211,10 @@ export default function CatalogoPage() {
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide" style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
             <button
               onClick={() => handleCategorySelect(null)}
-              className={`appearance-none border-none whitespace-nowrap px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 ${
-                filtros.categoria_id === null 
-                  ? 'bg-red-600 text-white shadow-[0_4px_15px_rgba(220,38,38,0.4)]' 
+              className={`appearance-none border-none whitespace-nowrap px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 ${filtros.categoria_id === null
+                  ? 'bg-red-600 text-white shadow-[0_4px_15px_rgba(220,38,38,0.4)]'
                   : 'bg-white/5 border border-white/10 text-neutral-300 hover:bg-white/10 hover:text-white'
-              }`}
+                }`}
             >
               Todos
             </button>
@@ -212,11 +222,10 @@ export default function CatalogoPage() {
               <button
                 key={c.id}
                 onClick={() => handleCategorySelect(c.id)}
-                className={`appearance-none border-none whitespace-nowrap px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 ${
-                  filtros.categoria_id === c.id
-                    ? 'bg-red-600 text-white shadow-[0_4px_15px_rgba(220,38,38,0.4)]' 
+                className={`appearance-none border-none whitespace-nowrap px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 ${filtros.categoria_id === c.id
+                    ? 'bg-red-600 text-white shadow-[0_4px_15px_rgba(220,38,38,0.4)]'
                     : 'bg-white/5 border border-white/10 text-neutral-300 hover:bg-white/10 hover:text-white'
-                }`}
+                  }`}
               >
                 {c.nombre}
               </button>
@@ -248,7 +257,7 @@ export default function CatalogoPage() {
             <p className="text-neutral-400 max-w-md">
               Intenta buscar con otros términos o selecciona una categoría diferente.
             </p>
-            <button 
+            <button
               onClick={() => { setDraft(DEFAULT_FILTROS); setFiltros(DEFAULT_FILTROS) }}
               className="mt-6 text-red-400 font-bold hover:text-red-300 transition-colors"
             >

@@ -17,7 +17,7 @@ export default function MisPedidosPage() {
 
   const { data: response, isLoading } = useQuery<PaginatedPedidos>({
     queryKey: ['pedidos', page],
-    queryFn: () => fetchPedidos('', page, 5),
+    queryFn: () => fetchPedidos('', page, 5, true),
     placeholderData: (prev) => prev,
     refetchInterval: 30_000,
   })

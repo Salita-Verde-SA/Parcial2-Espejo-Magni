@@ -367,11 +367,16 @@ def list_pedidos(
     estado_codigo: str,
     page: int,
     page_size: int,
+    solo_mis_pedidos: bool,
     uow: UnitOfWork,
 ) -> PaginatedPedidos:
     with uow:
         is_staff = any(r in ["ADMIN", "PEDIDOS"] for r in roles)
-        user_filter = None if is_staff else usuario_id
+        
+        if solo_mis_pedidos:
+            user_filter = usuario_id
+        else:
+            user_filter = None if is_staff else usuario_id
         
         items, total = uow.pedidos.list_filtered(
             usuario_id=user_filter,

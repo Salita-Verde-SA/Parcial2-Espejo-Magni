@@ -107,9 +107,10 @@ def list_orders(
     estado_codigo: str = Query(""),
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
+    solo_mis_pedidos: bool = Query(False),
 ):
     user, roles = ctx
-    return list_pedidos(user.id, roles, estado_codigo, page, page_size, uow)
+    return list_pedidos(user.id, roles, estado_codigo, page, page_size, solo_mis_pedidos, uow)
 
 
 @router.get("/api/v1/pedidos/{pedido_id}", response_model=PedidoPublic)
