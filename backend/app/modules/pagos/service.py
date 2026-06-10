@@ -39,7 +39,7 @@ def procesar_pago(data: PagoCreate, usuario_id: int, uow: UnitOfWork) -> PagoRes
                 "failure": f"{ngrok_url}/api/v1/pagos/redirect/{pedido.id}/failure",
                 "pending": f"{ngrok_url}/api/v1/pagos/redirect/{pedido.id}/pending"
             },
-            "auto_return": "approved" if settings.NGROK_URL else "",
+            "auto_return": "all" if settings.NGROK_URL else "",
             "notification_url": f"{settings.NGROK_URL}/api/v1/pagos/webhook" if settings.NGROK_URL else None,
             "external_reference": str(pedido.id)
         }

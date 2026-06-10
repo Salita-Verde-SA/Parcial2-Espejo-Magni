@@ -8,6 +8,7 @@ import ProductosPage from './pages/ProductosPage'
 import CategoriasPage from './pages/CategoriasPage'
 import CheckoutPage from './pages/CheckoutPage'
 import MisPedidosPage from './pages/MisPedidosPage'
+import PagoStatusPage from './pages/PagoStatusPage'
 import AdminPedidosPage from './pages/AdminPedidosPage'
 import AdminUsuariosPage from './pages/AdminUsuariosPage'
 import DashboardPage from './pages/DashboardPage'
@@ -86,6 +87,10 @@ export default function App() {
 
           <Route path="mis-pedidos" element={
             <RequireRole roles={['CLIENT', 'ADMIN']}><MisPedidosPage /></RequireRole>
+          } />
+
+          <Route path="pago/:status" element={
+            <RequireRole roles={['CLIENT', 'ADMIN']}><PagoStatusPage /></RequireRole>
           } />
         </Route>
 

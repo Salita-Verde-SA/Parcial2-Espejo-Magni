@@ -10,7 +10,7 @@ router = APIRouter(prefix="/api/v1/pagos", tags=["Pagos"])
 @router.get("/redirect/{pedido_id}/{status}")
 def redirect_to_frontend(pedido_id: int, status: str, request: Request):
     # Recibimos el redirect de Mercado Pago y mandamos al usuario a su frontend local
-    base_url = "http://localhost:5173/mis-pedidos"
+    base_url = f"http://localhost:5173/pago/{status}"
     query_params = request.query_params
     
     # Reconstruimos los parametros que mandó MP
