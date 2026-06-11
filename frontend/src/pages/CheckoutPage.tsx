@@ -34,11 +34,11 @@ export default function CheckoutPage() {
   })
 
   useEffect(() => {
-    if (direcciones) {
+    if (direcciones && selectedDirId === null) {
       const principal = direcciones.find((d) => d.principal)
       if (principal) {
         setSelectedDirId(principal.id)
-      } else if (direcciones.length > 0 && selectedDirId === null) {
+      } else if (direcciones.length > 0) {
         setSelectedDirId(direcciones[0].id)
       }
     }
