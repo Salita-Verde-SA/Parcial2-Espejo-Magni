@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     MP_ACCESS_TOKEN: str = ""
     MP_WEBHOOK_SECRET: str = ""
     NGROK_URL: str = ""
+    FRONTEND_URL: str = "http://localhost"
 
     model_config = {
         "env_file": ".env",

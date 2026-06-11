@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchProductos } from '../api/productos'
 import { fetchCategorias } from '../api/categorias'
 import { useCartStore } from '../stores/cartStore'
-import { useUiStore } from '../stores/uiStore'
+
 import type { Producto, FiltrosProducto } from '../types'
 
 const DEFAULT_FILTROS: FiltrosProducto = {
