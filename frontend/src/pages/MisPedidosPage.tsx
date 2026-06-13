@@ -3,14 +3,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { fetchPedidos, cancelarPedido } from '../api/pedidos'
 import { confirmarPagoManual } from '../api/pagos'
-import { usePedidosWebSocket } from '../hooks/usePedidosWebSocket'
+import { useMisPedidosFeed } from '../hooks/useOrderStatusWS'
+import WsConnectionBadge from '../features/ui/components/WsConnectionBadge'
 import ConfirmDialog from '../features/ui/components/ConfirmDialog'
 import type { PedidoPublic, PaginatedPedidos } from '../types'
 
 export default function MisPedidosPage() {
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
-  usePedidosWebSocket()
 
   const [page, setPage] = useState(1)
   const [selectedPedido, setSelectedPedido] = useState<PedidoPublic | null>(null)
@@ -24,6 +24,10 @@ export default function MisPedidosPage() {
     placeholderData: (prev) => prev,
     refetchInterval: 30_000,
   })
+
+  // WebSocket por pedido visible: refleja cambios de estado en tiempo real.
+  const activePedidoIds = response?.items.map((p) => p.id) ?? []
+  useMisPedidosFeed(activePedidoIds)
 
   useEffect(() => {
     const status = searchParams.get('status') || searchParams.get('collection_status')
@@ -99,8 +103,9 @@ export default function MisPedidosPage() {
 
   return (
     <>
-      <header className="topbar">
+      <header className="topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span className="topbar-title">Mis Pedidos</span>
+        <WsConnectionBadge />
       </header>
 
       <div className="page-wrapper" style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: 24, alignItems: 'start' }}>

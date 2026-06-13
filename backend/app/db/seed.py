@@ -19,19 +19,19 @@ ROLES = [
     {"codigo": "CLIENT",  "descripcion": "Cliente del sistema"},
 ]
 
+# Máquina de estados v7 — 5 estados (se elimina EN_CAMINO de v5)
 ESTADOS_PEDIDO = [
-    {"codigo": "PENDIENTE", "descripcion": "Pedido registrado, pendiente de aprobación"},
-    {"codigo": "CONFIRMADO", "descripcion": "Pedido confirmado por la tienda"},
-    {"codigo": "EN_PREP", "descripcion": "Pedido en preparación"},
-    {"codigo": "EN_CAMINO", "descripcion": "Pedido en camino"},
-    {"codigo": "ENTREGADO", "descripcion": "Pedido entregado al cliente"},
-    {"codigo": "CANCELADO", "descripcion": "Pedido cancelado"},
+    {"codigo": "PENDIENTE",  "descripcion": "Pedido creado, pago pendiente",     "orden": 1, "es_terminal": False},
+    {"codigo": "CONFIRMADO", "descripcion": "Pago procesado y confirmado",        "orden": 2, "es_terminal": False},
+    {"codigo": "EN_PREP",    "descripcion": "En preparación en cocina",           "orden": 3, "es_terminal": False},
+    {"codigo": "ENTREGADO",  "descripcion": "Entrega confirmada",                 "orden": 4, "es_terminal": True},
+    {"codigo": "CANCELADO",  "descripcion": "Pedido cancelado",                   "orden": 5, "es_terminal": True},
 ]
 
 FORMAS_PAGO = [
-    {"codigo": "EFECTIVO", "descripcion": "Pago en efectivo al recibir"},
-    {"codigo": "MERCADOPAGO", "descripcion": "Pago online a través de MercadoPago"},
-    {"codigo": "TARJETA", "descripcion": "Pago con tarjeta de crédito/débito"},
+    {"codigo": "MERCADOPAGO",   "descripcion": "Pago online a través de MercadoPago"},
+    {"codigo": "EFECTIVO",      "descripcion": "Pago en efectivo al recibir"},
+    {"codigo": "TRANSFERENCIA", "descripcion": "Pago por transferencia bancaria"},
 ]
 
 
@@ -51,13 +51,12 @@ CATEGORIAS = [
 ]
 
 UNIDADES = [
-    {"nombre": "kilogramo",       "simbolo": "kg",  "tipo": "masa"},
-    {"nombre": "gramo",           "simbolo": "g",   "tipo": "masa"},
-    {"nombre": "litro",           "simbolo": "L",   "tipo": "volumen"},
-    {"nombre": "mililitro",       "simbolo": "mL",  "tipo": "volumen"},
-    {"nombre": "pieza",           "simbolo": "u",   "tipo": "unidad"},
-    {"nombre": "docena",           "simbolo": "doc", "tipo": "unidad"},
-    {"nombre": "metro cuadrado",  "simbolo": "m²",  "tipo": "area"},
+    {"nombre": "kilogramo", "simbolo": "kg",        "tipo": "peso"},
+    {"nombre": "gramo",     "simbolo": "g",         "tipo": "peso"},
+    {"nombre": "litro",     "simbolo": "L",         "tipo": "volumen"},
+    {"nombre": "mililitro", "simbolo": "ml",        "tipo": "volumen"},
+    {"nombre": "unidad",    "simbolo": "ud",        "tipo": "contable"},
+    {"nombre": "porciones", "simbolo": "porciones", "tipo": "contable"},
 ]
 
 INGREDIENTES = [
@@ -212,7 +211,7 @@ def run() -> None:
                 unid_ids[u["simbolo"]] = existing.id
                 print(f"  [=] {u['nombre']} ({u['simbolo']})")
         
-        unidad_default_id = unid_ids.get("u", 1)
+        unidad_default_id = unid_ids.get("ud", 1)
 
         print("\n[Categorias]")
         cat_ids = {}

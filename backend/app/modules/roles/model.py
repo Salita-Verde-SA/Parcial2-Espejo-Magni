@@ -16,6 +16,11 @@ class UsuarioRol(SQLModel, table=True):
 
     usuario_id: int = Field(foreign_key="usuario.id", primary_key=True)
     rol_codigo: str = Field(foreign_key="rol.codigo", primary_key=True)
+    # Quién asignó el rol (auditoría) y expiración opcional (rol temporal, v7).
+    # asignado_por_id se deja sin FK formal para no introducir una segunda ruta
+    # FK a usuario en la tabla puente (rompería el join M2M Usuario<->Rol).
+    asignado_por_id: Optional[int] = Field(default=None)
+    expires_at: Optional[datetime] = Field(default=None)
     created_at: datetime = Field(default_factory=_utcnow)
 
 

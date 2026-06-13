@@ -18,6 +18,7 @@ class Categoria(SQLModel, table=True):
     nombre: str = Field(index=True, unique=True, max_length=100)
     descripcion: Optional[str] = Field(default=None, max_length=500)
     parent_id: Optional[int] = Field(default=None, foreign_key="categoria.id")
+    imagen_url: Optional[str] = Field(default=None, max_length=500)
     created_at: datetime = Field(default_factory=_utcnow)
     updated_at: datetime = Field(default_factory=_utcnow)
     deleted_at: Optional[datetime] = Field(default=None)
@@ -32,12 +33,14 @@ class CategoriaCreate(SQLModel):
     nombre: str = Field(min_length=1, max_length=100)
     descripcion: Optional[str] = Field(default=None, max_length=500)
     parent_id: Optional[int] = None
+    imagen_url: Optional[str] = Field(default=None, max_length=500)
 
 
 class CategoriaUpdate(SQLModel):
     nombre: Optional[str] = Field(default=None, min_length=1, max_length=100)
     descripcion: Optional[str] = Field(default=None, max_length=500)
     parent_id: Optional[int] = None
+    imagen_url: Optional[str] = Field(default=None, max_length=500)
 
 
 class CategoriaPublic(SQLModel):
@@ -45,6 +48,7 @@ class CategoriaPublic(SQLModel):
     nombre: str
     descripcion: Optional[str]
     parent_id: Optional[int]
+    imagen_url: Optional[str] = None
     created_at: datetime
     deleted_at: Optional[datetime] = None
     in_use: bool = False

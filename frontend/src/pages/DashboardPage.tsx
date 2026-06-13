@@ -1,42 +1,63 @@
 import { useQuery } from '@tanstack/react-query'
-import { fetchDashboardData } from '../api/admin'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import {
+  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+} from 'recharts'
+import {
+  fetchResumen, fetchVentas, fetchProductosTop, fetchPedidosPorEstado, fetchIngresos,
+} from '../api/estadisticas'
 
-const COLORS: Record<string, string> = {
-  'PENDIENTE': '#f59e0b', // amber-500
-  'CONFIRMADO': '#3b82f6', // blue-500
-  'EN_PREP': '#8b5cf6', // violet-500
-  'EN_CAMINO': '#6366f1', // indigo-500
-  'ENTREGADO': '#10b981', // emerald-500
-  'CANCELADO': '#ef4444', // red-500
+const ESTADO_COLORS: Record<string, string> = {
+  PENDIENTE: '#f59e0b',
+  CONFIRMADO: '#3b82f6',
+  EN_PREP: '#8b5cf6',
+  ENTREGADO: '#10b981',
+  CANCELADO: '#ef4444',
+}
+const BAR_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4']
+
+function fmtMoney(n: number | string) {
+  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(Number(n))
+}
+
+function KpiCard({ label, value, color }: { label: string; value: string; color: string }) {
+  return (
+    <div className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 6, borderLeft: `4px solid ${color}` }}>
+      <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</span>
+      <span style={{ fontSize: 30, fontWeight: 900, color: 'var(--text)', lineHeight: 1.1 }}>{value}</span>
+    </div>
+  )
+}
+
+function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="card" style={{ padding: 24 }}>
+      <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 700 }}>{title}</h3>
+      <div style={{ width: '100%', height: 280 }}>
+        <ResponsiveContainer>{children as any}</ResponsiveContainer>
+      </div>
+    </div>
+  )
 }
 
 export default function DashboardPage() {
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['admin-dashboard'],
-    queryFn: fetchDashboardData,
-  })
+  // refetchInterval mantiene los KPIs frescos; los hooks WS invalidan ['estadisticas'].
+  const resumen = useQuery({ queryKey: ['estadisticas', 'resumen'], queryFn: fetchResumen, refetchInterval: 30_000 })
+  const ventas = useQuery({ queryKey: ['estadisticas', 'ventas'], queryFn: () => fetchVentas('day') })
+  const productos = useQuery({ queryKey: ['estadisticas', 'productos-top'], queryFn: () => fetchProductosTop(5) })
+  const estados = useQuery({ queryKey: ['estadisticas', 'pedidos-por-estado'], queryFn: fetchPedidosPorEstado })
+  const ingresos = useQuery({ queryKey: ['estadisticas', 'ingresos'], queryFn: fetchIngresos })
 
-  if (isLoading) {
-    return (
-      <div className="page-wrapper" style={{ display: 'flex', justifyContent: 'center', marginTop: 100 }}>
-        <span className="spinner spinner-dark" style={{ width: 40, height: 40 }} />
-      </div>
-    )
-  }
-
-  if (isError || !data) {
-    return (
-      <div className="page-wrapper" style={{ display: 'flex', justifyContent: 'center', marginTop: 100, color: 'var(--danger)' }}>
-        <h2>Error al cargar el dashboard</h2>
-      </div>
-    )
-  }
-
-  // Preparamos datos para Recharts
-  const chartData = Object.entries(data.pedidos_por_estado).map(([estado, cantidad]) => ({
-    estado,
-    cantidad,
+  const ventasData = (ventas.data ?? []).map((v) => ({
+    periodo: v.periodo, total: Number(v.total_ventas), pedidos: v.cantidad_pedidos,
+  }))
+  const productosData = (productos.data ?? []).map((p) => ({
+    nombre: p.nombre.length > 14 ? p.nombre.slice(0, 14) + '…' : p.nombre,
+    ingresos: Number(p.ingresos), cantidad: p.cantidad_vendida,
+  }))
+  const estadosData = (estados.data ?? []).map((e) => ({ name: e.estado_codigo, value: e.cantidad }))
+  const ingresosData = (ingresos.data ?? []).map((i) => ({
+    forma: i.forma_pago_codigo, total: Number(i.total), cantidad: i.cantidad,
   }))
 
   return (
@@ -45,102 +66,65 @@ export default function DashboardPage() {
         <span className="topbar-title">Dashboard</span>
       </header>
 
-      <div className="page-wrapper" style={{ maxWidth: 1400, margin: '0 auto' }}>
+      <div className="page-wrapper" style={{ maxWidth: 1400, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(280px, 350px) 1fr',
-          gap: 32,
-          alignItems: 'start'
-        }}>
+        {/* KPI cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+          <KpiCard label="Ventas de hoy" value={fmtMoney(resumen.data?.ventas_hoy ?? 0)} color="#3b82f6" />
+          <KpiCard label="Ticket promedio" value={fmtMoney(resumen.data?.ticket_promedio ?? 0)} color="#10b981" />
+          <KpiCard label="Pedidos activos" value={String(resumen.data?.pedidos_activos ?? 0)} color="#f59e0b" />
+          <KpiCard label="Ventas del mes" value={fmtMoney(resumen.data?.ventas_mes ?? 0)} color="#8b5cf6" />
+        </div>
 
-          {/* Columna Izquierda: KPIs Stackeados */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        {/* Gráficos */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 24 }}>
 
-            <div className="card" style={{
-              padding: 24,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 8,
-              borderLeft: '4px solid #3b82f6'
-            }}>
-              <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Total Pedidos Registrados
-              </span>
-              <span style={{ fontSize: 42, fontWeight: 900, color: 'var(--text)', lineHeight: 1 }}>
-                {data.total_pedidos}
-              </span>
-            </div>
+          <ChartCard title="Ventas por período">
+            <LineChart data={ventasData} margin={{ top: 8, right: 16, left: -10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(128,128,128,0.15)" />
+              <XAxis dataKey="periodo" tick={{ fontSize: 11 }} />
+              <YAxis yAxisId="l" tick={{ fontSize: 11 }} />
+              <YAxis yAxisId="r" orientation="right" tick={{ fontSize: 11 }} allowDecimals={false} />
+              <Tooltip />
+              <Legend />
+              <Line yAxisId="l" type="monotone" dataKey="total" name="Ventas ($)" stroke="#3b82f6" strokeWidth={2} dot={false} />
+              <Line yAxisId="r" type="monotone" dataKey="pedidos" name="Pedidos" stroke="#10b981" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ChartCard>
 
-            <div className="card" style={{
-              padding: 24,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 8,
-              borderLeft: '4px solid #10b981'
-            }}>
-              <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Catálogo de Productos
-              </span>
-              <span style={{ fontSize: 42, fontWeight: 900, color: 'var(--text)', lineHeight: 1 }}>
-                {data.total_productos}
-              </span>
-            </div>
+          <ChartCard title="Top productos (ingresos)">
+            <BarChart data={productosData} margin={{ top: 8, right: 16, left: -10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(128,128,128,0.15)" />
+              <XAxis dataKey="nombre" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} />
+              <Tooltip formatter={(v: any, n: any) => (n === 'ingresos' ? fmtMoney(v) : v)} />
+              <Bar dataKey="ingresos" name="Ingresos" radius={[6, 6, 0, 0]}>
+                {productosData.map((_, i) => <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />)}
+              </Bar>
+            </BarChart>
+          </ChartCard>
 
-            <div className="card" style={{
-              padding: 24,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 8,
-              borderLeft: '4px solid #8b5cf6'
-            }}>
-              <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Usuarios Activos
-              </span>
-              <span style={{ fontSize: 42, fontWeight: 900, color: 'var(--text)', lineHeight: 1 }}>
-                {data.total_usuarios}
-              </span>
-            </div>
+          <ChartCard title="Distribución por estado">
+            <PieChart>
+              <Pie data={estadosData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label>
+                {estadosData.map((e, i) => <Cell key={i} fill={ESTADO_COLORS[e.name] || BAR_COLORS[i % BAR_COLORS.length]} />)}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ChartCard>
 
-          </div>
-
-          {/* Columna Derecha: Gráfico Principal */}
-          <div className="card" style={{
-            padding: 32,
-            height: '100%'
-          }}>
-            <div style={{ marginBottom: 32 }}>
-              <h3 style={{ margin: 0, fontSize: 20, color: 'var(--text)', fontWeight: 700 }}>Flujo de Pedidos por Estado</h3>
-              <p style={{ margin: '8px 0 0 0', color: 'var(--text-muted)', fontSize: 14 }}>
-                Distribución en tiempo real de los pedidos según su etapa actual.
-              </p>
-            </div>
-
-            {chartData.length > 0 ? (
-              <div style={{ height: 400, width: '100%' }}>
-                <ResponsiveContainer>
-                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
-                    <XAxis dataKey="estado" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#a3a3a3', fontWeight: 600 }} dy={16} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#a3a3a3', fontWeight: 600 }} allowDecimals={false} />
-                    <Tooltip
-                      cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                      contentStyle={{ borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.8)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)', fontWeight: 600, padding: '12px 16px', color: 'white' }}
-                    />
-                    <Bar dataKey="cantidad" radius={[6, 6, 0, 0]} maxBarSize={50} animationDuration={1500}>
-                      {chartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[entry.estado] || '#9ca3af'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-                No hay pedidos registrados todavía.
-              </div>
-            )}
-          </div>
+          <ChartCard title="Ingresos por forma de pago">
+            <BarChart layout="vertical" data={ingresosData} margin={{ top: 8, right: 16, left: 30, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(128,128,128,0.15)" />
+              <XAxis type="number" tick={{ fontSize: 11 }} />
+              <YAxis type="category" dataKey="forma" tick={{ fontSize: 11 }} width={100} />
+              <Tooltip formatter={(v: any) => fmtMoney(v)} />
+              <Bar dataKey="total" name="Total" radius={[0, 6, 6, 0]}>
+                {ingresosData.map((_, i) => <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />)}
+              </Bar>
+            </BarChart>
+          </ChartCard>
 
         </div>
       </div>

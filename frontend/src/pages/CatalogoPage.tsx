@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchProductos } from '../api/productos'
 import { fetchCategorias } from '../api/categorias'
+import { cldThumb } from '../api/uploads'
 import { useCartStore } from '../stores/cartStore'
 
 import type { Producto, FiltrosProducto } from '../types'
@@ -54,8 +55,9 @@ function ProductoCard({ producto }: { producto: Producto }) {
       <div className="h-48 overflow-hidden relative bg-gradient-to-br from-neutral-900 to-black flex items-center justify-center">
         {producto.imagen_url ? (
           <img
-            src={producto.imagen_url}
+            src={cldThumb(producto.imagen_url, 600, 400)}
             alt={producto.nombre}
+            loading="lazy"
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
           />
         ) : (

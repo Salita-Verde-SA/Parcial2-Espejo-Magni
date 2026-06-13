@@ -218,9 +218,26 @@ App disponible en: `http://localhost:5173` (o el puerto que Vite asigne)
 | `/categorias` | GET/POST | Listar/crear categorías |
 | `/productos` | GET/POST | Listar/crear productos |
 | `/ingredientes` | GET/POST | Listar/crear ingredientes |
-| `/pedidos` | GET/POST | Listar/crear pedidos |
+| `/pedidos` | GET/POST | Listar/crear pedidos (FSM 5 estados) |
+| `/pedidos/{id}/estado` | PATCH | Avanzar estado (valida FSM, notifica WS) |
+| `/pedidos/{id}/historial` | GET | Audit trail append-only del pedido |
+| `/pagos/crear` · `/pagos/webhook` | POST | MercadoPago (idempotency_key + tabla Pago) |
+| `/uploads/imagen` | POST/DELETE | Subir/eliminar imágenes en Cloudinary (ADMIN) |
+| `/estadisticas/*` | GET | KPIs: resumen, ventas, productos-top, ingresos (ADMIN) |
 | `/usuarios` | GET/POST | Gestión de usuarios (admin) |
+| `ws://…/ws/pedidos` | WS | Feed de pedidos en tiempo real (JWT en `?token=`) |
 | `/docs` | GET | Swagger UI |
+
+### Tests
+
+```bash
+# En el contenedor:
+docker-compose exec backend pytest
+# Local (con las dependencias instaladas):
+cd backend && pytest -q                 # 34 tests
+cd backend && pytest --cov=app          # cobertura ≥ 60%
+```
+Los tests usan SQLite in-memory (no requieren PostgreSQL) y cubren auth, pedidos (FSM/RN), estadísticas, pagos, uploads y WebSocket.
 
 ---
 
@@ -229,21 +246,34 @@ App disponible en: `http://localhost:5173` (o el puerto que Vite asigne)
 ### Variables de Entorno (`.env`)
 
 ```env
-# Database
-DATABASE_URL=postgresql://fastfood:password@postgres:5432/fastfood
+# Database (el backend compone DATABASE_URL a partir de estas, o usá DATABASE_URL directo)
+POSTGRES_USER=fastfood
+POSTGRES_PASSWORD=password
+POSTGRES_DB=fastfood_db
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+# DATABASE_URL=postgresql://fastfood:password@postgres:5432/fastfood_db
 
 # JWT
-SECRET_KEY=tu_clave_secreta_super_larga_aqui
+SECRET_KEY=tu_clave_secreta_super_larga_aqui_min_32_chars
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
 
-# CORS
-ALLOWED_ORIGINS=["http://localhost:3000", "http://localhost:5173"]
+# MercadoPago
+MP_ACCESS_TOKEN=TEST-xxxx          # backend
+MP_PUBLIC_KEY=TEST-xxxx            # frontend (VITE_MP_PUBLIC_KEY)
+NGROK_URL=https://tu-ngrok.app     # URL pública para el webhook IPN
+FRONTEND_URL=http://localhost
 
-# App
-DEBUG=False
-LOG_LEVEL=INFO
+# Cloudinary (backend only — el secret NUNCA se expone al frontend)
+CLOUDINARY_CLOUD_NAME=tu-cloud-name
+CLOUDINARY_API_KEY=123456789012345
+CLOUDINARY_API_SECRET=tu-api-secret
 ```
+
+> El frontend (Vite) usa `VITE_MP_PUBLIC_KEY` y `VITE_API_URL` en su propio `.env`.
+> Si faltan las claves de Cloudinary, el módulo `/uploads` degrada con HTTP 503 (no crashea).
 
 ### Primera Ejecución
 

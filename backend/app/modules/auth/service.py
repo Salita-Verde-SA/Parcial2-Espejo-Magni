@@ -26,6 +26,7 @@ def register_user(data: UserRegister, uow: UnitOfWork) -> Token:
             nombre=data.nombre,
             apellido=data.apellido,
             email=data.email,
+            celular=data.celular,
             hashed_password=hash_password(data.password),
         )
         uow.session.add(user)

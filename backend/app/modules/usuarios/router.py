@@ -17,6 +17,7 @@ def _to_public(u: Usuario, roles: list[str]) -> UserPublic:
         nombre=u.nombre,
         apellido=u.apellido,
         email=u.email,
+        celular=u.celular,
         disabled=u.disabled,
         roles=roles,
         created_at=u.created_at,
@@ -38,6 +39,8 @@ def update_me(
             u.nombre = data.nombre
         if data.apellido:
             u.apellido = data.apellido
+        if data.celular is not None:
+            u.celular = data.celular
         if data.email:
             u.email = str(data.email)
         u.updated_at = datetime.now(timezone.utc)

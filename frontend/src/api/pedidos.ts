@@ -23,9 +23,14 @@ export async function fetchPedido(id: number): Promise<PedidoPublic> {
   return res.data
 }
 
-export async function patchPedidoEstado(id: number, estado_codigo: string): Promise<PedidoPublic> {
+export async function patchPedidoEstado(
+  id: number,
+  estado_codigo: string,
+  motivo?: string,
+): Promise<PedidoPublic> {
   const res = await apiClient.patch<PedidoPublic>(`/api/v1/pedidos/${id}/estado`, {
     estado_codigo,
+    motivo,
   })
   return res.data
 }

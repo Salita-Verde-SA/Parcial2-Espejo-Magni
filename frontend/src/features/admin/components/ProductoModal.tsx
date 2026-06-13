@@ -9,6 +9,7 @@ import { createProducto, updateProducto, updateComposicion } from '../../../api/
 import { fetchCategorias } from '../../../api/categorias'
 import { fetchIngredientesAll } from '../../../api/ingredientes'
 import { fetchUnidades } from '../../../api/unidades'
+import { uploadImagen, deleteImagen, cldThumb } from '../../../api/uploads'
 import type { Producto, ProductoCreate, CategoriaTree, Ingrediente, IngredienteCantidadInput, UnidadMedida } from '../../../types'
 
 interface Props {
@@ -37,6 +38,10 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
 
   const [apiError, setApiError] = useState('')
   const [stockWarning, setStockWarning] = useState<string | null>(null)
+  // Estado del uploader de imágenes Cloudinary
+  const [imgUploading, setImgUploading] = useState(false)
+  const [imgPublicId, setImgPublicId] = useState<string | null>(null)
+  const [imgError, setImgError] = useState('')
 
   const form = useForm({
     defaultValues: EMPTY,
@@ -270,7 +275,7 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
   function addIngrediente(ingId: number) {
     // Agregar ingrediente con cantidad por defecto 1 y unidad "u" (pieza)
     const currentIngs = form.getFieldValue('ingredientes')
-    const unidadDefault = unidades.find(u => u.simbolo === 'u')
+    const unidadDefault = unidades.find(u => u.simbolo === 'ud') ?? unidades.find(u => u.simbolo === 'u')
     const newIngrediente: IngredienteCantidadInput = {
       ingrediente_id: ingId,
       cantidad: 1,
@@ -516,20 +521,79 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
 
             <form.Field
               name="imagen_url"
-              children={(field) => (
-                <div className="form-group">
-                  <label className="form-label">URL de imagen</label>
-                  <input
-                    className="form-input"
-                    type="url"
-                    placeholder="https://..."
-                    value={field.state.value ?? ''}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
-                    disabled={!canEditComercial}
-                  />
-                </div>
-              )}
+              children={(field) => {
+                async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  setImgError('')
+                  setImgUploading(true)
+                  try {
+                    const res = await uploadImagen(file, 'productos')
+                    field.handleChange(res.secure_url)
+                    setImgPublicId(res.public_id)
+                  } catch (err: any) {
+                    const status = err?.response?.status
+                    setImgError(
+                      status === 503
+                        ? 'Cloudinary no está configurado en el servidor.'
+                        : (err?.response?.data?.detail || 'No se pudo subir la imagen.')
+                    )
+                  } finally {
+                    setImgUploading(false)
+                    e.target.value = ''
+                  }
+                }
+
+                async function handleRemove() {
+                  if (imgPublicId) {
+                    try { await deleteImagen(imgPublicId) } catch { /* ignorar */ }
+                  }
+                  setImgPublicId(null)
+                  field.handleChange('')
+                }
+
+                return (
+                  <div className="form-group">
+                    <label className="form-label">Imagen del producto</label>
+                    {field.state.value ? (
+                      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 8 }}>
+                        <img
+                          src={cldThumb(field.state.value, 120, 120)}
+                          alt="preview"
+                          style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)' }}
+                        />
+                        {canEditComercial && (
+                          <button type="button" className="btn btn-ghost" onClick={handleRemove}>
+                            Quitar imagen
+                          </button>
+                        )}
+                      </div>
+                    ) : null}
+                    {canEditComercial && (
+                      <input
+                        className="form-input"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={handleFile}
+                        disabled={imgUploading}
+                      />
+                    )}
+                    {imgUploading && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Subiendo imagen…</span>}
+                    {imgError && <em style={{ color: 'var(--danger)', fontSize: 12 }}>{imgError}</em>}
+                    {/* Fallback: permitir pegar una URL manual */}
+                    <input
+                      className="form-input"
+                      type="url"
+                      placeholder="o pegá una URL de imagen…"
+                      value={field.state.value ?? ''}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                      disabled={!canEditComercial}
+                      style={{ marginTop: 8 }}
+                    />
+                  </div>
+                )
+              }}
             />
 
             <form.Field

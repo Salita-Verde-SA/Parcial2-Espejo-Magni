@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional, TYPE_CHECKING
 
-from sqlalchemy import Column, Numeric
+from sqlalchemy import Column, Numeric, JSON
 from sqlmodel import SQLModel, Field, Relationship
 
 if TYPE_CHECKING:
@@ -44,6 +44,8 @@ class Producto(SQLModel, table=True):
     stock_cantidad: int = Field(default=0)
     disponible: bool = Field(default=True)
     imagen_url: Optional[str] = Field(default=None, max_length=500)
+    # Array de URLs Cloudinary (v7). JSON para portabilidad SQLite/Postgres.
+    imagenes_url: Optional[list[str]] = Field(default=None, sa_column=Column(JSON, nullable=True))
     created_at: datetime = Field(default_factory=_utcnow)
     updated_at: datetime = Field(default_factory=_utcnow)
     deleted_at: Optional[datetime] = Field(default=None)
@@ -69,6 +71,7 @@ class ProductoCreate(SQLModel):
     unidad_venta_id: Optional[int] = None
     disponible: bool = True
     imagen_url: Optional[str] = Field(default=None, max_length=500)
+    imagenes_url: Optional[list[str]] = None
     categoria_ids: list[int] = []
     ingredientes: list[IngredienteCantidadInput] = []
 
@@ -81,6 +84,7 @@ class ProductoUpdate(SQLModel):
     unidad_venta_id: Optional[int] = None
     disponible: Optional[bool] = None
     imagen_url: Optional[str] = Field(default=None, max_length=500)
+    imagenes_url: Optional[list[str]] = None
     categoria_ids: Optional[list[int]] = None
     ingredientes: Optional[list[IngredienteCantidadInput]] = None
 
@@ -116,6 +120,7 @@ class ProductoPublic(SQLModel):
     stock_cantidad: int
     disponible: bool
     imagen_url: Optional[str]
+    imagenes_url: list[str] = []
     created_at: datetime
     deleted_at: Optional[datetime] = None
     categorias: list[int] = []

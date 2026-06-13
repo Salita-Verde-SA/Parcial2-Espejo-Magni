@@ -35,6 +35,10 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 # Copiar código de la aplicación
 COPY app/ ./app/
 
+# Copiar tests (permite: docker-compose exec backend pytest)
+COPY tests/ ./tests/
+COPY pytest.ini ./
+
 # Copiar script de entrypoint
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN sed -i 's/\r$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh

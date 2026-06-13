@@ -11,6 +11,7 @@ from app.modules.pedidos.model import (
     PedidoCreate,
     PedidoPublic,
     EstadoPedidoUpdate,
+    HistorialEstadoPedidoPublic,
     PaginatedPedidos,
 )
 from app.modules.pedidos.service import (
@@ -20,6 +21,7 @@ from app.modules.pedidos.service import (
     delete_direccion,
     create_pedido,
     get_pedido,
+    get_historial_pedido,
     list_pedidos,
     update_pedido_estado,
     cancelar_pedido_cliente,
@@ -96,7 +98,13 @@ async def create_order(
 ):
     user, _ = ctx
     result = create_pedido(user.id, data, uow)
-    await manager.broadcast({"type": "NEW_PEDIDO", "pedido_id": result.id})
+    # Broadcast post-commit (fuera del bloque UoW)
+    await manager.broadcast({
+        "type": "NEW_PEDIDO",
+        "event": "pedido_creado",
+        "pedido_id": result.id,
+        "estado_nuevo": result.estado_codigo,
+    })
     return result
 
 
@@ -123,6 +131,19 @@ def get_order(
     return get_pedido(pedido_id, user.id, roles, uow)
 
 
+@router.get(
+    "/api/v1/pedidos/{pedido_id}/historial",
+    response_model=list[HistorialEstadoPedidoPublic],
+)
+def get_order_history(
+    pedido_id: int,
+    ctx: Annotated[tuple, Depends(get_current_active_user)],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+):
+    user, roles = ctx
+    return get_historial_pedido(pedido_id, user.id, roles, uow)
+
+
 @router.patch(
     "/api/v1/pedidos/{pedido_id}/estado",
     response_model=PedidoPublic,
@@ -135,8 +156,12 @@ async def patch_order_state(
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
     user, _ = ctx
-    result = update_pedido_estado(pedido_id, data.estado_codigo, user.id, uow)
-    await manager.broadcast({"type": "PEDIDO_UPDATED", "pedido_id": result.id, "nuevo_estado": result.estado_codigo})
+    result = update_pedido_estado(pedido_id, data.estado_codigo, user.id, uow, motivo=data.motivo)
+    await manager.broadcast_pedido(result.id, {
+        "type": "PEDIDO_UPDATED",
+        "event": "estado_cambiado",
+        "estado_nuevo": result.estado_codigo,
+    })
     return result
 
 
@@ -148,5 +173,9 @@ async def cancel_order_client(
 ):
     user, _ = ctx
     result = cancelar_pedido_cliente(pedido_id, user.id, uow)
-    await manager.broadcast({"type": "PEDIDO_UPDATED", "pedido_id": result.id, "nuevo_estado": result.estado_codigo})
+    await manager.broadcast_pedido(result.id, {
+        "type": "PEDIDO_UPDATED",
+        "event": "pedido_cancelado",
+        "estado_nuevo": result.estado_codigo,
+    })
     return result
