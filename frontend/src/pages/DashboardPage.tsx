@@ -11,6 +11,7 @@ const ESTADO_COLORS: Record<string, string> = {
   PENDIENTE: '#f59e0b',
   CONFIRMADO: '#3b82f6',
   EN_PREP: '#8b5cf6',
+  EN_CAMINO: '#06b6d4',
   ENTREGADO: '#10b981',
   CANCELADO: '#ef4444',
 }

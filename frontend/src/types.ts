@@ -21,6 +21,7 @@ export interface Categoria {
   nombre: string
   descripcion: string | null
   parent_id: number | null
+  imagen_url: string | null
   created_at: string
   deleted_at: string | null
   in_use: boolean
@@ -34,6 +35,7 @@ export interface CategoriaCreate {
   nombre: string
   descripcion?: string
   parent_id?: number | null
+  imagen_url?: string | null
 }
 
 export interface Ingrediente {

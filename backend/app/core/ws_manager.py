@@ -28,6 +28,10 @@ def pedido_channel(pedido_id: int) -> str:
     return f"pedido:{pedido_id}"
 
 
+def user_channel(user_id: int) -> str:
+    return f"user:{user_id}"
+
+
 def authenticate_ws(token: Optional[str]) -> Optional[dict]:
     """Valida el JWT del handshake. Devuelve el payload o None si es inválido."""
     if not token:
@@ -67,6 +71,9 @@ class WSManager:
         evento.setdefault("timestamp", datetime.now(timezone.utc).isoformat())
         await self._send_to_channel(pedido_channel(pedido_id), evento)
         await self._send_to_channel(ADMIN_CHANNEL, evento)
+        uid = evento.get("usuario_id")
+        if uid is not None:
+            await self._send_to_channel(user_channel(int(uid)), evento)
 
     async def broadcast_to_role(self, channel: str, evento: dict) -> None:
         evento.setdefault("timestamp", datetime.now(timezone.utc).isoformat())
@@ -79,6 +86,9 @@ class WSManager:
         pid = evento.get("pedido_id")
         if pid is not None:
             await self._send_to_channel(pedido_channel(int(pid)), evento)
+        uid = evento.get("usuario_id")
+        if uid is not None:
+            await self._send_to_channel(user_channel(int(uid)), evento)
 
 
 manager = WSManager()

@@ -69,67 +69,73 @@ export function useAdminOrdersFeed() {
       clearTimeout(timer)
       if (ws) {
         ws.onclose = null
-        ws.close()
+        if (ws.readyState === WebSocket.CONNECTING) {
+          ws.onopen = () => ws?.close()
+        } else {
+          ws.close()
+        }
       }
       setStatus('disconnected')
     }
   }, [token, qc, setStatus])
 }
 
+export function useMisPedidosFeed(_pedidoIds: number[]) {
+  // Mantener por compatibilidad o simplemente usar el feed global
+  useMisPedidosGlobalFeed();
+}
+
 /**
- * Feed por pedido para el CLIENTE: abre una conexión por cada pedido visible
- * (canal pedido:{id}). Permite ver el cambio de estado en tiempo real sin recargar.
+ * Feed global para el CLIENTE: abre una sola conexión para todos sus pedidos
+ * (canal user:{id}). Recibe eventos cuando crea un pedido nuevo o le cambian el estado.
  */
-export function useMisPedidosFeed(pedidoIds: number[]) {
+export function useMisPedidosGlobalFeed() {
   const qc = useQueryClient()
   const token = useAuthStore((s) => s.token)
   const setStatus = useWsStore((s) => s.setStatus)
-  const key = [...pedidoIds].sort((a, b) => a - b).join(',')
 
   useEffect(() => {
-    if (!token || pedidoIds.length === 0) {
+    if (!token) {
       setStatus('disconnected')
       return
     }
-    const sockets: WebSocket[] = []
-    const abiertos = new Set<number>()
-    let closedAll = false
+    let ws: WebSocket | null = null
+    let attempt = 0
+    let closed = false
+    let timer: ReturnType<typeof setTimeout>
 
-    function refresh() {
-      setStatus(abiertos.size > 0 ? 'connected' : 'connecting')
+    function connect() {
+      setStatus('connecting')
+      ws = new WebSocket(buildWsUrl('/ws/mis-pedidos'))
+
+      ws.onopen = () => {
+        attempt = 0
+        setStatus('connected')
+      }
+      ws.onmessage = (e) => invalidate(qc, e.data)
+      ws.onclose = () => {
+        setStatus('disconnected')
+        if (closed) return
+        const delay = Math.min(1000 * 2 ** attempt, MAX_BACKOFF)
+        attempt += 1
+        timer = setTimeout(connect, delay)
+      }
+      ws.onerror = () => ws?.close()
     }
 
-    pedidoIds.forEach((id) => {
-      function connect(attempt = 0) {
-        if (closedAll) return
-        const ws = new WebSocket(buildWsUrl(`/ws/pedidos/${id}`))
-        sockets.push(ws)
-        ws.onopen = () => {
-          abiertos.add(id)
-          refresh()
-        }
-        ws.onmessage = (e) => invalidate(qc, e.data)
-        ws.onclose = () => {
-          abiertos.delete(id)
-          refresh()
-          if (closedAll) return
-          const delay = Math.min(1000 * 2 ** attempt, MAX_BACKOFF)
-          setTimeout(() => connect(attempt + 1), delay)
-        }
-        ws.onerror = () => ws.close()
-      }
-      connect()
-    })
-
-    setStatus('connecting')
+    connect()
     return () => {
-      closedAll = true
-      sockets.forEach((ws) => {
+      closed = true
+      clearTimeout(timer)
+      if (ws) {
         ws.onclose = null
-        ws.close()
-      })
+        if (ws.readyState === WebSocket.CONNECTING) {
+          ws.onopen = () => ws?.close()
+        } else {
+          ws.close()
+        }
+      }
       setStatus('disconnected')
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, token])
+  }, [token, qc, setStatus])
 }

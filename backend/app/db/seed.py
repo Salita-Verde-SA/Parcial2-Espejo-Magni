@@ -19,13 +19,14 @@ ROLES = [
     {"codigo": "CLIENT",  "descripcion": "Cliente del sistema"},
 ]
 
-# Máquina de estados v7 — 5 estados (se elimina EN_CAMINO de v5)
+# Máquina de estados v7 — 6 estados
 ESTADOS_PEDIDO = [
-    {"codigo": "PENDIENTE",  "descripcion": "Pedido creado, pago pendiente",     "orden": 1, "es_terminal": False},
+    {"codigo": "PENDIENTE",  "descripcion": "Pedido creado, pago pendiente",      "orden": 1, "es_terminal": False},
     {"codigo": "CONFIRMADO", "descripcion": "Pago procesado y confirmado",        "orden": 2, "es_terminal": False},
     {"codigo": "EN_PREP",    "descripcion": "En preparación en cocina",           "orden": 3, "es_terminal": False},
-    {"codigo": "ENTREGADO",  "descripcion": "Entrega confirmada",                 "orden": 4, "es_terminal": True},
-    {"codigo": "CANCELADO",  "descripcion": "Pedido cancelado",                   "orden": 5, "es_terminal": True},
+    {"codigo": "EN_CAMINO",  "descripcion": "En camino al domicilio",             "orden": 4, "es_terminal": False},
+    {"codigo": "ENTREGADO",  "descripcion": "Entrega confirmada",                 "orden": 5, "es_terminal": True},
+    {"codigo": "CANCELADO",  "descripcion": "Pedido cancelado",                   "orden": 6, "es_terminal": True},
 ]
 
 FORMAS_PAGO = [

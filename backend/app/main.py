@@ -110,6 +110,24 @@ async def websocket_pedido(websocket: WebSocket, pedido_id: int, token: str | No
         manager.disconnect(websocket, channel)
 
 
+@app.websocket("/ws/mis-pedidos")
+async def websocket_mis_pedidos(websocket: WebSocket, token: str | None = Query(default=None)):
+    """Feed global para un cliente de todos sus pedidos."""
+    from app.core.ws_manager import user_channel
+    payload = authenticate_ws(token)
+    if not payload:
+        await websocket.close(code=4001)
+        return
+    user_id = int(payload.get("sub", 0))
+    channel = user_channel(user_id)
+    await manager.connect(websocket, channel)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, channel)
+
+
 @app.get("/health", tags=["health"])
 def health():
     return {"status": "ok", "version": "2.0.0"}

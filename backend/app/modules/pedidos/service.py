@@ -444,11 +444,12 @@ def list_pedidos(
         return PaginatedPedidos(items=enriched, total=total, page=page, page_size=page_size, pages=pages)
 
 
-# Máquina de estados v7 — 5 estados (sin EN_CAMINO). Estados terminales sin salidas.
+# Máquina de estados v7 — 6 estados. Estados terminales sin salidas.
 TRANSICIONES_VALIDAS = {
     "PENDIENTE":  ["CONFIRMADO", "CANCELADO"],
     "CONFIRMADO": ["EN_PREP", "CANCELADO"],
-    "EN_PREP":    ["ENTREGADO", "CANCELADO"],
+    "EN_PREP":    ["EN_CAMINO", "ENTREGADO", "CANCELADO"],
+    "EN_CAMINO":  ["ENTREGADO", "CANCELADO"],
     "ENTREGADO":  [],
     "CANCELADO":  [],
 }

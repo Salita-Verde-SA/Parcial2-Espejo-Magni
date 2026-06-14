@@ -91,10 +91,10 @@ export default function MisPedidosPage() {
 
   const getBadgeClass = (estado: string) => {
     switch (estado) {
-      case 'PENDIENTE': return 'badge-secondary'
-      case 'CONFIRMADO': return 'badge-primary'
+      case 'PENDIENTE': return 'badge-neutral'
+      case 'CONFIRMADO': return 'badge-info'
       case 'EN_PREP': return 'badge-warning'
-      case 'EN_CAMINO': return 'badge-info'
+      case 'EN_CAMINO': return 'badge-primary'
       case 'ENTREGADO': return 'badge-success'
       case 'CANCELADO': return 'badge-danger'
       default: return 'badge-secondary'

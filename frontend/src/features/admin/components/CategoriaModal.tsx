@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from '@tanstack/react-form'
 import { createCategoria, updateCategoria, fetchCategoriasAll } from '../../../api/categorias'
+import { uploadImagen, deleteImagen, cldThumb } from '../../../api/uploads'
 import type { Categoria, CategoriaCreate } from '../../../types'
 
 interface Props {
@@ -17,12 +18,16 @@ const EMPTY: CategoriaCreate = {
   nombre: '',
   descripcion: '',
   parent_id: null,
+  imagen_url: '',
 }
 
 export default function CategoriaModal({ categoria, initialParentId, onClose }: Props) {
   const isEdit = !!categoria
   const qc = useQueryClient()
   const [apiError, setApiError] = useState('')
+  const [imgUploading, setImgUploading] = useState(false)
+  const [imgPublicId, setImgPublicId] = useState<string | null>(null)
+  const [imgError, setImgError] = useState('')
 
   // Traer todas las categorías para el selector de padre (incluyendo eliminadas por consistencia)
   const { data: categorias = [] } = useQuery({
@@ -36,6 +41,7 @@ export default function CategoriaModal({ categoria, initialParentId, onClose }: 
           nombre: categoria.nombre,
           descripcion: categoria.descripcion ?? '',
           parent_id: categoria.parent_id,
+          imagen_url: categoria.imagen_url ?? '',
         }
       : { ...EMPTY, parent_id: initialParentId ?? null },
     onSubmit: async ({ value }) => {
@@ -49,10 +55,12 @@ export default function CategoriaModal({ categoria, initialParentId, onClose }: 
       form.setFieldValue('nombre', categoria.nombre)
       form.setFieldValue('descripcion', categoria.descripcion ?? '')
       form.setFieldValue('parent_id', categoria.parent_id)
+      form.setFieldValue('imagen_url', categoria.imagen_url ?? '')
     } else {
       form.setFieldValue('nombre', '')
       form.setFieldValue('descripcion', '')
       form.setFieldValue('parent_id', initialParentId ?? null)
+      form.setFieldValue('imagen_url', '')
     }
     setApiError('')
   }, [categoria, initialParentId])
@@ -60,15 +68,17 @@ export default function CategoriaModal({ categoria, initialParentId, onClose }: 
   const mutation = useMutation({
     mutationFn: (value: CategoriaCreate) =>
       isEdit
-        ? updateCategoria(categoria!.id, {
-            nombre: value.nombre,
-            descripcion: value.descripcion || undefined,
-            parent_id: value.parent_id,
-          })
-        : createCategoria({
-            ...value,
-            descripcion: value.descripcion || undefined,
-          }),
+          ? updateCategoria(categoria!.id, {
+              nombre: value.nombre,
+              descripcion: value.descripcion || undefined,
+              parent_id: value.parent_id,
+              imagen_url: value.imagen_url || undefined,
+            })
+          : createCategoria({
+              ...value,
+              descripcion: value.descripcion || undefined,
+              imagen_url: value.imagen_url || undefined,
+            }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['categorias-all'] })
       qc.invalidateQueries({ queryKey: ['categorias-tree'] })
@@ -151,6 +161,77 @@ export default function CategoriaModal({ categoria, initialParentId, onClose }: 
                   />
                 </div>
               )}
+            />
+
+            <form.Field
+              name="imagen_url"
+              children={(field) => {
+                async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  setImgError('')
+                  setImgUploading(true)
+                  try {
+                    const res = await uploadImagen(file, 'categorias')
+                    field.handleChange(res.secure_url)
+                    setImgPublicId(res.public_id)
+                  } catch (err: any) {
+                    const status = err?.response?.status
+                    setImgError(
+                      status === 503
+                        ? 'Cloudinary no está configurado en el servidor.'
+                        : (err?.response?.data?.detail || 'No se pudo subir la imagen.')
+                    )
+                  } finally {
+                    setImgUploading(false)
+                    e.target.value = ''
+                  }
+                }
+
+                async function handleRemove() {
+                  if (imgPublicId) {
+                    try { await deleteImagen(imgPublicId) } catch { /* ignorar */ }
+                  }
+                  setImgPublicId(null)
+                  field.handleChange('')
+                }
+
+                return (
+                  <div className="form-group">
+                    <label className="form-label">Imagen de la categoría</label>
+                    {field.state.value ? (
+                      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 8 }}>
+                        <img
+                          src={cldThumb(field.state.value, 120, 120)}
+                          alt="preview"
+                          style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)' }}
+                        />
+                        <button type="button" className="btn btn-ghost" onClick={handleRemove}>
+                          Quitar imagen
+                        </button>
+                      </div>
+                    ) : null}
+                    <input
+                      className="form-input"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={handleFile}
+                      disabled={imgUploading}
+                    />
+                    {imgUploading && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Subiendo imagen…</span>}
+                    {imgError && <em style={{ color: 'var(--danger)', fontSize: 12 }}>{imgError}</em>}
+                    <input
+                      className="form-input"
+                      type="url"
+                      placeholder="o pegá una URL de imagen…"
+                      value={field.state.value ?? ''}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                      style={{ marginTop: 8 }}
+                    />
+                  </div>
+                )
+              }}
             />
 
             <form.Field

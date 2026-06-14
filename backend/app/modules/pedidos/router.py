@@ -103,6 +103,7 @@ async def create_order(
         "type": "NEW_PEDIDO",
         "event": "pedido_creado",
         "pedido_id": result.id,
+        "usuario_id": result.usuario_id,
         "estado_nuevo": result.estado_codigo,
     })
     return result
@@ -161,6 +162,7 @@ async def patch_order_state(
         "type": "PEDIDO_UPDATED",
         "event": "estado_cambiado",
         "estado_nuevo": result.estado_codigo,
+        "usuario_id": result.usuario_id,
     })
     return result
 
@@ -177,5 +179,6 @@ async def cancel_order_client(
         "type": "PEDIDO_UPDATED",
         "event": "pedido_cancelado",
         "estado_nuevo": result.estado_codigo,
+        "usuario_id": result.usuario_id,
     })
     return result

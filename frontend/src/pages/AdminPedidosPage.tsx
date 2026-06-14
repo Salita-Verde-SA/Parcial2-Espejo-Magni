@@ -10,6 +10,7 @@ import type { PedidoPublic, PaginatedPedidos } from '../types'
 const ESTADO_LABELS: Record<string, string> = {
   CONFIRMADO: 'Confirmado',
   EN_PREP: 'En Preparación',
+  EN_CAMINO: 'En Camino',
   ENTREGADO: 'Entregado',
   CANCELADO: 'Cancelado',
 }
@@ -139,6 +140,25 @@ export default function AdminPedidosPage() {
         return (
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
             <button
+              className="btn"
+              style={{ flex: 1, backgroundColor: '#06b6d4', color: 'white', border: 'none' }}
+              onClick={() => handleTransition(p.id, 'EN_CAMINO')}
+            >
+              🚚 Enviar Pedido
+            </button>
+            <button
+              className="btn btn-danger"
+              style={{ flex: 1 }}
+              onClick={() => handleTransition(p.id, 'CANCELADO')}
+            >
+              ✕ Cancelar
+            </button>
+          </div>
+        )
+      case 'EN_CAMINO':
+        return (
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <button
               className="btn btn-success"
               style={{ flex: 1 }}
               onClick={() => handleTransition(p.id, 'ENTREGADO')}
@@ -184,6 +204,7 @@ export default function AdminPedidosPage() {
                 <option value="PENDIENTE">Pendiente</option>
                 <option value="CONFIRMADO">Confirmado</option>
                 <option value="EN_PREP">En Preparación</option>
+                <option value="EN_CAMINO">En Camino</option>
                 <option value="ENTREGADO">Entregado</option>
                 <option value="CANCELADO">Cancelado</option>
               </select>
