@@ -132,6 +132,7 @@ def procesar_webhook_pago(payment_id: str, uow: UnitOfWork) -> dict | None:
                     "type": "PEDIDO_UPDATED",
                     "event": "pago_confirmado",
                     "pedido_id": pedido_id,
+                    "usuario_id": pedido.usuario_id,
                     "estado_nuevo": "CONFIRMADO",
                 }
     return None
@@ -161,7 +162,7 @@ def get_pago_de_pedido(pedido_id: int, usuario_id: int, roles: list[str], uow: U
         )
 
 
-def confirmar_pago_manual(data: PagoConfirmar, usuario_id: int, uow: UnitOfWork):
+def confirmar_pago_manual(data: PagoConfirmar, usuario_id: int, uow: UnitOfWork) -> dict | None:
     with uow:
         pedido = uow.pedidos.get_by_id_active(data.pedido_id)
         if not pedido:
@@ -170,4 +171,11 @@ def confirmar_pago_manual(data: PagoConfirmar, usuario_id: int, uow: UnitOfWork)
             raise HTTPException(status_code=403, detail="No tienes permiso")
         if pedido.estado_codigo == "PENDIENTE":
             update_pedido_estado(pedido.id, "CONFIRMADO", usuario_id, uow)
-        return {"status": "ok"}
+            return {
+                "type": "PEDIDO_UPDATED",
+                "event": "pago_confirmado",
+                "pedido_id": pedido.id,
+                "usuario_id": pedido.usuario_id,
+                "estado_nuevo": "CONFIRMADO",
+            }
+        return None

@@ -50,6 +50,18 @@ export default function AdminPedidosPage() {
       patchPedidoEstado(id, nuevoEstado, motivo),
     onSuccess: (updated) => {
       queryClient.setQueryData(['pedido-detalle', updated.id], updated)
+      
+      // Actualizar la lista optimísticamente para que no haya desincronización visual
+      queryClient.setQueriesData({ queryKey: ['admin-pedidos'] }, (oldData: any) => {
+        if (!oldData) return oldData
+        return {
+          ...oldData,
+          items: oldData.items.map((item: any) => 
+            item.id === updated.id ? updated : item
+          )
+        }
+      })
+
       queryClient.invalidateQueries({ queryKey: ['admin-pedidos'] })
       setErrorMsg('')
       setPendingTransition(null)

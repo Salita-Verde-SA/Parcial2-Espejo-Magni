@@ -69,10 +69,13 @@ def consultar_pago(
 
 
 @router.post("/confirmar")
-def confirmar_pago(
+async def confirmar_pago(
     data: PagoConfirmar,
     ctx: tuple = Depends(get_current_user),
     uow: UnitOfWork = Depends(get_uow),
 ):
     current_user, _ = ctx
-    return confirmar_pago_manual(data, current_user.id, uow)
+    evento = confirmar_pago_manual(data, current_user.id, uow)
+    if evento:
+        await manager.broadcast(evento)
+    return {"status": "ok"}

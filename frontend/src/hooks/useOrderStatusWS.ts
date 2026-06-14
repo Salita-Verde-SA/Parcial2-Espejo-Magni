@@ -16,6 +16,33 @@ function invalidate(qc: QueryClient, raw: string) {
   try {
     const data = JSON.parse(raw)
     useWsStore.getState().setLastEvent(data.event || data.type || null)
+
+    // Actualización optimista para evitar desincronización visual entre lista y detalle
+    if (data.pedido_id && data.estado_nuevo) {
+      qc.setQueriesData({ queryKey: ['admin-pedidos'] }, (oldData: any) => {
+        if (!oldData) return oldData
+        return {
+          ...oldData,
+          items: oldData.items.map((item: any) =>
+            item.id === data.pedido_id ? { ...item, estado_codigo: data.estado_nuevo } : item
+          ),
+        }
+      })
+      qc.setQueriesData({ queryKey: ['pedidos'] }, (oldData: any) => {
+        if (!oldData) return oldData
+        return {
+          ...oldData,
+          items: oldData.items.map((item: any) =>
+            item.id === data.pedido_id ? { ...item, estado_codigo: data.estado_nuevo } : item
+          ),
+        }
+      })
+      qc.setQueriesData({ queryKey: ['pedido-detalle', data.pedido_id] }, (oldData: any) => {
+        if (!oldData) return oldData
+        return { ...oldData, estado_codigo: data.estado_nuevo }
+      })
+    }
+
     qc.invalidateQueries({ queryKey: ['pedidos'] })
     qc.invalidateQueries({ queryKey: ['admin-pedidos'] })
     qc.invalidateQueries({ queryKey: ['admin-dashboard'] })
