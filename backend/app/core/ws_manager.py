@@ -22,6 +22,7 @@ from fastapi import WebSocket
 from app.core.security import decode_access_token
 
 ADMIN_CHANNEL = "admin"
+STOCK_CHANNEL = "stock"
 
 
 def pedido_channel(pedido_id: int) -> str:
@@ -78,6 +79,11 @@ class WSManager:
     async def broadcast_to_role(self, channel: str, evento: dict) -> None:
         evento.setdefault("timestamp", datetime.now(timezone.utc).isoformat())
         await self._send_to_channel(channel, evento)
+
+    async def broadcast_stock(self, evento: dict) -> None:
+        """Notifica al canal de stock sobre un cambio de inventario."""
+        evento.setdefault("timestamp", datetime.now(timezone.utc).isoformat())
+        await self._send_to_channel(STOCK_CHANNEL, evento)
 
     async def broadcast(self, evento: dict) -> None:
         """Compatibilidad: emite al canal admin y, si trae pedido_id, a su canal."""

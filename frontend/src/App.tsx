@@ -15,10 +15,13 @@ import DashboardPage from './pages/DashboardPage'
 import { initUser } from './api/auth'
 import { useEffect, useState } from 'react'
 
+import { useStockFeed } from './hooks/useOrderStatusWS'
 import AdminLayout from './features/ui/components/AdminLayout'
 
 function AppInitializer({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
+
+  useStockFeed()
 
   useEffect(() => {
     initUser().finally(() => setLoading(false))

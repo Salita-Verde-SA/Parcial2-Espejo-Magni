@@ -106,6 +106,7 @@ async def create_order(
         "usuario_id": result.usuario_id,
         "estado_nuevo": result.estado_codigo,
     })
+    await manager.broadcast_stock({"type": "STOCK_UPDATED", "entity": "pedido"})
     return result
 
 
@@ -165,6 +166,7 @@ async def patch_order_state(
         "usuario_id": result.usuario_id,
         "motivo": data.motivo,
     })
+    await manager.broadcast_stock({"type": "STOCK_UPDATED", "entity": "pedido"})
     return result
 
 
@@ -183,4 +185,5 @@ async def cancel_order_client(
         "usuario_id": result.usuario_id,
         "motivo": result.historial[-1].motivo if result.historial else None,
     })
+    await manager.broadcast_stock({"type": "STOCK_UPDATED", "entity": "pedido"})
     return result

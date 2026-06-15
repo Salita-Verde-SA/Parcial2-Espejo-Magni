@@ -195,3 +195,58 @@ export function useMisPedidosGlobalFeed() {
     }
   }, [token, qc, setStatus])
 }
+
+export function useStockFeed() {
+  const qc = useQueryClient()
+
+  useEffect(() => {
+    let ws: WebSocket | null = null
+    let attempt = 0
+    let closed = false
+    let timer: ReturnType<typeof setTimeout>
+
+    function connect() {
+      ws = new WebSocket(buildWsUrl('/ws/stock'))
+
+      ws.onopen = () => {
+        attempt = 0
+      }
+      ws.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data)
+          if (data.type === 'STOCK_UPDATED') {
+            qc.invalidateQueries({ queryKey: ['productos'] })
+            qc.invalidateQueries({ queryKey: ['productos-all'] })
+            qc.invalidateQueries({ queryKey: ['ingredientes'] })
+            qc.invalidateQueries({ queryKey: ['ingredientes-all'] })
+            // También invalidar el detalle de pedido y admin-dashboard si se desea
+            qc.invalidateQueries({ queryKey: ['pedido-detalle'] })
+          }
+        } catch {
+          // ignore
+        }
+      }
+      ws.onclose = () => {
+        if (closed) return
+        const delay = Math.min(1000 * 2 ** attempt, MAX_BACKOFF)
+        attempt += 1
+        timer = setTimeout(connect, delay)
+      }
+      ws.onerror = () => ws?.close()
+    }
+
+    connect()
+    return () => {
+      closed = true
+      clearTimeout(timer)
+      if (ws) {
+        ws.onclose = null
+        if (ws.readyState === WebSocket.CONNECTING) {
+          ws.onopen = () => ws?.close()
+        } else {
+          ws.close()
+        }
+      }
+    }
+  }, [qc])
+}

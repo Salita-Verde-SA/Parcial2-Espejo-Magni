@@ -128,6 +128,18 @@ async def websocket_mis_pedidos(websocket: WebSocket, token: str | None = Query(
         manager.disconnect(websocket, channel)
 
 
+@app.websocket("/ws/stock")
+async def websocket_stock(websocket: WebSocket):
+    """Feed global para actualizaciones de stock de productos e ingredientes."""
+    from app.core.ws_manager import STOCK_CHANNEL
+    await manager.connect(websocket, STOCK_CHANNEL)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, STOCK_CHANNEL)
+
+
 @app.get("/health", tags=["health"])
 def health():
     return {"status": "ok", "version": "2.0.0"}
