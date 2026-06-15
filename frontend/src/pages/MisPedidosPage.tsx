@@ -155,6 +155,11 @@ export default function MisPedidosPage() {
                     <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
                       Fecha: {formatFecha(p.fecha)}
                     </div>
+                    {p.estado_codigo === 'CANCELADO' && p.historial?.find(h => h.estado_nuevo_codigo === 'CANCELADO')?.motivo && (
+                      <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: 4, fontWeight: 500 }}>
+                        Motivo: {p.historial.find(h => h.estado_nuevo_codigo === 'CANCELADO')?.motivo}
+                      </div>
+                    )}
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)', marginTop: 8 }}>
                       Total: {formatPrecio(p.total)}
                     </div>
@@ -193,6 +198,12 @@ export default function MisPedidosPage() {
                   {selectedPedido.estado_codigo}
                 </span>
               </div>
+
+              {selectedPedido.estado_codigo === 'CANCELADO' && selectedPedido.historial?.find(h => h.estado_nuevo_codigo === 'CANCELADO')?.motivo && (
+                <div className="badge badge-danger" style={{ padding: 12, borderRadius: 8, fontSize: 13, display: 'block', textAlign: 'left' }}>
+                  <strong>Motivo de cancelación:</strong> {selectedPedido.historial.find(h => h.estado_nuevo_codigo === 'CANCELADO')?.motivo}
+                </div>
+              )}
 
               <div>
                 <strong style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 8 }}>PRODUCTOS</strong>
@@ -241,6 +252,11 @@ export default function MisPedidosPage() {
                   {selectedPedido.historial.map((h) => (
                     <div key={h.id} style={{ paddingLeft: 8, borderLeft: '2px solid var(--border)' }}>
                       <div style={{ fontWeight: 600 }}>{h.estado_nuevo_codigo}</div>
+                      {h.motivo && (
+                        <div style={{ fontSize: 11, color: 'var(--danger)', fontStyle: 'italic', marginTop: 2 }}>
+                          Motivo: {h.motivo}
+                        </div>
+                      )}
                       <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>
                         {formatFecha(h.fecha)} por {h.usuario_nombre}
                       </div>

@@ -32,14 +32,43 @@ function invalidate(qc: QueryClient, raw: string) {
         if (!oldData) return oldData
         return {
           ...oldData,
-          items: oldData.items.map((item: any) =>
-            item.id === data.pedido_id ? { ...item, estado_codigo: data.estado_nuevo } : item
-          ),
+          items: oldData.items.map((item: any) => {
+            if (item.id === data.pedido_id) {
+              const updatedItem = { ...item, estado_codigo: data.estado_nuevo }
+              if (data.motivo) {
+                updatedItem.historial = [...(item.historial || []), {
+                  id: Date.now(),
+                  pedido_id: item.id,
+                  estado_anterior_codigo: item.estado_codigo,
+                  estado_nuevo_codigo: data.estado_nuevo,
+                  motivo: data.motivo,
+                  fecha: new Date().toISOString(),
+                  usuario_id: data.usuario_id,
+                  usuario_nombre: 'Sistema' // Fallback
+                }]
+              }
+              return updatedItem
+            }
+            return item
+          }),
         }
       })
       qc.setQueriesData({ queryKey: ['pedido-detalle', data.pedido_id] }, (oldData: any) => {
         if (!oldData) return oldData
-        return { ...oldData, estado_codigo: data.estado_nuevo }
+        const updatedItem = { ...oldData, estado_codigo: data.estado_nuevo }
+        if (data.motivo) {
+          updatedItem.historial = [...(oldData.historial || []), {
+            id: Date.now(),
+            pedido_id: oldData.id,
+            estado_anterior_codigo: oldData.estado_codigo,
+            estado_nuevo_codigo: data.estado_nuevo,
+            motivo: data.motivo,
+            fecha: new Date().toISOString(),
+            usuario_id: data.usuario_id,
+            usuario_nombre: 'Sistema' // Fallback
+          }]
+        }
+        return updatedItem
       })
     }
 

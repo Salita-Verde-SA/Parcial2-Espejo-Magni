@@ -163,6 +163,7 @@ async def patch_order_state(
         "event": "estado_cambiado",
         "estado_nuevo": result.estado_codigo,
         "usuario_id": result.usuario_id,
+        "motivo": data.motivo,
     })
     return result
 
@@ -180,5 +181,6 @@ async def cancel_order_client(
         "event": "pedido_cancelado",
         "estado_nuevo": result.estado_codigo,
         "usuario_id": result.usuario_id,
+        "motivo": result.historial[-1].motivo if result.historial else None,
     })
     return result

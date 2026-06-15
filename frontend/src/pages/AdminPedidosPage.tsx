@@ -270,6 +270,11 @@ export default function AdminPedidosPage() {
                         <span className={`badge ${getBadgeClass(p.estado_codigo)}`} style={{ fontSize: 10 }}>
                           {p.estado_codigo}
                         </span>
+                        {p.estado_codigo === 'CANCELADO' && p.historial?.find(h => h.estado_nuevo_codigo === 'CANCELADO')?.motivo && (
+                          <div style={{ fontSize: 11, color: 'var(--danger)', marginTop: 4, fontWeight: 500 }}>
+                            Motivo: {p.historial.find(h => h.estado_nuevo_codigo === 'CANCELADO')?.motivo}
+                          </div>
+                        )}
                       </td>
                       <td style={{ padding: 12, fontWeight: 600 }}>{formatPrecio(p.total)}</td>
                     </tr>
@@ -307,6 +312,12 @@ export default function AdminPedidosPage() {
                   {selectedPedido.estado_codigo}
                 </span>
               </div>
+
+              {selectedPedido.estado_codigo === 'CANCELADO' && selectedPedido.historial?.find(h => h.estado_nuevo_codigo === 'CANCELADO')?.motivo && (
+                <div className="badge badge-danger" style={{ padding: 12, borderRadius: 8, fontSize: 13, display: 'block', textAlign: 'left' }}>
+                  <strong>Motivo de cancelación:</strong> {selectedPedido.historial.find(h => h.estado_nuevo_codigo === 'CANCELADO')?.motivo}
+                </div>
+              )}
 
               <div>
                 <strong style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>CLIENTE</strong>
@@ -360,6 +371,11 @@ export default function AdminPedidosPage() {
                   {selectedPedido.historial.map((h) => (
                     <div key={h.id} style={{ paddingLeft: 8, borderLeft: '2px solid var(--border)' }}>
                       <div style={{ fontWeight: 600 }}>{h.estado_nuevo_codigo}</div>
+                      {h.motivo && (
+                        <div style={{ fontSize: 11, color: 'var(--danger)', fontStyle: 'italic', marginTop: 2 }}>
+                          Motivo: {h.motivo}
+                        </div>
+                      )}
                       <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>
                         {formatFecha(h.fecha)} por {h.usuario_nombre}
                       </div>
