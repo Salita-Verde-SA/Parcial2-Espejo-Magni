@@ -43,7 +43,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 function RequireRole({ roles, children }: { roles: string[]; children: React.ReactNode }) {
   const userRoles = useAuthStore((s) => s.roles)
   const hasAny = userRoles.some((r) => roles.includes(r))
-  if (!hasAny) return <Navigate to="/" replace />
+  if (!hasAny) return <Navigate to={landingPathFor(userRoles)} replace />
   return <>{children}</>
 }
 
@@ -81,19 +81,19 @@ export default function App() {
           <Route index element={<HomeRedirect />} />
 
           <Route path="catalogo" element={
-            <RequireRole roles={['CLIENT', 'ADMIN']}><CatalogoPage /></RequireRole>
+            <RequireRole roles={['CLIENT']}><CatalogoPage /></RequireRole>
           } />
 
           <Route path="checkout" element={
-            <RequireRole roles={['CLIENT', 'ADMIN']}><CheckoutPage /></RequireRole>
+            <RequireRole roles={['CLIENT']}><CheckoutPage /></RequireRole>
           } />
 
           <Route path="mis-pedidos" element={
-            <RequireRole roles={['CLIENT', 'ADMIN']}><MisPedidosPage /></RequireRole>
+            <RequireRole roles={['CLIENT']}><MisPedidosPage /></RequireRole>
           } />
 
           <Route path="pago/:status" element={
-            <RequireRole roles={['CLIENT', 'ADMIN']}><PagoStatusPage /></RequireRole>
+            <RequireRole roles={['CLIENT']}><PagoStatusPage /></RequireRole>
           } />
         </Route>
 

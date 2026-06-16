@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import RedirectResponse
 
 from app.core.uow import UnitOfWork, get_uow
-from app.core.deps import get_current_user, get_current_active_user
+from app.core.deps import get_current_active_user, require_roles
 from app.core.websockets import manager
 from app.modules.pagos.model import PagoRead
 from app.modules.pagos.schema import PagoCreate, PagoResponse, PagoConfirmar
@@ -51,7 +51,7 @@ async def webhook_mercadopago(request: Request, uow: UnitOfWork = Depends(get_uo
 @router.post("/crear", response_model=PagoResponse)
 def crear_pago(
     data: PagoCreate,
-    ctx: tuple = Depends(get_current_user),
+    ctx: tuple = Depends(require_roles(["CLIENT"])),
     uow: UnitOfWork = Depends(get_uow),
 ):
     current_user, _ = ctx
@@ -71,7 +71,7 @@ def consultar_pago(
 @router.post("/confirmar")
 async def confirmar_pago(
     data: PagoConfirmar,
-    ctx: tuple = Depends(get_current_user),
+    ctx: tuple = Depends(require_roles(["CLIENT"])),
     uow: UnitOfWork = Depends(get_uow),
 ):
     current_user, _ = ctx

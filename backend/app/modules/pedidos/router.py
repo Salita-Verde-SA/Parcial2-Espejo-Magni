@@ -93,7 +93,7 @@ def set_principal_dir(
 )
 async def create_order(
     data: PedidoCreate,
-    ctx: Annotated[tuple, Depends(get_current_active_user)],
+    ctx: Annotated[tuple, Depends(require_roles(["CLIENT"]))],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
     user, _ = ctx

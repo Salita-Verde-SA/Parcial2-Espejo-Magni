@@ -37,7 +37,7 @@ FORMAS_PAGO = [
 
 
 USUARIOS = [
-    {"nombre": "Admin",     "apellido": "Sistema",  "email": "admin@fastfood.com", "password": "Admin1234!", "roles": ["ADMIN", "CLIENT"]},
+    {"nombre": "Admin",     "apellido": "Sistema",  "email": "admin@fastfood.com", "password": "Admin1234!", "roles": ["ADMIN"]},
     {"nombre": "Juan",      "apellido": "Perez",    "email": "juan@fastfood.com",  "password": "Juan1234!",  "roles": ["CLIENT"]},
     {"nombre": "Stock",     "apellido": "Manager",  "email": "stock@fastfood.com", "password": "Stock1234!", "roles": ["STOCK"]},
     {"nombre": "Pedidos",   "apellido": "Manager",  "email": "pedidos@fastfood.com","password": "Ped1234!",  "roles": ["PEDIDOS"]},

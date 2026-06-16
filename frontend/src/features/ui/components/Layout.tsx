@@ -21,8 +21,8 @@ export default function Layout() {
 
   const initial = (nombre ?? 'U')[0].toUpperCase()
 
-  // La tienda (catálogo, carrito, mis pedidos) solo aplica a clientes y admin.
-  const canShop = roles.includes('CLIENT') || isAdmin()
+  // La tienda (catálogo, carrito, mis pedidos) solo aplica a clientes.
+  const canShop = roles.includes('CLIENT')
 
   const showAdminMenu = isAdmin() || roles.includes('STOCK') || roles.includes('PEDIDOS')
 

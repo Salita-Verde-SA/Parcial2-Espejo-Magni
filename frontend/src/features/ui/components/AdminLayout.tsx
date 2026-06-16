@@ -23,7 +23,12 @@ export default function AdminLayout() {
         borderRight: '1px solid var(--border)',
         display: 'flex',
         flexDirection: 'column',
-        flexShrink: 0
+        flexShrink: 0,
+        position: 'sticky',
+        top: 0,
+        height: '100vh',
+        alignSelf: 'flex-start',
+        overflowY: 'auto',
       }}>
         <div style={{ padding: '24px 28px', borderBottom: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -36,13 +41,15 @@ export default function AdminLayout() {
 
         <nav style={{ flex: 1, padding: '20px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
 
-          <NavLink
-            to="/admin/dashboard"
-            className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}
-            style={{ padding: '10px 16px', borderRadius: '8px' }}
-          >
-            Dashboard
-          </NavLink>
+          {isAdmin() && (
+            <NavLink
+              to="/admin/dashboard"
+              className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}
+              style={{ padding: '10px 16px', borderRadius: '8px' }}
+            >
+              Dashboard
+            </NavLink>
+          )}
 
           {(isAdmin() || roles.includes('STOCK')) && (
             <>
@@ -103,14 +110,9 @@ export default function AdminLayout() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <button onClick={() => navigate('/catalogo')} className="btn btn-ghost" style={{ width: '100%', justifyContent: 'center' }}>
-              Volver a Tienda
-            </button>
-            <button onClick={handleLogout} className="btn btn-danger" style={{ width: '100%', justifyContent: 'center' }}>
-              Cerrar Sesión
-            </button>
-          </div>
+          <button onClick={handleLogout} className="btn btn-danger" style={{ width: '100%', justifyContent: 'center' }}>
+            Cerrar Sesión
+          </button>
         </div>
       </aside>
 
