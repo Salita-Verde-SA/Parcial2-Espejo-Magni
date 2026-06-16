@@ -86,6 +86,53 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
     return roots
   }, [categorias])
 
+  // Mapas de jerarquía para cascade de categorías
+  const parentMap = useMemo(() => {
+    const map = new Map<number, number>()
+    categorias?.forEach(c => {
+      if (c.parent_id !== null) map.set(c.id, c.parent_id)
+    })
+    return map
+  }, [categorias])
+
+  const childrenMap = useMemo(() => {
+    const map = new Map<number, number[]>()
+    categorias?.forEach(c => {
+      if (c.parent_id !== null) {
+        const siblings = map.get(c.parent_id) ?? []
+        siblings.push(c.id)
+        map.set(c.parent_id, siblings)
+      }
+    })
+    return map
+  }, [categorias])
+
+  function getAllDescendants(id: number): number[] {
+    const result: number[] = []
+    const stack = [id]
+    while (stack.length > 0) {
+      const current = stack.pop()!
+      const kids = childrenMap.get(current)
+      if (kids) {
+        for (const kid of kids) {
+          result.push(kid)
+          stack.push(kid)
+        }
+      }
+    }
+    return result
+  }
+
+  function getAllAncestors(id: number): number[] {
+    const result: number[] = []
+    let current = parentMap.get(id)
+    while (current !== undefined) {
+      result.push(current)
+      current = parentMap.get(current)
+    }
+    return result
+  }
+
   const [expandedCats, setExpandedCats] = useState<Set<number>>(new Set())
 
   function toggleExpandCat(id: number, e: React.MouseEvent) {
@@ -99,7 +146,7 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
     })
   }
 
-  function renderCategoriaCheckboxes(nodes: CategoriaTree[], currentIds: number[], depth = 0) {
+  function renderCategoriaCheckboxes(nodes: CategoriaTree[], currentIds: number[], indeterminateIds: Set<number>, depth = 0) {
     return nodes.map(cat => {
       const hasChildren = cat.hijos && cat.hijos.length > 0
       const isExpanded = expandedCats.has(cat.id)
@@ -124,7 +171,7 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
                 </svg>
               </button>
             ) : (
-              <div style={{ width: 18 }} /> // Espaciador
+              <div style={{ width: 18 }} />
             )}
             <label className="checkbox-row" style={{ gap: 6, marginBottom: 0, fontWeight: depth === 0 ? 600 : 400 }}>
               <input
@@ -132,13 +179,14 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
                 checked={currentIds.includes(cat.id)}
                 onChange={() => toggleCategoria(cat.id)}
                 disabled={!canEditComercial}
+                ref={el => { if (el) el.indeterminate = indeterminateIds.has(cat.id) }}
               />
               <span>{cat.nombre}</span>
             </label>
           </div>
           {hasChildren && isExpanded && (
             <div style={{ marginTop: 2 }}>
-              {renderCategoriaCheckboxes(cat.hijos, currentIds, depth + 1)}
+              {renderCategoriaCheckboxes(cat.hijos, currentIds, indeterminateIds, depth + 1)}
             </div>
           )}
         </div>
@@ -268,8 +316,31 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
 
   function toggleCategoria(catId: number) {
     const currentIds = form.getFieldValue('categoria_ids')
-    const ids = currentIds.includes(catId) ? [] : [catId]
-    form.setFieldValue('categoria_ids', ids)
+    const ancestors = getAllAncestors(catId)
+    const expectedSet = new Set([catId, ...ancestors])
+
+    // Misma selección actual → toggle off (limpia todo)
+    if (currentIds.length === expectedSet.size && currentIds.every(id => expectedSet.has(id))) {
+      form.setFieldValue('categoria_ids', [])
+      return
+    }
+
+    // Reemplazar selección: solo esta categoría + sus ancestros
+    form.setFieldValue('categoria_ids', [catId, ...ancestors])
+  }
+
+  function computeIndeterminateIds(currentIds: number[]): Set<number> {
+    const indeterminate = new Set<number>()
+    const catList = categorias ?? []
+    for (const cat of catList) {
+      const descendants = getAllDescendants(cat.id)
+      if (descendants.length === 0) continue
+      const selectedCount = descendants.filter(d => currentIds.includes(d)).length
+      if (selectedCount > 0 && selectedCount < descendants.length) {
+        indeterminate.add(cat.id)
+      }
+    }
+    return indeterminate
   }
 
   function addIngrediente(ingId: number) {
@@ -617,7 +688,9 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
             />
 
             <form.Subscribe selector={(state) => state.values.categoria_ids}>
-              {(categoria_ids) => (
+              {(categoria_ids) => {
+                const indetIds = computeIndeterminateIds(categoria_ids)
+                return (
                 <div className="form-group">
                   <label className="form-label">Categorías</label>
                   <div style={{ 
@@ -629,13 +702,13 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
                     overflowY: 'auto'
                   }}>
                     {categoriasTree.length > 0 ? (
-                      renderCategoriaCheckboxes(categoriasTree, categoria_ids)
+                      renderCategoriaCheckboxes(categoriasTree, categoria_ids, indetIds)
                     ) : (
                       <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>No hay categorías disponibles.</span>
                     )}
                   </div>
                 </div>
-              )}
+              )}}
             </form.Subscribe>
 
             <form.Subscribe selector={(state) => state.values.ingredientes}>

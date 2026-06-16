@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchProductos } from '../api/productos'
 import { fetchCategorias } from '../api/categorias'
@@ -156,6 +156,25 @@ export default function CatalogoPage() {
     staleTime: 5 * 60_000,
   })
 
+  const parentMap = useMemo(() => {
+    const map = new Map<number, number>()
+    categorias?.forEach(c => {
+      if (c.parent_id !== null) map.set(c.id, c.parent_id)
+    })
+    return map
+  }, [categorias])
+
+  function isAncestorOfSelected(catId: number): boolean {
+    const selectedId = filtros.categoria_id
+    if (!selectedId) return false
+    let current = parentMap.get(selectedId)
+    while (current !== undefined) {
+      if (current === catId) return true
+      current = parentMap.get(current)
+    }
+    return false
+  }
+
   const handleCategorySelect = (id: number | null) => {
     const newFiltros = { ...filtros, categoria_id: id, page: 1 }
     setDraft(newFiltros)
@@ -220,18 +239,23 @@ export default function CatalogoPage() {
             >
               Todos
             </button>
-            {categorias?.map((c) => (
+            {categorias?.map((c) => {
+              const isAncestor = isAncestorOfSelected(c.id)
+              return (
               <button
                 key={c.id}
                 onClick={() => handleCategorySelect(c.id)}
-                className={`appearance-none border-none whitespace-nowrap px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 ${filtros.categoria_id === c.id
-                    ? 'bg-red-600 text-white shadow-[0_4px_15px_rgba(220,38,38,0.4)]'
-                    : 'bg-white/5 border border-white/10 text-neutral-300 hover:bg-white/10 hover:text-white'
-                  }`}
+                className={`appearance-none whitespace-nowrap px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 ${
+                  filtros.categoria_id === c.id
+                    ? 'bg-red-600 text-white border-none shadow-[0_4px_15px_rgba(220,38,38,0.4)]'
+                    : isAncestor
+                      ? 'bg-red-900/30 text-red-300 border border-red-500/40 shadow-none'
+                      : 'bg-white/5 border border-white/10 text-neutral-300 hover:bg-white/10 hover:text-white'
+                }`}
               >
                 {c.nombre}
               </button>
-            ))}
+            )})}
           </div>
         </div>
 
