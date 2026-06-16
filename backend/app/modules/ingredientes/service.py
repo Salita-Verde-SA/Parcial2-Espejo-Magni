@@ -84,7 +84,9 @@ class IngredienteService:
             nombre=ing_in.nombre,
             descripcion=ing_in.descripcion,
             es_alergeno=ing_in.es_alergeno,
+            es_terminado=ing_in.es_terminado,
             stock_cantidad=ing_in.stock_cantidad,
+            costo_unitario=ing_in.costo_unitario,
         )
         return self.uow.ingredientes.add(ingrediente)
 
