@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.database import create_all_tables
+from app.core.observability import register_observability
 from app.modules.auth.router import router as auth_router
 from app.modules.usuarios.router import router as usuarios_router
 from app.modules.categorias.router import router as categorias_router
@@ -39,7 +40,11 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Process-Time", "X-Request-ID"],
 )
+
+# Observabilidad: logging + timing por consola y exception handlers globales (RFC 7807).
+register_observability(app)
 
 app.include_router(auth_router)
 app.include_router(usuarios_router)
