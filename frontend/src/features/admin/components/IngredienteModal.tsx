@@ -5,10 +5,11 @@
 // Usa useMutation de TanStack Query para enviar los cambios al backend.
 
 import { useState, useEffect, FormEvent } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createIngrediente, updateIngrediente } from '../../../api/ingredientes'
+import { fetchUnidades } from '../../../api/unidades'
 import { useAuthStore } from '../../../stores/authStore'
-import type { Ingrediente, IngredienteCreate } from '../../../types'
+import type { Ingrediente, IngredienteCreate, UnidadMedida } from '../../../types'
 
 // Props que recibe este componente desde su padre (IngredientesPage)
 interface Props {
@@ -17,7 +18,7 @@ interface Props {
 }
 
 // Valores iniciales del formulario cuando se crea uno nuevo
-const EMPTY: IngredienteCreate = { nombre: '', descripcion: '', es_alergeno: false, es_terminado: false, stock_cantidad: 0, costo_unitario: 0 }
+const EMPTY: IngredienteCreate = { nombre: '', descripcion: '', es_alergeno: false, es_terminado: false, unidad_medida_id: 0, stock_cantidad: 0, costo_unitario: 0 }
 
 export default function IngredienteModal({ ingrediente, onClose }: Props) {
   // isEdit: true si se recibió un ingrediente existente
@@ -31,6 +32,11 @@ export default function IngredienteModal({ ingrediente, onClose }: Props) {
   const [form, setForm]         = useState<IngredienteCreate>(EMPTY)
   const [apiError, setApiError] = useState('')
 
+  const { data: unidades = [] } = useQuery({
+    queryKey: ['unidades'],
+    queryFn: fetchUnidades,
+  })
+
   // ─── useEffect ──────────────────────────────────────────────────────────────
   // Se ejecuta cada vez que cambia la prop "ingrediente".
   // Si se abre en modo edición: carga los datos actuales en el formulario.
@@ -42,6 +48,7 @@ export default function IngredienteModal({ ingrediente, onClose }: Props) {
         descripcion:     ingrediente.descripcion ?? '',
         es_alergeno:     ingrediente.es_alergeno,
         es_terminado:    ingrediente.es_terminado,
+        unidad_medida_id: ingrediente.unidad_medida_id,
         stock_cantidad:  ingrediente.stock_cantidad,
         costo_unitario:  parseFloat(ingrediente.costo_unitario) || 0,
       })
@@ -59,12 +66,13 @@ export default function IngredienteModal({ ingrediente, onClose }: Props) {
     mutationFn: () =>
       isEdit
         ? updateIngrediente(ingrediente!.id, {
-            nombre:         form.nombre,
-            descripcion:    form.descripcion || undefined,  // "" se convierte a undefined (no se envía)
-            es_alergeno:    form.es_alergeno,
-            es_terminado:   form.es_terminado,
-            stock_cantidad: form.stock_cantidad,
-            costo_unitario: form.costo_unitario,
+            nombre:          form.nombre,
+            descripcion:     form.descripcion || undefined,  // "" se convierte a undefined (no se envía)
+            es_alergeno:     form.es_alergeno,
+            es_terminado:    form.es_terminado,
+            unidad_medida_id: form.unidad_medida_id,
+            stock_cantidad:  form.stock_cantidad,
+            costo_unitario:  form.costo_unitario,
           })
         : createIngrediente({
             ...form,
@@ -91,6 +99,10 @@ export default function IngredienteModal({ ingrediente, onClose }: Props) {
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setApiError('')
+    if (!form.unidad_medida_id) {
+      setApiError('Debés seleccionar una unidad de medida')
+      return
+    }
     mutation.mutate()   // dispara la mutación
   }
 
@@ -198,7 +210,7 @@ export default function IngredienteModal({ ingrediente, onClose }: Props) {
               </span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
               {/* Campo: Costo unitario */}
               <div className="form-group">
                 <label className="form-label" htmlFor="ing-costo">
@@ -221,6 +233,31 @@ export default function IngredienteModal({ ingrediente, onClose }: Props) {
                 </div>
                 <span className="form-hint">
                   Costo de compra para cálculo de precios.
+                </span>
+              </div>
+
+              {/* Campo: Unidad de medida */}
+              <div className="form-group">
+                <label className="form-label" htmlFor="ing-unidad">
+                  Unidad <span style={{ color: 'var(--danger)' }}>*</span>
+                </label>
+                <select
+                  id="ing-unidad"
+                  className="form-input"
+                  value={form.unidad_medida_id}
+                  onChange={(e) => setForm({ ...form, unidad_medida_id: Number(e.target.value) })}
+                  required
+                  disabled={!isAdmin}
+                >
+                  <option value={0} disabled>Seleccionar...</option>
+                  {unidades.map((u: UnidadMedida) => (
+                    <option key={u.id} value={u.id}>
+                      {u.simbolo} — {u.nombre}
+                    </option>
+                  ))}
+                </select>
+                <span className="form-hint">
+                  Unidad base del insumo para recetas
                 </span>
               </div>
 
