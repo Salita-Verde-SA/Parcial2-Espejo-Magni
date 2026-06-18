@@ -97,6 +97,14 @@ export default function CarritoDrawer() {
                     <div className="text-xs text-neutral-400 font-medium mt-0.5">
                       {formatPrecio(parseFloat(item.producto.precio_base), (item.producto as any).unidad_venta?.simbolo)} c/u
                     </div>
+                    {(() => {
+                      const disp = item.producto.stock_cantidad
+                      return (
+                        <div className={`text-xs mt-0.5 ${disp <= 0 ? 'text-red-500/60' : 'text-neutral-500'}`}>
+                          {disp <= 0 ? 'Sin stock' : `Stock: ${disp} disponibles`}
+                        </div>
+                      )
+                    })()}
                   </div>
 
                   <div className="flex flex-col items-end gap-2">
@@ -111,7 +119,12 @@ export default function CarritoDrawer() {
                         {item.cantidad}
                       </span>
                       <button
-                        className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-white/10 text-neutral-400 hover:text-white transition-colors"
+                        className={`w-6 h-6 flex items-center justify-center rounded-md transition-colors ${
+                          item.cantidad >= item.producto.stock_cantidad
+                            ? 'text-neutral-600 cursor-not-allowed'
+                            : 'hover:bg-white/10 text-neutral-400 hover:text-white'
+                        }`}
+                        disabled={item.cantidad >= item.producto.stock_cantidad}
                         onClick={() => updateCantidad(item.producto.id, item.cantidad + 1)}
                       >
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
