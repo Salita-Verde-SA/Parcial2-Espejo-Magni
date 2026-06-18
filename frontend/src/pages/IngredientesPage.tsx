@@ -6,10 +6,11 @@ import {
   exportExcel,
   activateIngrediente,
 } from '../api/ingredientes'
+import { fetchUnidades } from '../api/unidades'
 import { useAuthStore } from '../stores/authStore'
 import IngredienteModal from '../features/admin/components/IngredienteModal'
 import ConfirmDialog from '../features/ui/components/ConfirmDialog'
-import type { Ingrediente, FiltrosIngrediente } from '../types'
+import type { Ingrediente, FiltrosIngrediente, UnidadMedida } from '../types'
 
 const DEFAULT_FILTROS: FiltrosIngrediente = {
   nombre: '',
@@ -57,6 +58,12 @@ export default function IngredientesPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['ingredientes'] })
     },
+  })
+
+  const { data: unidades = [] } = useQuery({
+    queryKey: ['unidades'],
+    queryFn: fetchUnidades,
+    staleTime: 5 * 60 * 1000,
   })
 
   function handleSearch() {
@@ -254,6 +261,7 @@ export default function IngredientesPage() {
                   <th>Nombre</th>
                   <th>Descripción</th>
                   <th style={{ width: 80 }}>Stock</th>
+                  <th style={{ width: 90 }}>Unidad</th>
                   <th style={{ width: 90 }}>Costo</th>
                   <th style={{ width: 110 }}>Alérgeno</th>
                   <th style={{ width: 100 }}>Terminado</th>
@@ -266,7 +274,7 @@ export default function IngredientesPage() {
 
                 {isLoading && (
                   <tr className="loading-row">
-                    <td colSpan={(isAdmin || isStock) ? 8 : 7}>
+                    <td colSpan={(isAdmin || isStock) ? 9 : 8}>
                       <span className="spinner spinner-dark" /> Cargando...
                     </td>
                   </tr>
@@ -274,7 +282,7 @@ export default function IngredientesPage() {
 
                 {isError && (
                   <tr>
-                    <td colSpan={(isAdmin || isStock) ? 8 : 7}
+                    <td colSpan={(isAdmin || isStock) ? 9 : 8}
                       style={{ textAlign: 'center', padding: 24, color: 'var(--danger)' }}>
                       Error al cargar los datos. Intentá de nuevo.
                     </td>
@@ -283,7 +291,7 @@ export default function IngredientesPage() {
 
                 {!isLoading && !isError && data?.items.length === 0 && (
                   <tr>
-                    <td colSpan={(isAdmin || isStock) ? 8 : 7}>
+                    <td colSpan={(isAdmin || isStock) ? 9 : 8}>
                       <div className="empty-state">
                         <h3>Sin resultados</h3>
                         <p>No se encontraron insumos con los filtros aplicados.</p>
@@ -316,6 +324,12 @@ export default function IngredientesPage() {
                         }}>
                           {ing.stock_cantidad}
                         </span>
+                      </td>
+                      <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                        {(() => {
+                          const u = unidades.find((u: UnidadMedida) => u.id === ing.unidad_medida_id)
+                          return u ? `${u.simbolo} — ${u.nombre}` : '—'
+                        })()}
                       </td>
                       <td>
                         <strong>${parseFloat(ing.costo_unitario).toFixed(2)}</strong>

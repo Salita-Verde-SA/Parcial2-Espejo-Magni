@@ -44,6 +44,7 @@ export interface Ingrediente {
   descripcion: string | null
   es_alergeno: boolean
   es_terminado: boolean
+  unidad_medida_id: number
   stock_cantidad: number
   costo_unitario: string
   created_at: string
@@ -55,6 +56,7 @@ export interface IngredienteCreate {
   descripcion?: string
   es_alergeno: boolean
   es_terminado: boolean
+  unidad_medida_id: number
   stock_cantidad?: number
   costo_unitario?: number
 }
@@ -64,6 +66,7 @@ export interface IngredienteUpdate {
   descripcion?: string
   es_alergeno?: boolean
   es_terminado?: boolean
+  unidad_medida_id?: number
   stock_cantidad?: number
   costo_unitario?: number
 }
