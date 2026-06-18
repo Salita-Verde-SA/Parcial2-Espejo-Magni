@@ -34,7 +34,7 @@ function ProductoCard({ producto }: { producto: Producto }) {
   const alergenos = producto.ingredientes.filter((i) => i.es_alergeno)
 
   function handleAgregar() {
-    addItem(producto, 1, [])
+    addItem(producto, Math.min(1, producto.stock_cantidad), [])
     setShowToast(true)
     setTimeout(() => setShowToast(false), 2500)
   }
