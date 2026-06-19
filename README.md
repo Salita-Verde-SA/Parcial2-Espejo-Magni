@@ -2,9 +2,9 @@
 
 > 📁 **Documentación adicional** en `/docs/pdf/` — archivos complementarios del proyecto.
 
-## Entrega para el parcial
+## Entregas
 
-[Enlace al video para la presentación del segundo parcial](https://drive.google.com/file/d/111Qs4vTrp4xQ8rA84ZaXlW0PcZnhixfC/view?usp=sharing)
+- [Enlace a la entrega del video final](https://drive.google.com/file/d/1_OJNJCtktnr53zqSCFmRaW8e9nk7LjcE/view?usp=sharing)
 
 **Integrantes del grupo**
 
