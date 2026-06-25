@@ -13,14 +13,20 @@ function buildWsUrl(path: string): string {
 }
 
 function invalidate(qc: QueryClient, raw: string) {
+  let data: any = null
   try {
-    const data = JSON.parse(raw)
-    useWsStore.getState().setLastEvent(data.event || data.type || null)
+    data = JSON.parse(raw)
+  } catch {
+    return // mensaje no-JSON: ignorar
+  }
 
-    // Actualización optimista para evitar desincronización visual entre lista y detalle
-    if (data.pedido_id && data.estado_nuevo) {
+  useWsStore.getState().setLastEvent(data.event || data.type || null)
+
+  // Actualización optimista — si falla no bloquea los invalidateQueries de abajo
+  if (data.pedido_id && data.estado_nuevo) {
+    try {
       qc.setQueriesData({ queryKey: ['admin-pedidos'] }, (oldData: any) => {
-        if (!oldData) return oldData
+        if (!oldData?.items) return oldData
         return {
           ...oldData,
           items: oldData.items.map((item: any) =>
@@ -29,27 +35,25 @@ function invalidate(qc: QueryClient, raw: string) {
         }
       })
       qc.setQueriesData({ queryKey: ['pedidos'] }, (oldData: any) => {
-        if (!oldData) return oldData
+        if (!oldData?.items) return oldData
         return {
           ...oldData,
           items: oldData.items.map((item: any) => {
-            if (item.id === data.pedido_id) {
-              const updatedItem = { ...item, estado_codigo: data.estado_nuevo }
-              if (data.motivo) {
-                updatedItem.historial = [...(item.historial || []), {
-                  id: Date.now(),
-                  pedido_id: item.id,
-                  estado_anterior_codigo: item.estado_codigo,
-                  estado_nuevo_codigo: data.estado_nuevo,
-                  motivo: data.motivo,
-                  fecha: new Date().toISOString(),
-                  usuario_id: data.usuario_id,
-                  usuario_nombre: 'Sistema' // Fallback
-                }]
-              }
-              return updatedItem
+            if (item.id !== data.pedido_id) return item
+            const updatedItem = { ...item, estado_codigo: data.estado_nuevo }
+            if (data.motivo) {
+              updatedItem.historial = [...(item.historial || []), {
+                id: Date.now(),
+                pedido_id: item.id,
+                estado_anterior_codigo: item.estado_codigo,
+                estado_nuevo_codigo: data.estado_nuevo,
+                motivo: data.motivo,
+                fecha: new Date().toISOString(),
+                usuario_id: data.usuario_id,
+                usuario_nombre: 'Sistema',
+              }]
             }
-            return item
+            return updatedItem
           }),
         }
       })
@@ -65,22 +69,23 @@ function invalidate(qc: QueryClient, raw: string) {
             motivo: data.motivo,
             fecha: new Date().toISOString(),
             usuario_id: data.usuario_id,
-            usuario_nombre: 'Sistema' // Fallback
+            usuario_nombre: 'Sistema',
           }]
         }
         return updatedItem
       })
+    } catch {
+      // optimistic update falló; los invalidateQueries de abajo refetchan igual
     }
+  }
 
-    qc.invalidateQueries({ queryKey: ['pedidos'] })
-    qc.invalidateQueries({ queryKey: ['admin-pedidos'] })
-    qc.invalidateQueries({ queryKey: ['admin-dashboard'] })
-    qc.invalidateQueries({ queryKey: ['estadisticas'] })
-    if (data.pedido_id) {
-      qc.invalidateQueries({ queryKey: ['pedido-detalle', data.pedido_id] })
-    }
-  } catch {
-    /* mensaje no-JSON: ignorar */
+  // Siempre invalidar — garantiza datos frescos aunque falle el update optimista
+  qc.invalidateQueries({ queryKey: ['pedidos'] })
+  qc.invalidateQueries({ queryKey: ['admin-pedidos'] })
+  qc.invalidateQueries({ queryKey: ['admin-dashboard'] })
+  qc.invalidateQueries({ queryKey: ['estadisticas'] })
+  if (data.pedido_id) {
+    qc.invalidateQueries({ queryKey: ['pedido-detalle', data.pedido_id] })
   }
 }
 
@@ -105,6 +110,11 @@ export function useAdminOrdersFeed() {
       ws = new WebSocket(buildWsUrl('/ws/pedidos'))
 
       ws.onopen = () => {
+        if (attempt > 0) {
+          qc.invalidateQueries({ queryKey: ['admin-pedidos'] })
+          qc.invalidateQueries({ queryKey: ['pedidos'] })
+          qc.invalidateQueries({ queryKey: ['estadisticas'] })
+        }
         attempt = 0
         setStatus('connected')
       }
@@ -165,6 +175,9 @@ export function useMisPedidosGlobalFeed() {
       ws = new WebSocket(buildWsUrl('/ws/mis-pedidos'))
 
       ws.onopen = () => {
+        if (attempt > 0) {
+          qc.invalidateQueries({ queryKey: ['pedidos'] })
+        }
         attempt = 0
         setStatus('connected')
       }

@@ -14,6 +14,7 @@ export default function CheckoutPage() {
   
   const [selectedDirId, setSelectedDirId] = useState<number | null>(null)
   const [formaPago, setFormaPago] = useState<string>('EFECTIVO')
+  const [modalidadEntrega, setModalidadEntrega] = useState<'ENVIO' | 'RETIRO'>('ENVIO')
   const [createdPedidoId, setCreatedPedidoId] = useState<number | null>(null)
   const [errorMsg, setErrorMsg] = useState<string>('')
 
@@ -107,7 +108,7 @@ export default function CheckoutPage() {
       setErrorMsg('El carrito está vacío')
       return
     }
-    if (!selectedDirId) {
+    if (modalidadEntrega === 'ENVIO' && !selectedDirId) {
       setErrorMsg('Por favor selecciona una dirección de entrega')
       return
     }
@@ -115,7 +116,7 @@ export default function CheckoutPage() {
 
     const orderData = {
       forma_pago_codigo: formaPago,
-      direccion_id: selectedDirId,
+      direccion_id: modalidadEntrega === 'ENVIO' ? selectedDirId : null,
       items: items.map((i) => ({
         producto_id: i.producto.id,
         cantidad: i.cantidad,
@@ -166,6 +167,53 @@ export default function CheckoutPage() {
             </div>
           )}
 
+          <div className="card" style={{ padding: 24 }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: 18 }}>🚚 Modalidad de Entrega</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div
+                onClick={() => setModalidadEntrega('ENVIO')}
+                style={{
+                  padding: 16,
+                  border: `2px solid ${modalidadEntrega === 'ENVIO' ? 'var(--primary)' : 'var(--border)'}`,
+                  borderRadius: 12,
+                  cursor: 'pointer',
+                  background: modalidadEntrega === 'ENVIO' ? 'rgba(var(--primary-rgb), 0.05)' : 'var(--surface)',
+                  display: 'flex', alignItems: 'center', gap: 12,
+                }}
+              >
+                <div style={{ fontSize: 20 }}>🏠</div>
+                <div style={{ flex: 1 }}>
+                  <strong style={{ fontSize: 14, display: 'block' }}>Envío a domicilio</strong>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Recibí tu pedido en la dirección elegida</span>
+                </div>
+                <div style={{ width: 20, height: 20, borderRadius: '50%', border: `2px solid ${modalidadEntrega === 'ENVIO' ? 'var(--primary)' : 'var(--text-muted)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {modalidadEntrega === 'ENVIO' && <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--primary)' }} />}
+                </div>
+              </div>
+              <div
+                onClick={() => setModalidadEntrega('RETIRO')}
+                style={{
+                  padding: 16,
+                  border: `2px solid ${modalidadEntrega === 'RETIRO' ? 'var(--primary)' : 'var(--border)'}`,
+                  borderRadius: 12,
+                  cursor: 'pointer',
+                  background: modalidadEntrega === 'RETIRO' ? 'rgba(var(--primary-rgb), 0.05)' : 'var(--surface)',
+                  display: 'flex', alignItems: 'center', gap: 12,
+                }}
+              >
+                <div style={{ fontSize: 20 }}>🏪</div>
+                <div style={{ flex: 1 }}>
+                  <strong style={{ fontSize: 14, display: 'block' }}>Retiro en local</strong>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Pasá a buscar tu pedido directamente en el local</span>
+                </div>
+                <div style={{ width: 20, height: 20, borderRadius: '50%', border: `2px solid ${modalidadEntrega === 'RETIRO' ? 'var(--primary)' : 'var(--text-muted)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {modalidadEntrega === 'RETIRO' && <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--primary)' }} />}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {modalidadEntrega === 'ENVIO' && (
           <div className="card" style={{ padding: 24 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h3 style={{ margin: 0, fontSize: 18 }}>📍 Dirección de Entrega</h3>
@@ -322,6 +370,7 @@ export default function CheckoutPage() {
               </div>
             )}
           </div>
+          )}
 
           <div className="card" style={{ padding: 24 }}>
             <h3 style={{ margin: '0 0 16px 0', fontSize: 18 }}>💵 Forma de Pago</h3>
@@ -421,7 +470,7 @@ export default function CheckoutPage() {
           <button
             className="btn btn-primary"
             onClick={handleConfirmarPedido}
-            disabled={createPedidoMutation.isPending || createPagoMutation.isPending || !selectedDirId}
+            disabled={createPedidoMutation.isPending || createPagoMutation.isPending || (modalidadEntrega === 'ENVIO' && !selectedDirId)}
             style={{ width: '100%', marginTop: 24, padding: 12, fontSize: 15 }}
           >
             {createPedidoMutation.isPending || createPagoMutation.isPending ? 'Procesando...' : 'Confirmar Pedido'}

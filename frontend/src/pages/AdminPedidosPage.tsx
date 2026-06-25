@@ -6,13 +6,20 @@ import WsConnectionBadge from '../features/ui/components/WsConnectionBadge'
 import ConfirmDialog from '../features/ui/components/ConfirmDialog'
 import type { PedidoPublic, PaginatedPedidos } from '../types'
 
-// Etiquetas legibles para mostrar en el diálogo de confirmación (FSM v7: 5 estados)
 const ESTADO_LABELS: Record<string, string> = {
   CONFIRMADO: 'Confirmado',
   EN_PREP: 'En Preparación',
   EN_CAMINO: 'En Camino',
   ENTREGADO: 'Entregado',
   CANCELADO: 'Cancelado',
+}
+
+function getEstadoLabel(codigo: string, direccionId: number | null | undefined): string {
+  if (!direccionId) {
+    if (codigo === 'EN_CAMINO') return 'LISTO P/ RETIRAR'
+    if (codigo === 'ENTREGADO') return 'RETIRADO'
+  }
+  return codigo
 }
 
 export default function AdminPedidosPage() {
@@ -24,7 +31,7 @@ export default function AdminPedidosPage() {
   const [selectedPedidoId, setSelectedPedidoId] = useState<number | null>(null)
   const [errorMsg, setErrorMsg] = useState('')
   // Transición pendiente de confirmar (null → no hay diálogo abierto)
-  const [pendingTransition, setPendingTransition] = useState<{ id: number; nuevoEstado: string } | null>(null)
+  const [pendingTransition, setPendingTransition] = useState<{ id: number; nuevoEstado: string; esRetiro?: boolean } | null>(null)
   // Motivo de cancelación (RN-05: obligatorio al pasar a CANCELADO)
   const [cancelMotivo, setCancelMotivo] = useState('')
 
@@ -32,6 +39,7 @@ export default function AdminPedidosPage() {
     queryKey: ['admin-pedidos', estadoFiltro, page],
     queryFn: () => fetchPedidos(estadoFiltro, page, 8),
     placeholderData: (prev) => prev,
+    refetchInterval: 5_000,
   })
 
   const { data: selectedPedido } = useQuery<PedidoPublic | null>({
@@ -74,9 +82,8 @@ export default function AdminPedidosPage() {
     },
   })
 
-  function handleTransition(id: number, nuevoEstado: string) {
-    // En vez del confirm() del navegador, abrimos el ConfirmDialog
-    setPendingTransition({ id, nuevoEstado })
+  function handleTransition(id: number, nuevoEstado: string, esRetiro = false) {
+    setPendingTransition({ id, nuevoEstado, esRetiro })
   }
 
   const formatPrecio = (n: number | string) =>
@@ -154,9 +161,9 @@ export default function AdminPedidosPage() {
             <button
               className="btn"
               style={{ flex: 1, backgroundColor: '#06b6d4', color: 'white', border: 'none' }}
-              onClick={() => handleTransition(p.id, 'EN_CAMINO')}
+              onClick={() => handleTransition(p.id, 'EN_CAMINO', !p.direccion_id)}
             >
-              🚚 Enviar Pedido
+              {p.direccion_id ? '🚚 Enviar Pedido' : '🏪 Listo para Retirar'}
             </button>
             <button
               className="btn btn-danger"
@@ -175,7 +182,7 @@ export default function AdminPedidosPage() {
               style={{ flex: 1 }}
               onClick={() => handleTransition(p.id, 'ENTREGADO')}
             >
-              🎁 Marcar como Entregado
+              {p.direccion_id ? '🎁 Marcar como Entregado' : '✅ Marcar como Retirado'}
             </button>
             <button
               className="btn btn-danger"
@@ -268,7 +275,7 @@ export default function AdminPedidosPage() {
                       <td style={{ padding: 12 }}>{formatFecha(p.fecha)}</td>
                       <td style={{ padding: 12 }}>
                         <span className={`badge ${getBadgeClass(p.estado_codigo)}`} style={{ fontSize: 10 }}>
-                          {p.estado_codigo}
+                          {getEstadoLabel(p.estado_codigo, p.direccion_id)}
                         </span>
                         {p.estado_codigo === 'CANCELADO' && p.historial?.find(h => h.estado_nuevo_codigo === 'CANCELADO')?.motivo && (
                           <div style={{ fontSize: 11, color: 'var(--danger)', marginTop: 4, fontWeight: 500 }}>
@@ -309,7 +316,7 @@ export default function AdminPedidosPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
                 <h3 style={{ margin: 0, fontSize: 18 }}>Pedido #{selectedPedido.id}</h3>
                 <span className={`badge ${getBadgeClass(selectedPedido.estado_codigo)}`}>
-                  {selectedPedido.estado_codigo}
+                  {getEstadoLabel(selectedPedido.estado_codigo, selectedPedido.direccion_id)}
                 </span>
               </div>
 
@@ -336,17 +343,19 @@ export default function AdminPedidosPage() {
                 </div>
               </div>
 
-              {selectedPedido.direccion && (
-                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
-                  <strong style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>DIRECCIÓN DE ENTREGA</strong>
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+                <strong style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>TIPO DE ENTREGA</strong>
+                {selectedPedido.direccion ? (
                   <div style={{ fontSize: 13 }}>
-                    {selectedPedido.direccion.calle} {selectedPedido.direccion.numero}
+                    🏠 {selectedPedido.direccion.calle} {selectedPedido.direccion.numero}
                     {selectedPedido.direccion.piso && `, Piso ${selectedPedido.direccion.piso}`}
                     {selectedPedido.direccion.departamento && `, Depto ${selectedPedido.direccion.departamento}`}
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{selectedPedido.direccion.ciudad} ({selectedPedido.direccion.alias})</div>
                   </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{selectedPedido.direccion.ciudad} ({selectedPedido.direccion.alias})</div>
-                </div>
-              )}
+                ) : (
+                  <div style={{ fontSize: 13 }}>🏪 Retiro en Local</div>
+                )}
+              </div>
 
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
@@ -370,7 +379,7 @@ export default function AdminPedidosPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12 }}>
                   {selectedPedido.historial.map((h) => (
                     <div key={h.id} style={{ paddingLeft: 8, borderLeft: '2px solid var(--border)' }}>
-                      <div style={{ fontWeight: 600 }}>{h.estado_nuevo_codigo}</div>
+                      <div style={{ fontWeight: 600 }}>{getEstadoLabel(h.estado_nuevo_codigo, selectedPedido.direccion_id)}</div>
                       {h.motivo && (
                         <div style={{ fontSize: 11, color: 'var(--danger)', fontStyle: 'italic', marginTop: 2 }}>
                           Motivo: {h.motivo}
@@ -422,7 +431,7 @@ export default function AdminPedidosPage() {
             ) : (
               <>
                 ¿Confirmás pasar el pedido <strong>#{pendingTransition.id}</strong> al estado{' '}
-                <strong>"{ESTADO_LABELS[pendingTransition.nuevoEstado] ?? pendingTransition.nuevoEstado}"</strong>?
+                <strong>"{pendingTransition.esRetiro && pendingTransition.nuevoEstado === 'EN_CAMINO' ? 'Listo para Retirar' : (ESTADO_LABELS[pendingTransition.nuevoEstado] ?? pendingTransition.nuevoEstado)}"</strong>?
               </>
             )
           }

@@ -22,7 +22,7 @@ export default function MisPedidosPage() {
     queryKey: ['pedidos', page],
     queryFn: () => fetchPedidos('', page, 5, true),
     placeholderData: (prev) => prev,
-    refetchInterval: 30_000,
+    refetchInterval: 5_000,
   })
 
   // WebSocket por pedido visible: refleja cambios de estado en tiempo real.
@@ -89,6 +89,14 @@ export default function MisPedidosPage() {
     })
   }
 
+  const getEstadoLabel = (codigo: string, direccionId: number | null | undefined): string => {
+    if (!direccionId) {
+      if (codigo === 'EN_CAMINO') return 'LISTO P/ RETIRAR'
+      if (codigo === 'ENTREGADO') return 'RETIRADO'
+    }
+    return codigo
+  }
+
   const getBadgeClass = (estado: string) => {
     switch (estado) {
       case 'PENDIENTE': return 'badge-neutral'
@@ -149,7 +157,7 @@ export default function MisPedidosPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <strong style={{ fontSize: 15 }}>Pedido #{p.id}</strong>
                       <span className={`badge ${getBadgeClass(p.estado_codigo)}`} style={{ fontSize: 11 }}>
-                        {p.estado_codigo}
+                        {getEstadoLabel(p.estado_codigo, p.direccion_id)}
                       </span>
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
@@ -195,7 +203,7 @@ export default function MisPedidosPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
                 <h3 style={{ margin: 0, fontSize: 18 }}>Detalle del Pedido #{selectedPedido.id}</h3>
                 <span className={`badge ${getBadgeClass(selectedPedido.estado_codigo)}`}>
-                  {selectedPedido.estado_codigo}
+                  {getEstadoLabel(selectedPedido.estado_codigo, selectedPedido.direccion_id)}
                 </span>
               </div>
 
@@ -217,17 +225,19 @@ export default function MisPedidosPage() {
                 </div>
               </div>
 
-              {selectedPedido.direccion && (
-                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
-                  <strong style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>DIRECCIÓN DE ENTREGA</strong>
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+                <strong style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>TIPO DE ENTREGA</strong>
+                {selectedPedido.direccion ? (
                   <div style={{ fontSize: 13 }}>
-                    {selectedPedido.direccion.calle} {selectedPedido.direccion.numero}
+                    🏠 {selectedPedido.direccion.calle} {selectedPedido.direccion.numero}
                     {selectedPedido.direccion.piso && `, Piso ${selectedPedido.direccion.piso}`}
                     {selectedPedido.direccion.departamento && `, Depto ${selectedPedido.direccion.departamento}`}
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{selectedPedido.direccion.ciudad}</div>
                   </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{selectedPedido.direccion.ciudad}</div>
-                </div>
-              )}
+                ) : (
+                  <div style={{ fontSize: 13 }}>🏪 Retiro en Local</div>
+                )}
+              </div>
 
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
@@ -251,7 +261,7 @@ export default function MisPedidosPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12 }}>
                   {selectedPedido.historial.map((h) => (
                     <div key={h.id} style={{ paddingLeft: 8, borderLeft: '2px solid var(--border)' }}>
-                      <div style={{ fontWeight: 600 }}>{h.estado_nuevo_codigo}</div>
+                      <div style={{ fontWeight: 600 }}>{getEstadoLabel(h.estado_nuevo_codigo, selectedPedido.direccion_id)}</div>
                       {h.motivo && (
                         <div style={{ fontSize: 11, color: 'var(--danger)', fontStyle: 'italic', marginTop: 2 }}>
                           Motivo: {h.motivo}

@@ -1,5 +1,6 @@
 import { apiClient } from './client'
 import { useAuthStore } from '../stores/authStore'
+import { useCartStore } from '../stores/cartStore'
 import type { LoginResponse, UserPublic } from '../types'
 
 export async function login(email: string, password: string): Promise<void> {
@@ -24,6 +25,7 @@ export async function logout(): Promise<void> {
     await apiClient.post('/api/v1/auth/logout')
   } catch {
   }
+  useCartStore.getState().clearCart()
   useAuthStore.getState().logout()
 }
 
