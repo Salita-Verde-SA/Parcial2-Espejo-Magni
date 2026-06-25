@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchPedidos, patchPedidoEstado, fetchPedido } from '../api/pedidos'
-import { usePedidosWebSocket } from '../hooks/usePedidosWebSocket'
+import { useAdminOrdersFeed } from '../hooks/useOrderStatusWS'
+import WsConnectionBadge from '../features/ui/components/WsConnectionBadge'
 import ConfirmDialog from '../features/ui/components/ConfirmDialog'
 import type { PedidoPublic, PaginatedPedidos } from '../types'
 
-// Etiquetas legibles para mostrar en el diálogo de confirmación
+// Etiquetas legibles para mostrar en el diálogo de confirmación (FSM v7: 5 estados)
 const ESTADO_LABELS: Record<string, string> = {
   CONFIRMADO: 'Confirmado',
   EN_PREP: 'En Preparación',
@@ -16,7 +17,7 @@ const ESTADO_LABELS: Record<string, string> = {
 
 export default function AdminPedidosPage() {
   const queryClient = useQueryClient()
-  usePedidosWebSocket()
+  useAdminOrdersFeed()
 
   const [page, setPage] = useState(1)
   const [estadoFiltro, setEstadoFiltro] = useState('')
@@ -24,6 +25,8 @@ export default function AdminPedidosPage() {
   const [errorMsg, setErrorMsg] = useState('')
   // Transición pendiente de confirmar (null → no hay diálogo abierto)
   const [pendingTransition, setPendingTransition] = useState<{ id: number; nuevoEstado: string } | null>(null)
+  // Motivo de cancelación (RN-05: obligatorio al pasar a CANCELADO)
+  const [cancelMotivo, setCancelMotivo] = useState('')
 
   const { data: response, isLoading } = useQuery<PaginatedPedidos>({
     queryKey: ['admin-pedidos', estadoFiltro, page],
@@ -43,17 +46,31 @@ export default function AdminPedidosPage() {
   })
 
   const stateMutation = useMutation({
-    mutationFn: ({ id, nuevoEstado }: { id: number; nuevoEstado: string }) =>
-      patchPedidoEstado(id, nuevoEstado),
+    mutationFn: ({ id, nuevoEstado, motivo }: { id: number; nuevoEstado: string; motivo?: string }) =>
+      patchPedidoEstado(id, nuevoEstado, motivo),
     onSuccess: (updated) => {
       queryClient.setQueryData(['pedido-detalle', updated.id], updated)
+      
+      // Actualizar la lista optimísticamente para que no haya desincronización visual
+      queryClient.setQueriesData({ queryKey: ['admin-pedidos'] }, (oldData: any) => {
+        if (!oldData) return oldData
+        return {
+          ...oldData,
+          items: oldData.items.map((item: any) => 
+            item.id === updated.id ? updated : item
+          )
+        }
+      })
+
       queryClient.invalidateQueries({ queryKey: ['admin-pedidos'] })
       setErrorMsg('')
       setPendingTransition(null)
+      setCancelMotivo('')
     },
     onError: (err: any) => {
       setErrorMsg(err.response?.data?.detail || 'Error al actualizar el estado del pedido')
       setPendingTransition(null)
+      setCancelMotivo('')
     },
   })
 
@@ -135,11 +152,11 @@ export default function AdminPedidosPage() {
         return (
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
             <button
-              className="btn btn-info"
-              style={{ flex: 1 }}
+              className="btn"
+              style={{ flex: 1, backgroundColor: '#06b6d4', color: 'white', border: 'none' }}
               onClick={() => handleTransition(p.id, 'EN_CAMINO')}
             >
-              🛵 Despachar / Enviar
+              🚚 Enviar Pedido
             </button>
             <button
               className="btn btn-danger"
@@ -176,8 +193,9 @@ export default function AdminPedidosPage() {
 
   return (
     <>
-      <header className="topbar">
+      <header className="topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span className="topbar-title">Administración de Pedidos</span>
+        <WsConnectionBadge />
       </header>
 
       <div className="page-wrapper" style={{ display: 'grid', gridTemplateColumns: '1fr 420px', gap: 24, alignItems: 'start' }}>
@@ -252,6 +270,11 @@ export default function AdminPedidosPage() {
                         <span className={`badge ${getBadgeClass(p.estado_codigo)}`} style={{ fontSize: 10 }}>
                           {p.estado_codigo}
                         </span>
+                        {p.estado_codigo === 'CANCELADO' && p.historial?.find(h => h.estado_nuevo_codigo === 'CANCELADO')?.motivo && (
+                          <div style={{ fontSize: 11, color: 'var(--danger)', marginTop: 4, fontWeight: 500 }}>
+                            Motivo: {p.historial.find(h => h.estado_nuevo_codigo === 'CANCELADO')?.motivo}
+                          </div>
+                        )}
                       </td>
                       <td style={{ padding: 12, fontWeight: 600 }}>{formatPrecio(p.total)}</td>
                     </tr>
@@ -289,6 +312,12 @@ export default function AdminPedidosPage() {
                   {selectedPedido.estado_codigo}
                 </span>
               </div>
+
+              {selectedPedido.estado_codigo === 'CANCELADO' && selectedPedido.historial?.find(h => h.estado_nuevo_codigo === 'CANCELADO')?.motivo && (
+                <div className="badge badge-danger" style={{ padding: 12, borderRadius: 8, fontSize: 13, display: 'block', textAlign: 'left' }}>
+                  <strong>Motivo de cancelación:</strong> {selectedPedido.historial.find(h => h.estado_nuevo_codigo === 'CANCELADO')?.motivo}
+                </div>
+              )}
 
               <div>
                 <strong style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>CLIENTE</strong>
@@ -342,6 +371,11 @@ export default function AdminPedidosPage() {
                   {selectedPedido.historial.map((h) => (
                     <div key={h.id} style={{ paddingLeft: 8, borderLeft: '2px solid var(--border)' }}>
                       <div style={{ fontWeight: 600 }}>{h.estado_nuevo_codigo}</div>
+                      {h.motivo && (
+                        <div style={{ fontSize: 11, color: 'var(--danger)', fontStyle: 'italic', marginTop: 2 }}>
+                          Motivo: {h.motivo}
+                        </div>
+                      )}
                       <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>
                         {formatFecha(h.fecha)} por {h.usuario_nombre}
                       </div>
@@ -374,9 +408,16 @@ export default function AdminPedidosPage() {
               <>
                 ¿Confirmás la <strong>cancelación</strong> del pedido <strong>#{pendingTransition.id}</strong>?
                 <br />
-                <span style={{ fontSize: 12, marginTop: 8, display: 'block' }}>
-                  Esta acción no se puede deshacer.
+                <span style={{ fontSize: 12, margin: '8px 0', display: 'block' }}>
+                  Esta acción no se puede deshacer. Indicá el motivo (obligatorio):
                 </span>
+                <textarea
+                  value={cancelMotivo}
+                  onChange={(e) => setCancelMotivo(e.target.value)}
+                  placeholder="Motivo de la cancelación…"
+                  rows={2}
+                  style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid var(--border)', fontSize: 13, resize: 'vertical' }}
+                />
               </>
             ) : (
               <>
@@ -388,8 +429,12 @@ export default function AdminPedidosPage() {
           confirmLabel={pendingTransition.nuevoEstado === 'CANCELADO' ? 'Cancelar pedido' : 'Confirmar'}
           confirmVariant={pendingTransition.nuevoEstado === 'CANCELADO' ? 'danger' : 'primary'}
           loading={stateMutation.isPending}
-          onConfirm={() => stateMutation.mutate(pendingTransition)}
-          onCancel={() => setPendingTransition(null)}
+          confirmDisabled={pendingTransition.nuevoEstado === 'CANCELADO' && !cancelMotivo.trim()}
+          onConfirm={() => stateMutation.mutate({
+            ...pendingTransition,
+            motivo: pendingTransition.nuevoEstado === 'CANCELADO' ? cancelMotivo.trim() : undefined,
+          })}
+          onCancel={() => { setPendingTransition(null); setCancelMotivo('') }}
         />
       )}
     </>

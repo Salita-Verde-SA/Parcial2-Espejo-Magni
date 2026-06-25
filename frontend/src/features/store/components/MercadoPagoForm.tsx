@@ -11,17 +11,11 @@ export default function MercadoPagoForm({ pedidoId, onSuccess }: { pedidoId: num
     amount: 100, // MercadoPago SDK requires an amount, though real amount is handled by backend
   }
 
-  const onSubmit = async (formData: any) => {
+  const onSubmit = async (_formData: any) => {
     try {
       setPaymentStatus('processing')
       setError(null)
-      const res = await createPago(
-        formData.token, 
-        pedidoId, 
-        formData.issuer_id, 
-        formData.payment_method_id, 
-        formData.installments
-      )
+      const res = await createPago(pedidoId)
       if (res.status === 'ok') {
         setPaymentStatus('approved')
         onSuccess()

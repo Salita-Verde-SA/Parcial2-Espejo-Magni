@@ -11,6 +11,7 @@ from app.modules.ingredientes.model import (
     PaginatedIngredientes,
 )
 from app.modules.ingredientes.service import IngredienteService
+from app.core.websockets import manager
 
 router = APIRouter(prefix="/api/v1/ingredientes", tags=["ingredientes"])
 
@@ -61,12 +62,14 @@ def get_ingrediente(
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_roles(["ADMIN"]))],
 )
-def create_ingrediente(
+async def create_ingrediente(
     ing_in: IngredienteCreate,
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
     with uow:
-        return IngredienteService(uow).create(ing_in)
+        res = IngredienteService(uow).create(ing_in)
+    await manager.broadcast_stock({"type": "STOCK_UPDATED", "entity": "ingrediente"})
+    return res
 
 
 @router.patch(
@@ -74,13 +77,15 @@ def create_ingrediente(
     response_model=IngredientePublic,
     dependencies=[Depends(require_roles(["ADMIN", "STOCK"]))],
 )
-def update_ingrediente(
+async def update_ingrediente(
     ingrediente_id: int,
     ing_in: IngredienteUpdate,
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
     with uow:
-        return IngredienteService(uow).update(ingrediente_id, ing_in)
+        res = IngredienteService(uow).update(ingrediente_id, ing_in)
+    await manager.broadcast_stock({"type": "STOCK_UPDATED", "entity": "ingrediente"})
+    return res
 
 
 @router.delete(
@@ -88,12 +93,13 @@ def update_ingrediente(
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(require_roles(["ADMIN"]))],
 )
-def delete_ingrediente(
+async def delete_ingrediente(
     ingrediente_id: int,
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
     with uow:
         IngredienteService(uow).soft_delete(ingrediente_id)
+    await manager.broadcast_stock({"type": "STOCK_UPDATED", "entity": "ingrediente"})
 
 
 @router.post(
@@ -101,9 +107,11 @@ def delete_ingrediente(
     response_model=IngredientePublic,
     dependencies=[Depends(require_roles(["ADMIN"]))],
 )
-def activate_ingrediente(
+async def activate_ingrediente(
     ingrediente_id: int,
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
     with uow:
-        return IngredienteService(uow).activate(ingrediente_id)
+        res = IngredienteService(uow).activate(ingrediente_id)
+    await manager.broadcast_stock({"type": "STOCK_UPDATED", "entity": "ingrediente"})
+    return res

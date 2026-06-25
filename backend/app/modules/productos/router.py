@@ -24,8 +24,10 @@ from app.modules.productos.service import (
     update_producto,
     update_stock,
     update_disponibilidad,
+    update_disponibilidad,
     update_composicion,
 )
+from app.core.websockets import manager
 
 router = APIRouter(prefix="/api/v1/productos", tags=["productos"])
 
@@ -68,8 +70,10 @@ def get_prod(producto_id: int, uow: Annotated[UnitOfWork, Depends(get_uow)]):
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_roles(["ADMIN"]))],
 )
-def create(data: ProductoCreate, uow: Annotated[UnitOfWork, Depends(get_uow)]):
-    return create_producto(data, uow)
+async def create(data: ProductoCreate, uow: Annotated[UnitOfWork, Depends(get_uow)]):
+    res = create_producto(data, uow)
+    await manager.broadcast_stock({"type": "STOCK_UPDATED", "entity": "producto"})
+    return res
 
 
 @router.put(
@@ -77,8 +81,10 @@ def create(data: ProductoCreate, uow: Annotated[UnitOfWork, Depends(get_uow)]):
     response_model=ProductoPublic,
     dependencies=[Depends(require_roles(["ADMIN"]))],
 )
-def update(producto_id: int, data: ProductoUpdate, uow: Annotated[UnitOfWork, Depends(get_uow)]):
-    return update_producto(producto_id, data, uow)
+async def update(producto_id: int, data: ProductoUpdate, uow: Annotated[UnitOfWork, Depends(get_uow)]):
+    res = update_producto(producto_id, data, uow)
+    await manager.broadcast_stock({"type": "STOCK_UPDATED", "entity": "producto"})
+    return res
 
 
 @router.patch(
@@ -86,8 +92,10 @@ def update(producto_id: int, data: ProductoUpdate, uow: Annotated[UnitOfWork, De
     response_model=ProductoPublic,
     dependencies=[Depends(require_roles(["ADMIN", "STOCK"]))],
 )
-def patch_stock(producto_id: int, data: StockUpdate, uow: Annotated[UnitOfWork, Depends(get_uow)]):
-    return update_stock(producto_id, data, uow)
+async def patch_stock(producto_id: int, data: StockUpdate, uow: Annotated[UnitOfWork, Depends(get_uow)]):
+    res = update_stock(producto_id, data, uow)
+    await manager.broadcast_stock({"type": "STOCK_UPDATED", "entity": "producto"})
+    return res
 
 
 @router.patch(
@@ -95,8 +103,10 @@ def patch_stock(producto_id: int, data: StockUpdate, uow: Annotated[UnitOfWork, 
     response_model=ProductoPublic,
     dependencies=[Depends(require_roles(["ADMIN", "STOCK"]))],
 )
-def patch_composicion(producto_id: int, data: ComposicionUpdate, uow: Annotated[UnitOfWork, Depends(get_uow)]):
-    return update_composicion(producto_id, data, uow)
+async def patch_composicion(producto_id: int, data: ComposicionUpdate, uow: Annotated[UnitOfWork, Depends(get_uow)]):
+    res = update_composicion(producto_id, data, uow)
+    await manager.broadcast_stock({"type": "STOCK_UPDATED", "entity": "producto"})
+    return res
 
 
 @router.patch(
@@ -104,8 +114,10 @@ def patch_composicion(producto_id: int, data: ComposicionUpdate, uow: Annotated[
     response_model=ProductoPublic,
     dependencies=[Depends(require_roles(["ADMIN", "STOCK"]))],
 )
-def patch_disponibilidad(producto_id: int, data: DisponibilidadUpdate, uow: Annotated[UnitOfWork, Depends(get_uow)]):
-    return update_disponibilidad(producto_id, data, uow)
+async def patch_disponibilidad(producto_id: int, data: DisponibilidadUpdate, uow: Annotated[UnitOfWork, Depends(get_uow)]):
+    res = update_disponibilidad(producto_id, data, uow)
+    await manager.broadcast_stock({"type": "STOCK_UPDATED", "entity": "producto"})
+    return res
 
 
 @router.delete(
@@ -113,8 +125,9 @@ def patch_disponibilidad(producto_id: int, data: DisponibilidadUpdate, uow: Anno
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(require_roles(["ADMIN"]))],
 )
-def delete(producto_id: int, uow: Annotated[UnitOfWork, Depends(get_uow)]):
+async def delete(producto_id: int, uow: Annotated[UnitOfWork, Depends(get_uow)]):
     delete_producto(producto_id, uow)
+    await manager.broadcast_stock({"type": "STOCK_UPDATED", "entity": "producto"})
 
 
 @router.post(
@@ -122,5 +135,7 @@ def delete(producto_id: int, uow: Annotated[UnitOfWork, Depends(get_uow)]):
     response_model=ProductoPublic,
     dependencies=[Depends(require_roles(["ADMIN"]))],
 )
-def activate(producto_id: int, uow: Annotated[UnitOfWork, Depends(get_uow)]):
-    return activate_producto(producto_id, uow)
+async def activate(producto_id: int, uow: Annotated[UnitOfWork, Depends(get_uow)]):
+    res = activate_producto(producto_id, uow)
+    await manager.broadcast_stock({"type": "STOCK_UPDATED", "entity": "producto"})
+    return res

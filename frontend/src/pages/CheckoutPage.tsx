@@ -3,8 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { fetchDirecciones, createDireccion } from '../api/direcciones'
 import { createPedido } from '../api/pedidos'
+import { createPago } from '../api/pagos'
 import { useCartStore } from '../stores/cartStore'
-import MercadoPagoForm from '../features/store/components/MercadoPagoForm'
 import type { DireccionCreate, DireccionPublic } from '../types'
 
 export default function CheckoutPage() {
@@ -16,7 +16,6 @@ export default function CheckoutPage() {
   const [formaPago, setFormaPago] = useState<string>('EFECTIVO')
   const [createdPedidoId, setCreatedPedidoId] = useState<number | null>(null)
   const [errorMsg, setErrorMsg] = useState<string>('')
-  const [descuento, setDescuento] = useState<number>(0)
 
   const [showNewDirForm, setShowNewDirForm] = useState(false)
   const [newDir, setNewDir] = useState<DireccionCreate>({
@@ -35,11 +34,11 @@ export default function CheckoutPage() {
   })
 
   useEffect(() => {
-    if (direcciones) {
+    if (direcciones && selectedDirId === null) {
       const principal = direcciones.find((d) => d.principal)
       if (principal) {
         setSelectedDirId(principal.id)
-      } else if (direcciones.length > 0 && selectedDirId === null) {
+      } else if (direcciones.length > 0) {
         setSelectedDirId(direcciones[0].id)
       }
     }
@@ -66,13 +65,26 @@ export default function CheckoutPage() {
     },
   })
 
+  const createPagoMutation = useMutation({
+    mutationFn: createPago,
+    onSuccess: (data: any) => {
+      clearCart()
+      window.location.href = data.init_point
+    },
+    onError: (err: any) => {
+      setErrorMsg(err.response?.data?.detail || 'Error al iniciar pago con MercadoPago')
+      setCreatedPedidoId(null)
+    },
+  })
+
   const createPedidoMutation = useMutation({
     mutationFn: createPedido,
     onSuccess: (data: any) => {
-      clearCart()
       if (formaPago === 'MERCADOPAGO') {
         setCreatedPedidoId(data.id)
+        createPagoMutation.mutate(data.id)
       } else {
+        clearCart()
         navigate('/mis-pedidos')
       }
     },
@@ -104,7 +116,6 @@ export default function CheckoutPage() {
     const orderData = {
       forma_pago_codigo: formaPago,
       direccion_id: selectedDirId,
-      descuento: descuento,
       items: items.map((i) => ({
         producto_id: i.producto.id,
         cantidad: i.cantidad,
@@ -139,13 +150,10 @@ export default function CheckoutPage() {
         <span className="topbar-title">Finalizar Pedido</span>
       </header>
 
-      {createdPedidoId ? (
+      {createdPedidoId && formaPago === 'MERCADOPAGO' ? (
         <div className="page-wrapper" style={{ maxWidth: 600, margin: '0 auto', paddingTop: 32 }}>
-          <h2 style={{ textAlign: 'center', marginBottom: 24 }}>Pagar Pedido #{createdPedidoId}</h2>
-          <MercadoPagoForm 
-            pedidoId={createdPedidoId} 
-            onSuccess={() => navigate('/mis-pedidos')} 
-          />
+          <h2 style={{ textAlign: 'center', marginBottom: 24 }}>Redirigiendo a Mercado Pago...</h2>
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Por favor, espera un momento mientras preparamos tu pago seguro.</div>
         </div>
       ) : (
       <div className="page-wrapper" style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 24, alignItems: 'start' }}>
@@ -400,37 +408,23 @@ export default function CheckoutPage() {
               <span>Subtotal</span>
               <span>{formatPrecio(total())}</span>
             </div>
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, color: 'var(--text-muted)' }}>
-              <span>Descuento ($)</span>
-              <input 
-                type="number"
-                min="0"
-                max={total()}
-                value={descuento || ''}
-                onChange={(e) => setDescuento(Math.min(total(), parseFloat(e.target.value) || 0))}
-                style={{ width: 80, padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border)', textAlign: 'right' }}
-                placeholder="0"
-              />
-            </div>
-
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--text-muted)' }}>
               <span>Envío</span>
               <span style={{ color: 'var(--success)', fontWeight: 600 }}>Gratis</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, fontWeight: 700, marginTop: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 18, fontWeight: 700, marginTop: 16 }}>
               <span>Total</span>
-              <span style={{ color: 'var(--primary)' }}>{formatPrecio(Math.max(0, total() - descuento))}</span>
+              <span style={{ color: 'var(--primary)' }}>{formatPrecio(total())}</span>
             </div>
           </div>
 
           <button
             className="btn btn-primary"
             onClick={handleConfirmarPedido}
-            disabled={createPedidoMutation.isPending || !selectedDirId}
+            disabled={createPedidoMutation.isPending || createPagoMutation.isPending || !selectedDirId}
             style={{ width: '100%', marginTop: 24, padding: 12, fontSize: 15 }}
           >
-            {createPedidoMutation.isPending ? 'Procesando...' : 'Confirmar Pedido'}
+            {createPedidoMutation.isPending || createPagoMutation.isPending ? 'Procesando...' : 'Confirmar Pedido'}
           </button>
         </div>
 

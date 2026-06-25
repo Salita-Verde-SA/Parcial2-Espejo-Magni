@@ -1,4 +1,4 @@
-import { apiClient, saveRefreshToken, clearRefreshToken } from './client'
+import { apiClient } from './client'
 import { useAuthStore } from '../stores/authStore'
 import type { LoginResponse, UserPublic } from '../types'
 
@@ -7,7 +7,7 @@ export async function login(email: string, password: string): Promise<void> {
     email,
     password,
   })
-  const { access_token, refresh_token } = res.data
+  const { access_token } = res.data
 
   const payload = JSON.parse(atob(access_token.split('.')[1]))
 
@@ -18,20 +18,13 @@ export async function login(email: string, password: string): Promise<void> {
   useAuthStore
     .getState()
     .setAuth(access_token, Number(payload.sub), me.data.email, me.data.nombre, payload.roles ?? [])
-
-  saveRefreshToken(refresh_token)
 }
-
 export async function logout(): Promise<void> {
-  const rt = sessionStorage.getItem('rt')
-  if (rt) {
-    try {
-      await apiClient.post('/api/v1/auth/logout', { refresh_token: rt })
-    } catch {
-    }
+  try {
+    await apiClient.post('/api/v1/auth/logout')
+  } catch {
   }
   useAuthStore.getState().logout()
-  clearRefreshToken()
 }
 
 export async function initUser(): Promise<void> {

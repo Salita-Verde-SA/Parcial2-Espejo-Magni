@@ -28,7 +28,24 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     MP_ACCESS_TOKEN: str = ""
+    MP_PUBLIC_KEY: str = ""
     MP_WEBHOOK_SECRET: str = ""
+    NGROK_URL: str = ""
+    FRONTEND_URL: str = "http://localhost"
+
+    # Cloudinary (backend only — el secret nunca se expone al frontend)
+    CLOUDINARY_CLOUD_NAME: str = ""
+    CLOUDINARY_API_KEY: str = ""
+    CLOUDINARY_API_SECRET: str = ""
+
+    @computed_field
+    @property
+    def cloudinary_enabled(self) -> bool:
+        return bool(
+            self.CLOUDINARY_CLOUD_NAME
+            and self.CLOUDINARY_API_KEY
+            and self.CLOUDINARY_API_SECRET
+        )
 
     model_config = {
         "env_file": ".env",

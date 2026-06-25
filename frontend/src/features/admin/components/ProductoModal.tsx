@@ -9,6 +9,7 @@ import { createProducto, updateProducto, updateComposicion } from '../../../api/
 import { fetchCategorias } from '../../../api/categorias'
 import { fetchIngredientesAll } from '../../../api/ingredientes'
 import { fetchUnidades } from '../../../api/unidades'
+import { uploadImagen, deleteImagen, cldThumb } from '../../../api/uploads'
 import type { Producto, ProductoCreate, CategoriaTree, Ingrediente, IngredienteCantidadInput, UnidadMedida } from '../../../types'
 
 interface Props {
@@ -37,6 +38,11 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
 
   const [apiError, setApiError] = useState('')
   const [stockWarning, setStockWarning] = useState<string | null>(null)
+  // Estado del uploader de imágenes Cloudinary
+  const [imgUploading, setImgUploading] = useState(false)
+  const [imgPublicId, setImgPublicId] = useState<string | null>(null)
+  const [imgError, setImgError] = useState('')
+  const [ingSearch, setIngSearch] = useState('')
 
   const form = useForm({
     defaultValues: EMPTY,
@@ -81,6 +87,53 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
     return roots
   }, [categorias])
 
+  // Mapas de jerarquía para cascade de categorías
+  const parentMap = useMemo(() => {
+    const map = new Map<number, number>()
+    categorias?.forEach(c => {
+      if (c.parent_id !== null) map.set(c.id, c.parent_id)
+    })
+    return map
+  }, [categorias])
+
+  const childrenMap = useMemo(() => {
+    const map = new Map<number, number[]>()
+    categorias?.forEach(c => {
+      if (c.parent_id !== null) {
+        const siblings = map.get(c.parent_id) ?? []
+        siblings.push(c.id)
+        map.set(c.parent_id, siblings)
+      }
+    })
+    return map
+  }, [categorias])
+
+  function getAllDescendants(id: number): number[] {
+    const result: number[] = []
+    const stack = [id]
+    while (stack.length > 0) {
+      const current = stack.pop()!
+      const kids = childrenMap.get(current)
+      if (kids) {
+        for (const kid of kids) {
+          result.push(kid)
+          stack.push(kid)
+        }
+      }
+    }
+    return result
+  }
+
+  function getAllAncestors(id: number): number[] {
+    const result: number[] = []
+    let current = parentMap.get(id)
+    while (current !== undefined) {
+      result.push(current)
+      current = parentMap.get(current)
+    }
+    return result
+  }
+
   const [expandedCats, setExpandedCats] = useState<Set<number>>(new Set())
 
   function toggleExpandCat(id: number, e: React.MouseEvent) {
@@ -94,7 +147,7 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
     })
   }
 
-  function renderCategoriaCheckboxes(nodes: CategoriaTree[], currentIds: number[], depth = 0) {
+  function renderCategoriaCheckboxes(nodes: CategoriaTree[], currentIds: number[], indeterminateIds: Set<number>, depth = 0) {
     return nodes.map(cat => {
       const hasChildren = cat.hijos && cat.hijos.length > 0
       const isExpanded = expandedCats.has(cat.id)
@@ -119,7 +172,7 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
                 </svg>
               </button>
             ) : (
-              <div style={{ width: 18 }} /> // Espaciador
+              <div style={{ width: 18 }} />
             )}
             <label className="checkbox-row" style={{ gap: 6, marginBottom: 0, fontWeight: depth === 0 ? 600 : 400 }}>
               <input
@@ -127,13 +180,14 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
                 checked={currentIds.includes(cat.id)}
                 onChange={() => toggleCategoria(cat.id)}
                 disabled={!canEditComercial}
+                ref={el => { if (el) el.indeterminate = indeterminateIds.has(cat.id) }}
               />
               <span>{cat.nombre}</span>
             </label>
           </div>
           {hasChildren && isExpanded && (
             <div style={{ marginTop: 2 }}>
-              {renderCategoriaCheckboxes(cat.hijos, currentIds, depth + 1)}
+              {renderCategoriaCheckboxes(cat.hijos, currentIds, indeterminateIds, depth + 1)}
             </div>
           )}
         </div>
@@ -164,6 +218,12 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
     if (!unidadId) return ''
     const unidad = unidades.find(u => u.id === unidadId)
     return unidad?.simbolo ?? ''
+  }
+
+  function isUnidadContable(unidadId: number | null | undefined): boolean {
+    if (!unidadId) return false
+    const unidad = unidades.find(u => u.id === unidadId)
+    return unidad?.tipo === 'contable'
   }
 
   // Calcular stock del producto en tiempo real
@@ -263,23 +323,44 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
 
   function toggleCategoria(catId: number) {
     const currentIds = form.getFieldValue('categoria_ids')
-    const ids = currentIds.includes(catId) ? [] : [catId]
-    form.setFieldValue('categoria_ids', ids)
+    const ancestors = getAllAncestors(catId)
+    const expectedSet = new Set([catId, ...ancestors])
+
+    // Misma selección actual → toggle off (limpia todo)
+    if (currentIds.length === expectedSet.size && currentIds.every(id => expectedSet.has(id))) {
+      form.setFieldValue('categoria_ids', [])
+      return
+    }
+
+    // Reemplazar selección: solo esta categoría + sus ancestros
+    form.setFieldValue('categoria_ids', [catId, ...ancestors])
+  }
+
+  function computeIndeterminateIds(currentIds: number[]): Set<number> {
+    const indeterminate = new Set<number>()
+    const catList = categorias ?? []
+    for (const cat of catList) {
+      const descendants = getAllDescendants(cat.id)
+      if (descendants.length === 0) continue
+      const selectedCount = descendants.filter(d => currentIds.includes(d)).length
+      if (selectedCount > 0 && selectedCount < descendants.length) {
+        indeterminate.add(cat.id)
+      }
+    }
+    return indeterminate
   }
 
   function addIngrediente(ingId: number) {
-    // Agregar ingrediente con cantidad por defecto 1 y unidad "u" (pieza)
     const currentIngs = form.getFieldValue('ingredientes')
-    const unidadDefault = unidades.find(u => u.simbolo === 'u')
+    const ing = ingredientes.find(i => i.id === ingId)
     const newIngrediente: IngredienteCantidadInput = {
       ingrediente_id: ingId,
       cantidad: 1,
-      unidad_medida_id: unidadDefault?.id ?? 1,
+      unidad_medida_id: ing?.unidad_medida_id ?? 1,
       es_removible: false,
     }
     
     // Verificar stock y mostrar warning si no hay suficiente
-    const ing = ingredientes.find(i => i.id === ingId)
     if (ing && ing.stock_cantidad < 1) {
       const ingNombre = ing.nombre
       setStockWarning(`⚠️ El ingrediente "${ingNombre}" no tiene stock disponible (stock: ${ing.stock_cantidad})`)
@@ -297,19 +378,12 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
   function updateCantidad(ingId: number, cantidad: number) {
     const ingData = ingredientes.find(i => i.id === ingId)
     if (ingData?.es_terminado) {
-      cantidad = 1 // No se puede cambiar cantidad de producto terminado
+      cantidad = 1
     }
+    const minVal = isUnidadContable(ingData?.unidad_medida_id) ? 1 : 0.01
     const currentIngs = form.getFieldValue('ingredientes')
     const newIngredientes = currentIngs.map((i: any) =>
-      i.ingrediente_id === ingId ? { ...i, cantidad: Math.max(0.001, cantidad) } : i
-    )
-    form.setFieldValue('ingredientes', newIngredientes)
-  }
-
-  function updateUnidadMedida(ingId: number, unidadId: number) {
-    const currentIngs = form.getFieldValue('ingredientes')
-    const newIngredientes = currentIngs.map((i: any) =>
-      i.ingrediente_id === ingId ? { ...i, unidad_medida_id: unidadId } : i
+      i.ingrediente_id === ingId ? { ...i, cantidad: Math.max(minVal, cantidad) } : i
     )
     form.setFieldValue('ingredientes', newIngredientes)
   }
@@ -326,7 +400,7 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 650 }}>
+      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 780 }}>
         <div className="modal-header">
           <span className="modal-title">
             {isEdit ? 'Editar Producto' : 'Nuevo Producto'}
@@ -340,6 +414,16 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
           form.handleSubmit()
         }}>
           <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+            <style>{`
+              .qty-input::-webkit-outer-spin-button,
+              .qty-input::-webkit-inner-spin-button {
+                -webkit-appearance: none;
+                margin: 0;
+              }
+              .qty-input[type="number"] {
+                -moz-appearance: textfield;
+              }
+            `}</style>
             {apiError && <div className="alert alert-danger">{apiError}</div>}
             {stockWarning && (
               <div className="alert alert-warning" style={{ marginBottom: 12 }}>
@@ -404,9 +488,31 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
               )}
             />
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
-              {/* El precio_base se calcula automáticamente al hacer submit */}
+            <form.Subscribe selector={(state) => state.values.categoria_ids}>
+              {(categoria_ids) => {
+                const indetIds = computeIndeterminateIds(categoria_ids)
+                return (
+                <div className="form-group">
+                  <label className="form-label">Categorías</label>
+                  <div style={{ 
+                    padding: '12px 16px', 
+                    background: 'var(--bg-light)', 
+                    borderRadius: 8, 
+                    border: '1px solid var(--border)',
+                    maxHeight: 200,
+                    overflowY: 'auto'
+                  }}>
+                    {categoriasTree.length > 0 ? (
+                      renderCategoriaCheckboxes(categoriasTree, categoria_ids, indetIds)
+                    ) : (
+                      <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>No hay categorías disponibles.</span>
+                    )}
+                  </div>
+                </div>
+              )}}
+            </form.Subscribe>
 
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <form.Field
                 name="margen_ganancia"
                 validators={{
@@ -463,73 +569,298 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
                   </div>
                 )}
               />
-
-              <form.Subscribe selector={(state) => ({ ingredientes: state.values.ingredientes, margen: state.values.margen_ganancia })}>
-                {({ ingredientes: ingredientesList, margen }) => {
-                  const stockCalculado = calcularStockEnTiempoReal(ingredientesList)
-                  const { costoTotal, precioSugerido } = calcularCostoYPrecioSugerido(ingredientesList, margen)
-                  
-                  return (
-                    <div className="form-group" style={{ gridColumn: '1 / -1', display: 'flex', gap: 16 }}>
-                      <div style={{ flex: 1 }}>
-                        <label className="form-label">Stock calculado</label>
-                        {ingredientesList.length > 0 ? (
-                          <div style={{ 
-                            padding: '8px 12px', 
-                            background: stockCalculado > 0 ? 'var(--bg-light)' : 'rgba(220, 53, 69, 0.1)', 
-                            borderRadius: 4,
-                            border: `1px solid ${stockCalculado > 0 ? 'var(--border)' : 'var(--danger)'}`,
-                            color: stockCalculado > 0 ? 'var(--success)' : 'var(--danger)',
-                            fontSize: 14,
-                            fontWeight: 'bold'
-                          }}>
-                            {stockCalculado} {stockCalculado === 1 ? 'unidad' : 'unidades'} disponibles
-                          </div>
-                        ) : (
-                          <div style={{ padding: '8px 12px', background: 'var(--bg-light)', borderRadius: 4, border: '1px solid var(--border)', color: 'var(--danger)', fontSize: 13, fontStyle: 'italic' }}>
-                            Sin ingredientes
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div style={{ flex: 1 }}>
-                        <label className="form-label">Costo y Precio Sugerido</label>
-                        <div style={{ 
-                          padding: '8px 12px', 
-                          background: 'var(--bg-light)', 
-                          borderRadius: 4,
-                          border: '1px solid var(--border)',
-                          fontSize: 13,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 4
-                        }}>
-                          <div>Costo total: <strong>${costoTotal.toFixed(2)}</strong></div>
-                          <div style={{ color: 'var(--primary)' }}>Sugerido ({margen}%): <strong>${precioSugerido.toFixed(2)}</strong></div>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                }}
-              </form.Subscribe>
             </div>
 
-            <form.Field
+            <form.Subscribe
+              selector={(state) => ({ ings: state.values.ingredientes, margen: state.values.margen_ganancia })}
+            >
+              {({ ings: selectedIngs, margen }) => {
+                const stockCalc = calcularStockEnTiempoReal(selectedIngs)
+                const { costoTotal, precioSugerido } = calcularCostoYPrecioSugerido(selectedIngs, margen)
+                const availableIngs = ingredientes.filter(ing => !ing.es_terminado && !hasIngrediente(ing.id, selectedIngs))
+                const filteredAvail = ingSearch
+                  ? availableIngs.filter(ing => ing.nombre.toLowerCase().includes(ingSearch.toLowerCase()))
+                  : availableIngs
+
+                return (
+                  <div className="form-group">
+                    <label className="form-label">Ingredientes de receta</label>
+
+                    <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+                      <div style={{
+                        flex: 1, padding: '8px 12px', borderRadius: 4,
+                        background: selectedIngs.length > 0
+                          ? (stockCalc > 0 ? 'var(--bg-light)' : 'rgba(220, 53, 69, 0.1)')
+                          : 'var(--bg-light)',
+                        border: `1px solid ${
+                          selectedIngs.length === 0 ? 'var(--border)'
+                          : stockCalc > 0 ? 'var(--border)'
+                          : 'var(--danger)'
+                        }`,
+                        fontSize: 13, fontWeight: 600,
+                        color: selectedIngs.length === 0 ? 'var(--text-muted)'
+                          : stockCalc > 0 ? 'var(--success)' : 'var(--danger)',
+                      }}>
+                        {selectedIngs.length > 0
+                          ? `Stock: ${stockCalc} ${stockCalc === 1 ? 'unidad' : 'unidades'}`
+                          : 'Sin ingredientes'}
+                      </div>
+                      <div style={{
+                        flex: 1, padding: '8px 12px', borderRadius: 4,
+                        background: 'var(--bg-light)', border: '1px solid var(--border)',
+                        fontSize: 13, display: 'flex', flexDirection: 'column', gap: 2,
+                      }}>
+                        <span>Costo: <strong>${costoTotal.toFixed(2)}</strong></span>
+                        <span style={{ color: 'var(--primary)' }}>
+                          Sugerido ({margen}%): <strong>${precioSugerido.toFixed(2)}</strong>
+                        </span>
+                      </div>
+                    </div>
+
+                    <input
+                      className="form-input"
+                      type="text"
+                      placeholder="Buscar ingrediente..."
+                      value={ingSearch}
+                      onChange={(e) => setIngSearch(e.target.value)}
+                      style={{ width: '100%', marginBottom: 12 }}
+                    />
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      <div style={{
+                        border: '1px solid var(--border)', borderRadius: 6,
+                        padding: 8, maxHeight: 220, overflowY: 'auto',
+                        background: 'var(--bg-light)',
+                      }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>
+                          Disponibles
+                        </div>
+                        {filteredAvail.length === 0 ? (
+                          <div style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic', padding: 8 }}>
+                            {ingSearch ? 'Sin resultados' : 'Todos seleccionados'}
+                          </div>
+                        ) : (
+                          filteredAvail.map(ing => {
+                            const sinStock = ing.stock_cantidad === 0
+                            return (
+                              <div key={ing.id} style={{
+                                display: 'flex', alignItems: 'center', gap: 6, padding: '4px 6px',
+                                borderRadius: 4, opacity: sinStock ? 0.5 : 1,
+                              }}>
+                                <button
+                                  type="button"
+                                  disabled={sinStock}
+                                  onClick={() => addIngrediente(ing.id)}
+                                  style={{
+                                    width: 22, height: 22, borderRadius: '50%', border: 'none',
+                                    background: sinStock ? 'var(--border)' : 'var(--primary)',
+                                    color: '#fff', fontSize: 14, lineHeight: '22px', textAlign: 'center',
+                                    cursor: sinStock ? 'not-allowed' : 'pointer', padding: 0, flexShrink: 0,
+                                  }}
+                                >
+                                  +
+                                </button>
+                                <span style={{ fontSize: 13, flex: 1 }}>
+                                  {ing.nombre}
+                                  <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 4 }}>
+                                    ({ing.stock_cantidad})
+                                  </span>
+                                </span>
+                                {sinStock && (
+                                  <span style={{ fontSize: 10, color: 'var(--danger)' }}>sin stock</span>
+                                )}
+                              </div>
+                            )
+                          })
+                        )}
+                      </div>
+
+                      <div style={{
+                        border: '1px solid var(--border)', borderRadius: 6,
+                        padding: 8, maxHeight: 220, overflowY: 'auto',
+                        background: 'var(--bg-light)',
+                      }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>
+                          En receta
+                        </div>
+                        {selectedIngs.length === 0 ? (
+                          <div style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic', padding: 8 }}>
+                            Agregá ingredientes desde la lista de disponibles
+                          </div>
+                        ) : (
+                          selectedIngs.map((ing: any) => {
+                            const ingInfo = ingredientes.find(i => i.id === ing.ingrediente_id)
+                            const simbolo = getUnidadSimbolo(ing.unidad_medida_id)
+                            const esContable = isUnidadContable(ingInfo?.unidad_medida_id)
+                            const tieneStock = (ingInfo?.stock_cantidad ?? 0) >= ing.cantidad
+                            return (
+                              <div key={ing.ingrediente_id} style={{
+                                display: 'flex', alignItems: 'center', gap: 6, padding: '4px 6px',
+                                borderRadius: 4, marginBottom: 4,
+                                background: tieneStock ? 'transparent' : 'rgba(220, 53, 69, 0.08)',
+                                flexWrap: 'wrap',
+                              }}>
+                                <span style={{ flex: 1, minWidth: 80, fontSize: 13, fontWeight: 500 }}>
+                                  {ingInfo?.nombre ?? `ID ${ing.ingrediente_id}`}
+                                </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                  {ingInfo?.es_terminado ? (
+                                    <input
+                                      type="number"
+                                      className="qty-input"
+                                      style={{ width: 50, padding: '2px 4px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--bg-light)', fontSize: 13, textAlign: 'center' }}
+                                      value={1}
+                                      disabled
+                                    />
+                                  ) : (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 0, border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden' }}>
+                                      <button
+                                        type="button"
+                                        onClick={() => updateCantidad(ing.ingrediente_id, Math.max(esContable ? 1 : 0.01, (esContable ? parseInt : parseFloat)(String(ing.cantidad)) - (esContable ? 1 : 0.01)))}
+                                        style={{
+                                          width: 26, height: 28, border: 'none', borderRight: '1px solid var(--border)',
+                                          background: 'var(--bg-light)', cursor: 'pointer', fontSize: 15, lineHeight: 1,
+                                          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, color: 'var(--text-muted)',
+                                        }}
+                                        onMouseOver={(e) => (e.currentTarget.style.background = 'var(--border)')}
+                                        onMouseOut={(e) => (e.currentTarget.style.background = 'var(--bg-light)')}
+                                      >
+                                        −
+                                      </button>
+                                      <input
+                                        type="number"
+                                        className="qty-input"
+                                        min={esContable ? "1" : "0.01"}
+                                        step={esContable ? "1" : "0.01"}
+                                        style={{ width: 48, padding: '2px 0', border: 'none', fontSize: 13, textAlign: 'center', outline: 'none' }}
+                                        value={ing.cantidad}
+                                        onChange={(e) => updateCantidad(ing.ingrediente_id, (esContable ? parseInt : parseFloat)(e.target.value) || (esContable ? 1 : 0.01))}
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => updateCantidad(ing.ingrediente_id, (esContable ? parseInt : parseFloat)(String(ing.cantidad)) + (esContable ? 1 : 0.01))}
+                                        style={{
+                                          width: 26, height: 28, border: 'none', borderLeft: '1px solid var(--border)',
+                                          background: 'var(--bg-light)', cursor: 'pointer', fontSize: 15, lineHeight: 1,
+                                          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, color: 'var(--text-muted)',
+                                        }}
+                                        onMouseOver={(e) => (e.currentTarget.style.background = 'var(--border)')}
+                                        onMouseOut={(e) => (e.currentTarget.style.background = 'var(--bg-light)')}
+                                      >
+                                        +
+                                      </button>
+                                    </div>
+                                  )}
+                                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{simbolo}</span>
+                                </div>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: 11 }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={ing.es_removible}
+                                    onChange={() => toggleEsRemovible(ing.ingrediente_id)}
+                                  />
+                                  Remov.
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => removeIngrediente(ing.ingrediente_id)}
+                                  style={{
+                                    background: 'none', border: 'none', color: 'var(--danger)',
+                                    cursor: 'pointer', fontSize: 16, padding: '0 2px', lineHeight: 1,
+                                  }}
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            )
+                          })
+                        )}
+                      </div>
+                    </div>
+
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
+                      ☐ Remov. = cliente puede quitarlo del producto
+                    </div>
+                  </div>
+                )
+              }}
+            </form.Subscribe>
+
+                    <form.Field
               name="imagen_url"
-              children={(field) => (
-                <div className="form-group">
-                  <label className="form-label">URL de imagen</label>
-                  <input
-                    className="form-input"
-                    type="url"
-                    placeholder="https://..."
-                    value={field.state.value ?? ''}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
-                    disabled={!canEditComercial}
-                  />
-                </div>
-              )}
+              children={(field) => {
+                async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  setImgError('')
+                  setImgUploading(true)
+                  try {
+                    const res = await uploadImagen(file, 'productos')
+                    field.handleChange(res.secure_url)
+                    setImgPublicId(res.public_id)
+                  } catch (err: any) {
+                    const status = err?.response?.status
+                    setImgError(
+                      status === 503
+                        ? 'Cloudinary no está configurado en el servidor.'
+                        : (err?.response?.data?.detail || 'No se pudo subir la imagen.')
+                    )
+                  } finally {
+                    setImgUploading(false)
+                    e.target.value = ''
+                  }
+                }
+
+                async function handleRemove() {
+                  if (imgPublicId) {
+                    try { await deleteImagen(imgPublicId) } catch { /* ignorar */ }
+                  }
+                  setImgPublicId(null)
+                  field.handleChange('')
+                }
+
+                return (
+                  <div className="form-group">
+                    <label className="form-label">Imagen del producto</label>
+                    {field.state.value ? (
+                      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 8 }}>
+                        <img
+                          src={cldThumb(field.state.value, 120, 120)}
+                          alt="preview"
+                          style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)' }}
+                        />
+                        {canEditComercial && (
+                          <button type="button" className="btn btn-ghost" onClick={handleRemove}>
+                            Quitar imagen
+                          </button>
+                        )}
+                      </div>
+                    ) : null}
+                    {canEditComercial && (
+                      <input
+                        className="form-input"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={handleFile}
+                        disabled={imgUploading}
+                      />
+                    )}
+                    {imgUploading && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Subiendo imagen…</span>}
+                    {imgError && <em style={{ color: 'var(--danger)', fontSize: 12 }}>{imgError}</em>}
+                    {/* Fallback: permitir pegar una URL manual */}
+                    <input
+                      className="form-input"
+                      type="url"
+                      placeholder="o pegá una URL de imagen…"
+                      value={field.state.value ?? ''}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                      disabled={!canEditComercial}
+                      style={{ marginTop: 8 }}
+                    />
+                  </div>
+                )
+              }}
             />
 
             <form.Field
@@ -551,152 +882,6 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
                 </div>
               )}
             />
-
-            <form.Subscribe selector={(state) => state.values.categoria_ids}>
-              {(categoria_ids) => (
-                <div className="form-group">
-                  <label className="form-label">Categorías</label>
-                  <div style={{ 
-                    padding: '12px 16px', 
-                    background: 'var(--bg-light)', 
-                    borderRadius: 8, 
-                    border: '1px solid var(--border)',
-                    maxHeight: 200,
-                    overflowY: 'auto'
-                  }}>
-                    {categoriasTree.length > 0 ? (
-                      renderCategoriaCheckboxes(categoriasTree, categoria_ids)
-                    ) : (
-                      <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>No hay categorías disponibles.</span>
-                    )}
-                  </div>
-                </div>
-              )}
-            </form.Subscribe>
-
-            <form.Subscribe selector={(state) => state.values.ingredientes}>
-              {(ingredientesList) => (
-                <div className="form-group">
-                  <label className="form-label">Ingredientes de receta</label>
-                  
-                  {/* Lista de ingredientes seleccionados con cantidad y unidad */}
-                  {ingredientesList.length > 0 && (
-                    <div style={{ marginBottom: 12, padding: 8, background: 'var(--bg-light)', borderRadius: 6 }}>
-                      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
-                        Ingredientes seleccionados:
-                      </div>
-                      {ingredientesList.map((ing: any) => {
-                        const ingInfo = ingredientes.find(i => i.id === ing.ingrediente_id)
-                        const simbolo = getUnidadSimbolo(ing.unidad_medida_id)
-                        const stockActual = ingInfo?.stock_cantidad ?? 0
-                        const tieneStock = stockActual >= ing.cantidad
-                        
-                        return (
-                          <div key={ing.ingrediente_id} style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 8,
-                            marginBottom: 6,
-                            flexWrap: 'wrap',
-                            padding: tieneStock ? 0 : '4px 8px',
-                            background: tieneStock ? 'transparent' : 'rgba(220, 53, 69, 0.1)',
-                            borderRadius: 4,
-                            border: tieneStock ? 'none' : '1px solid var(--danger)'
-                          }}>
-                            <span style={{ flex: 1, minWidth: 100, color: tieneStock ? 'inherit' : 'var(--danger)' }}>
-                              {ingInfo?.nombre ?? `ID ${ing.ingrediente_id}`}
-                              {!tieneStock && <span style={{ fontSize: 11, marginLeft: 4 }}>⚠️ Sin stock</span>}
-                            </span>
-                            
-                            {/* Stock actual del ingrediente */}
-                            <span style={{ fontSize: 11, color: 'var(--text-muted)', marginRight: 4 }}>
-                              Stock: {stockActual}
-                            </span>
-                            
-                            <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
-                              Cant:
-                              {ingInfo?.es_terminado ? (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                  <input
-                                    type="number"
-                                    style={{ width: 60, padding: '4px 6px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--bg-light)' }}
-                                    value={1}
-                                    disabled
-                                  />
-                                  <span title="Producto terminado (cantidad fija)">🔒</span>
-                                </div>
-                              ) : (
-                                <input
-                                  type="number"
-                                  min="0.001"
-                                  step="0.001"
-                                  style={{ width: 60, padding: '4px 6px', borderRadius: 4, border: '1px solid var(--border)' }}
-                                  value={ing.cantidad}
-                                  onChange={(e) => updateCantidad(ing.ingrediente_id, parseFloat(e.target.value) || 0.001)}
-                                />
-                              )}
-                            </label>
-                            {simbolo && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{simbolo}</span>}
-                            <select
-                              style={{ padding: '4px 6px', borderRadius: 4, border: '1px solid var(--border)', fontSize: 13 }}
-                              value={ing.unidad_medida_id}
-                              onChange={(e) => updateUnidadMedida(ing.ingrediente_id, Number(e.target.value))}
-                            >
-                              {unidades.map((u: UnidadMedida) => (
-                                <option key={u.id} value={u.id}>
-                                  {u.simbolo}
-                                </option>
-                              ))}
-                            </select>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
-                              <input
-                                type="checkbox"
-                                checked={ing.es_removible}
-                                onChange={() => toggleEsRemovible(ing.ingrediente_id)}
-                              />
-                              Remov.
-                            </label>
-                            <button
-                              type="button"
-                              onClick={() => removeIngrediente(ing.ingrediente_id)}
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                color: 'var(--danger)',
-                                cursor: 'pointer',
-                                fontSize: 18,
-                                padding: '0 4px'
-                              }}
-                            >
-                              ×
-                            </button>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                  
-                  {/* Checkboxes para agregar ingredientes */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: 120, overflowY: 'auto' }}>
-                    {ingredientes.map((ing: Ingrediente) => (
-                      <label key={ing.id} className="checkbox-row" style={{ gap: 6, opacity: ing.stock_cantidad > 0 ? 1 : 0.5 }}>
-                        <input
-                          type="checkbox"
-                          checked={hasIngrediente(ing.id, ingredientesList)}
-                          onChange={() => hasIngrediente(ing.id, ingredientesList) ? removeIngrediente(ing.id) : addIngrediente(ing.id)}
-                          disabled={ing.stock_cantidad === 0}
-                        />
-                        <span title={`Stock: ${ing.stock_cantidad}`}>
-                          {ing.nombre}
-                          {ing.stock_cantidad > 0 && <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 4 }}>({ing.stock_cantidad})</span>}
-                          {ing.stock_cantidad === 0 && <span style={{ fontSize: 10, color: 'var(--danger)', marginLeft: 4 }}>(sin stock)</span>}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </form.Subscribe>
           </div>
 
           <div className="modal-footer">

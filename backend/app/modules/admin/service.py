@@ -15,6 +15,7 @@ def _to_public(u: Usuario, roles: list[str]) -> UserPublic:
         nombre=u.nombre,
         apellido=u.apellido,
         email=u.email,
+        celular=u.celular,
         disabled=u.disabled,
         roles=roles,
         created_at=u.created_at,
@@ -49,6 +50,8 @@ def update_usuario_admin(
             user.nombre = data.nombre
         if data.apellido is not None:
             user.apellido = data.apellido
+        if data.celular is not None:
+            user.celular = data.celular
         if data.email is not None:
             # Verificar si el email ya está siendo usado por otro usuario
             existing_user = uow.usuarios.get_by_email(str(data.email))

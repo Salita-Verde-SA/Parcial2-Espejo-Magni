@@ -9,17 +9,17 @@ import { login } from '../api/auth'
 
 // Usuarios sembrados (ver backend/app/db/seed.py). Click para autocompletar y probar rápido.
 const CUENTAS_DEMO = [
-  { rol: 'Admin',   email: 'admin@fastfood.com',   password: 'Admin1234!' },
-  { rol: 'Cliente', email: 'juan@fastfood.com',    password: 'Juan1234!'  },
-  { rol: 'Stock',   email: 'stock@fastfood.com',   password: 'Stock1234!' },
-  { rol: 'Pedidos', email: 'pedidos@fastfood.com', password: 'Ped1234!'   },
+  { rol: 'Admin', email: 'admin@fastfood.com', password: 'Admin1234!' },
+  { rol: 'Cliente', email: 'juan@fastfood.com', password: 'Juan1234!' },
+  { rol: 'Stock', email: 'stock@fastfood.com', password: 'Stock1234!' },
+  { rol: 'Pedidos', email: 'pedidos@fastfood.com', password: 'Ped1234!' },
 ]
 
 export default function LoginPage() {
-  const [email, setEmail]       = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError]       = useState('')     // mensaje de error a mostrar
-  const [loading, setLoading]   = useState(false)  // deshabilita el botón mientras carga
+  const [error, setError] = useState('')     // mensaje de error a mostrar
+  const [loading, setLoading] = useState(false)  // deshabilita el botón mientras carga
 
   const navigate = useNavigate()
 
@@ -42,13 +42,15 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#08080A] flex items-center justify-center p-4 relative overflow-hidden font-sans">
-      {/* Background glow effects */}
-      <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-red-600/20 rounded-full blur-[80px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] left-[-5%] w-[600px] h-[600px] bg-amber-500/10 rounded-full blur-[80px] pointer-events-none" />
+      {/* Background image */}
+      <div
+        className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-20 pointer-events-none"
+        style={{ backgroundImage: "url('/bg-food.png')" }}
+      />
 
       {/* Login Card */}
-      <div className="w-full max-w-[420px] bg-white/[0.03] backdrop-blur-2xl border border-white/10 rounded-3xl p-8 sm:p-10 shadow-2xl relative z-10">
-        
+      <div className="w-full max-w-[420px] bg-black/[0.70] backdrop-blur-2xl border border-white/10 rounded-3xl p-8 sm:p-10 shadow-2xl relative z-10">
+
         {/* Header */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-red-700 shadow-[0_8px_32px_rgba(220,38,38,0.4)] mb-6">
@@ -95,8 +97,8 @@ export default function LoginPage() {
           </div>
 
           <div className="pt-2">
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={loading}
               className="w-full bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl px-4 py-4 shadow-[0_8px_20px_rgba(220,38,38,0.25)] hover:shadow-[0_10px_25px_rgba(220,38,38,0.4)] transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center uppercase tracking-widest text-sm border-none appearance-none"
             >

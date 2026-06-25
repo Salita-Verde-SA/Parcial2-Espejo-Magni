@@ -9,10 +9,11 @@ export async function createPedido(data: PedidoCreate): Promise<PedidoPublic> {
 export async function fetchPedidos(
   estado_codigo: string = '',
   page: number = 1,
-  page_size: number = 10
+  page_size: number = 10,
+  solo_mis_pedidos: boolean = false
 ): Promise<PaginatedPedidos> {
   const res = await apiClient.get<PaginatedPedidos>('/api/v1/pedidos/', {
-    params: { estado_codigo, page, page_size },
+    params: { estado_codigo, page, page_size, solo_mis_pedidos },
   })
   return res.data
 }
@@ -22,9 +23,14 @@ export async function fetchPedido(id: number): Promise<PedidoPublic> {
   return res.data
 }
 
-export async function patchPedidoEstado(id: number, estado_codigo: string): Promise<PedidoPublic> {
+export async function patchPedidoEstado(
+  id: number,
+  estado_codigo: string,
+  motivo?: string,
+): Promise<PedidoPublic> {
   const res = await apiClient.patch<PedidoPublic>(`/api/v1/pedidos/${id}/estado`, {
     estado_codigo,
+    motivo,
   })
   return res.data
 }

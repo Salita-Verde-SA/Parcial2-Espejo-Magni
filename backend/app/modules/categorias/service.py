@@ -23,6 +23,7 @@ def _to_public(c: Categoria, uow: UnitOfWork) -> CategoriaPublic:
         nombre=c.nombre,
         descripcion=c.descripcion,
         parent_id=c.parent_id,
+        imagen_url=c.imagen_url,
         created_at=c.created_at,
         deleted_at=c.deleted_at,
         in_use=in_use,
@@ -85,6 +86,7 @@ def create_categoria(data: CategoriaCreate, uow: UnitOfWork) -> CategoriaPublic:
             nombre=data.nombre,
             descripcion=data.descripcion,
             parent_id=data.parent_id,
+            imagen_url=data.imagen_url,
         )
         return _to_public(uow.categorias.add(cat), uow)
 
@@ -102,6 +104,8 @@ def update_categoria(cat_id: int, data: CategoriaUpdate, uow: UnitOfWork) -> Cat
             cat.descripcion = data.descripcion
         if data.parent_id is not None:
             cat.parent_id = data.parent_id
+        if data.imagen_url is not None:
+            cat.imagen_url = data.imagen_url
         cat.updated_at = datetime.now(timezone.utc)
         return _to_public(uow.categorias.update(cat), uow)
 

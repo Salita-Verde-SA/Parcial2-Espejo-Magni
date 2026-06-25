@@ -105,6 +105,7 @@ def _enrich(producto: Producto, uow: UnitOfWork) -> ProductoPublic:
         stock_cantidad=stock_calculado,
         disponible=disponible_final,
         imagen_url=producto.imagen_url,
+        imagenes_url=producto.imagenes_url or ([producto.imagen_url] if producto.imagen_url else []),
         created_at=producto.created_at,
         deleted_at=producto.deleted_at,
         categorias=cats,
@@ -147,6 +148,7 @@ def create_producto(data: ProductoCreate, uow: UnitOfWork) -> ProductoPublic:
         if data.ingredientes:
             validar_stock_ingredientes(data.ingredientes, uow)
         
+        imagenes = data.imagenes_url or ([data.imagen_url] if data.imagen_url else [])
         p = Producto(
             nombre=data.nombre,
             descripcion=data.descripcion,
@@ -154,7 +156,8 @@ def create_producto(data: ProductoCreate, uow: UnitOfWork) -> ProductoPublic:
             margen_ganancia=data.margen_ganancia,
             unidad_venta_id=data.unidad_venta_id,
             disponible=data.disponible,
-            imagen_url=data.imagen_url,
+            imagen_url=imagenes[0] if imagenes else data.imagen_url,
+            imagenes_url=imagenes or None,
         )
         saved = uow.productos.add(p)
         if data.categoria_ids:
@@ -194,8 +197,12 @@ def update_producto(producto_id: int, data: ProductoUpdate, uow: UnitOfWork) -> 
             p.unidad_venta_id = data.unidad_venta_id
         if data.disponible is not None:
             p.disponible = data.disponible
-        if data.imagen_url is not None:
+        if data.imagenes_url is not None:
+            p.imagenes_url = data.imagenes_url or None
+            p.imagen_url = data.imagenes_url[0] if data.imagenes_url else None
+        elif data.imagen_url is not None:
             p.imagen_url = data.imagen_url
+            p.imagenes_url = [data.imagen_url] if data.imagen_url else None
         p.updated_at = datetime.now(timezone.utc)
         saved = uow.productos.update(p)
         if data.categoria_ids is not None:

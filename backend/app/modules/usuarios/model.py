@@ -18,6 +18,7 @@ class Usuario(SQLModel, table=True):
     nombre: str = Field(max_length=100)
     apellido: str = Field(max_length=100)
     email: str = Field(index=True, unique=True, max_length=254)
+    celular: Optional[str] = Field(default=None, max_length=20)
     hashed_password: str
     disabled: bool = Field(default=False)
     created_at: datetime = Field(default_factory=_utcnow)
@@ -31,9 +32,10 @@ class Usuario(SQLModel, table=True):
 
 
 class UserRegister(SQLModel):
-    nombre: str = Field(min_length=1, max_length=100)
-    apellido: str = Field(min_length=1, max_length=100)
+    nombre: str = Field(min_length=2, max_length=80)
+    apellido: str = Field(min_length=2, max_length=80)
     email: EmailStr
+    celular: Optional[str] = Field(default=None, max_length=20)
     password: str = Field(min_length=8)
 
 
@@ -47,6 +49,7 @@ class UserPublic(SQLModel):
     nombre: str
     apellido: str
     email: str
+    celular: Optional[str] = None
     disabled: bool
     roles: list[str] = []
     created_at: datetime
@@ -56,6 +59,7 @@ class UserUpdate(SQLModel):
     nombre: Optional[str] = Field(default=None, min_length=1, max_length=100)
     apellido: Optional[str] = Field(default=None, min_length=1, max_length=100)
     email: Optional[EmailStr] = None
+    celular: Optional[str] = Field(default=None, max_length=20)
 
 
 class Token(SQLModel):
@@ -65,8 +69,7 @@ class Token(SQLModel):
     expires_in: int
 
 
-class TokenRefresh(SQLModel):
-    refresh_token: str
+
 
 
 class PaginatedUsuarios(SQLModel):

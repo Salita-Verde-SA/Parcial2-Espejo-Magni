@@ -20,17 +20,25 @@ export const useCartStore = create<CartState>()(
       items: [],
 
       addItem: (producto, cantidad, personalizacion) => {
+        const maxStock = producto.stock_cantidad
+        if (maxStock <= 0) return
         const existing = get().items.find((i) => i.producto.id === producto.id)
         if (existing) {
+          const nuevaCant = Math.min(existing.cantidad + cantidad, maxStock)
           set({
             items: get().items.map((i) =>
               i.producto.id === producto.id
-                ? { ...i, cantidad: i.cantidad + cantidad }
+                ? { ...i, cantidad: nuevaCant }
                 : i
             ),
           })
         } else {
-          set({ items: [...get().items, { producto, cantidad, personalizacion }] })
+          set({
+            items: [
+              ...get().items,
+              { producto, cantidad: Math.min(cantidad, maxStock), personalizacion },
+            ],
+          })
         }
       },
 
@@ -44,7 +52,9 @@ export const useCartStore = create<CartState>()(
         }
         set({
           items: get().items.map((i) =>
-            i.producto.id === productoId ? { ...i, cantidad } : i
+            i.producto.id === productoId
+              ? { ...i, cantidad: Math.min(cantidad, i.producto.stock_cantidad) }
+              : i
           ),
         })
       },

@@ -10,6 +10,7 @@ export interface UserPublic {
   nombre: string
   apellido: string
   email: string
+  celular?: string | null
   disabled: boolean
   roles: string[]
   created_at: string
@@ -20,6 +21,7 @@ export interface Categoria {
   nombre: string
   descripcion: string | null
   parent_id: number | null
+  imagen_url: string | null
   created_at: string
   deleted_at: string | null
   in_use: boolean
@@ -33,6 +35,7 @@ export interface CategoriaCreate {
   nombre: string
   descripcion?: string
   parent_id?: number | null
+  imagen_url?: string | null
 }
 
 export interface Ingrediente {
@@ -41,6 +44,7 @@ export interface Ingrediente {
   descripcion: string | null
   es_alergeno: boolean
   es_terminado: boolean
+  unidad_medida_id: number
   stock_cantidad: number
   costo_unitario: string
   created_at: string
@@ -52,6 +56,7 @@ export interface IngredienteCreate {
   descripcion?: string
   es_alergeno: boolean
   es_terminado: boolean
+  unidad_medida_id: number
   stock_cantidad?: number
   costo_unitario?: number
 }
@@ -61,6 +66,7 @@ export interface IngredienteUpdate {
   descripcion?: string
   es_alergeno?: boolean
   es_terminado?: boolean
+  unidad_medida_id?: number
   stock_cantidad?: number
   costo_unitario?: number
 }
@@ -132,6 +138,7 @@ export interface Producto {
   stock_cantidad: number
   disponible: boolean
   imagen_url: string | null
+  imagenes_url?: string[]
   created_at: string
   deleted_at: string | null
   categorias: number[]
@@ -146,6 +153,7 @@ export interface ProductoCreate {
   unidad_venta_id?: number | null
   disponible: boolean
   imagen_url?: string
+  imagenes_url?: string[]
   categoria_ids: number[]
   ingredientes: IngredienteCantidadInput[]
 }
@@ -158,6 +166,7 @@ export interface ProductoUpdate {
   unidad_venta_id?: number | null
   disponible?: boolean
   imagen_url?: string
+  imagenes_url?: string[]
   categoria_ids?: number[]
   ingredientes?: IngredienteCantidadInput[]
 }
@@ -191,6 +200,10 @@ export interface DetallePedidoPublic {
   cantidad: number
   precio_unitario: string
   producto_nombre: string
+  nombre_snapshot?: string
+  precio_snapshot?: string
+  subtotal_snap?: string
+  personalizacion?: number[] | null
 }
 
 export interface HistorialEstadoPedidoPublic {
@@ -198,6 +211,7 @@ export interface HistorialEstadoPedidoPublic {
   pedido_id: number
   estado_anterior_codigo: string | null
   estado_nuevo_codigo: string
+  motivo?: string | null
   fecha: string
   usuario_id: number
   usuario_nombre?: string
@@ -212,8 +226,11 @@ export interface PedidoPublic {
   forma_pago_codigo: string
   direccion_id: number | null
   direccion?: DireccionPublic | null
-  total: string
+  subtotal: string
   descuento: string
+  costo_envio: string
+  total: string
+  notas?: string | null
   created_at: string
   updated_at: string
   deleted_at: string | null
@@ -232,12 +249,14 @@ export interface PaginatedPedidos {
 export interface DetallePedidoCreate {
   producto_id: number
   cantidad: number
+  personalizacion?: number[]
 }
 
 export interface PedidoCreate {
   forma_pago_codigo: string
   direccion_id?: number | null
   descuento?: number
+  notas?: string
   items: DetallePedidoCreate[]
 }
 
@@ -291,4 +310,36 @@ export interface DashboardData {
   total_productos: number
   total_usuarios: number
   pedidos_por_estado: Record<string, number>
+}
+
+// ── Estadísticas (módulo v7) ──────────────────────────────────────────────
+export interface ResumenEstadisticas {
+  ventas_hoy: string
+  ticket_promedio: string
+  pedidos_activos: number
+  ventas_mes: string
+}
+
+export interface VentasPeriodoItem {
+  periodo: string
+  total_ventas: string
+  cantidad_pedidos: number
+}
+
+export interface ProductoTopItem {
+  producto_id: number
+  nombre: string
+  cantidad_vendida: number
+  ingresos: string
+}
+
+export interface PedidosEstadoItem {
+  estado_codigo: string
+  cantidad: number
+}
+
+export interface IngresosFormaPagoItem {
+  forma_pago_codigo: string
+  total: string
+  cantidad: number
 }

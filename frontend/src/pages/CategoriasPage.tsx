@@ -133,7 +133,7 @@ export default function CategoriasPage() {
               paddingLeft: `${16 + depth * 40}px`,
               transition: 'all 0.2s ease',
             }}
-            className="tree-row hover:bg-gray-50"
+            className="tree-row"
           >
             {/* Toggle Arrow */}
             <div style={{ width: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -176,7 +176,7 @@ export default function CategoriasPage() {
             {/* Name and Info */}
             <div style={{ flex: 1, minWidth: 0, paddingRight: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <strong style={{ fontSize: depth === 0 ? 15 : 14, color: '#111827', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                <strong style={{ fontSize: depth === 0 ? 15 : 14, color: 'var(--text)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                   {node.nombre}
                 </strong>
                 {isInactive && <span className="badge badge-danger">Inactivo</span>}
@@ -252,7 +252,7 @@ export default function CategoriasPage() {
             )}
           </div>
 
-          <div style={{ borderTop: '1px solid var(--border)', background: 'white', borderRadius: '0 0 12px 12px', overflow: 'hidden' }}>
+          <div style={{ borderTop: '1px solid var(--border)', background: 'transparent', borderRadius: '0 0 12px 12px', overflow: 'hidden' }}>
             {isLoading ? (
               <div style={{ padding: 48, textAlign: 'center' }}>
                 <span className="spinner spinner-dark" /> Cargando árbol...
@@ -306,7 +306,7 @@ export default function CategoriasPage() {
           to { opacity: 1; transform: translateY(0); }
         }
         .tree-row:hover {
-          background-color: #f9fafb !important;
+          background-color: rgba(255, 255, 255, 0.05) !important;
         }
       `}</style>
     </>

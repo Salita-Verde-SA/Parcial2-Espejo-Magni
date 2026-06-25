@@ -11,6 +11,7 @@ interface Props {
   loading?: boolean          // si true → muestra spinner y bloquea botones
   confirmLabel?: string      // texto del botón de confirmación (default: "Confirmar")
   confirmVariant?: 'danger' | 'primary'  // color del botón (default: rojo)
+  confirmDisabled?: boolean  // deshabilita el botón confirmar (p. ej. campo requerido vacío)
 }
 
 export default function ConfirmDialog({
@@ -20,6 +21,7 @@ export default function ConfirmDialog({
   loading = false,
   confirmLabel = 'Confirmar',
   confirmVariant = 'danger',
+  confirmDisabled = false,
 }: Props) {
   return (
     // Overlay oscuro con blur
@@ -51,7 +53,7 @@ export default function ConfirmDialog({
           <button
             className={`btn btn-${confirmVariant}`}
             onClick={onConfirm}
-            disabled={loading}
+            disabled={loading || confirmDisabled}
           >
             {loading ? <span className="spinner" /> : confirmLabel}
           </button>

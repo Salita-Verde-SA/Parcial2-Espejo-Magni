@@ -8,45 +8,45 @@
 
 :root {
   /* Brand */
-  --brand:          #CC1F1F;
-  --brand-dark:     #A81A1A;
-  --brand-light:    #E53E3E;
+  --brand:          #DC2626;
+  --brand-dark:     #B91C1C;
+  --brand-light:    #EF4444;
   --gold:           #F59E0B;
   --gold-dark:      #D97706;
 
   /* Surfaces */
-  --bg:             #F9F5F1;
-  --surface:        #FFFFFF;
-  --surface-alt:    #FDFAF7;
+  --bg:             #08080A;
+  --surface:        rgba(255, 255, 255, 0.03);
+  --surface-alt:    rgba(0, 0, 0, 0.2);
   --white:          #FFFFFF;
 
   /* Text */
-  --text:           #1C1917;
-  --text-muted:     #78716C;
-  --text-subtle:    #A8A29E;
+  --text:           #FFFFFF;
+  --text-muted:     #A3A3A3;
+  --text-subtle:    #737373;
 
   /* Borders */
-  --border:         #E7E5E4;
-  --border-strong:  #D6D3D1;
+  --border:         rgba(255, 255, 255, 0.1);
+  --border-strong:  rgba(255, 255, 255, 0.2);
 
   /* Status */
   --success:        #16A34A;
-  --success-bg:     #F0FDF4;
+  --success-bg:     rgba(22, 163, 74, 0.1);
   --danger:         #DC2626;
-  --danger-bg:      #FEF2F2;
+  --danger-bg:      rgba(220, 38, 38, 0.1);
   --warning:        #D97706;
-  --warning-bg:     #FFFBEB;
+  --warning-bg:     rgba(217, 119, 6, 0.1);
 
   /* Navbar */
-  --navbar-bg:      #1A1614;
+  --navbar-bg:      rgba(0, 0, 0, 0.2);
   --navbar-h:       64px;
 
   /* Shape & depth */
-  --radius:         10px;
-  --radius-lg:      16px;
-  --shadow:         0 1px 4px rgba(28,25,23,.07), 0 2px 8px rgba(28,25,23,.04);
-  --shadow-md:      0 4px 20px rgba(28,25,23,.12);
-  --shadow-lg:      0 16px 48px rgba(28,25,23,.18);
+  --radius:         12px;
+  --radius-lg:      24px;
+  --shadow:         0 8px 32px rgba(0, 0, 0, 0.2);
+  --shadow-md:      0 12px 40px rgba(0, 0, 0, 0.3);
+  --shadow-lg:      0 25px 50px -12px rgba(0, 0, 0, 0.5);
 
   /* Legacy aliases */
   --primary:        var(--brand);
@@ -77,6 +77,8 @@ body {
 /* ─── Navbar ────────────────────────────────────────────────────────────────── */
 .navbar {
   background: var(--navbar-bg);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
   height: var(--navbar-h);
   display: flex;
   align-items: center;
@@ -210,6 +212,7 @@ body {
 /* ─── Topbar (page title bar below navbar) ──────────────────────────────────── */
 .topbar {
   background: var(--surface);
+  backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
   padding: 0 32px;
   height: 56px;
@@ -240,24 +243,25 @@ body {
 .btn:active { transform: scale(.97); }
 .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
 
-.btn-primary   { background: var(--brand); color: #fff; box-shadow: 0 2px 8px rgba(204,31,31,.22); }
-.btn-primary:hover:not(:disabled) { background: var(--brand-dark); box-shadow: 0 4px 14px rgba(204,31,31,.32); }
+.btn-primary   { background: var(--brand); color: #fff; box-shadow: 0 8px 20px rgba(220,38,38,0.25); text-transform: uppercase; letter-spacing: 0.1em; border: 1px solid rgba(255,255,255,0.1); }
+.btn-primary:hover:not(:disabled) { background: var(--brand-dark); box-shadow: 0 10px 25px rgba(220,38,38,0.4); }
 
-.btn-success   { background: var(--success); color: #fff; }
+.btn-success   { background: var(--success); color: #fff; border: 1px solid rgba(255,255,255,0.1); }
 .btn-success:hover:not(:disabled) { background: #15803D; }
 
-.btn-danger    { background: var(--danger); color: #fff; }
+.btn-danger    { background: var(--danger); color: #fff; border: 1px solid rgba(255,255,255,0.1); }
 .btn-danger:hover:not(:disabled) { background: #B91C1C; }
 
-.btn-ghost     { background: var(--surface); color: var(--text-muted); border: 1.5px solid var(--border); }
-.btn-ghost:hover:not(:disabled) { background: var(--bg); border-color: var(--border-strong); color: var(--text); }
+.btn-ghost     { background: var(--surface-alt); color: var(--text-muted); border: 1.5px solid var(--border); }
+.btn-ghost:hover:not(:disabled) { background: var(--surface); border-color: var(--border-strong); color: var(--text); }
 
 .btn-sm { padding: 5px 12px; font-size: 12px; }
 
 /* ─── Card ──────────────────────────────────────────────────────────────────── */
 .card {
   background: var(--surface);
-  border-radius: var(--radius);
+  backdrop-filter: blur(24px);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
   border: 1px solid var(--border);
   overflow: hidden;
@@ -283,6 +287,7 @@ body {
   flex-wrap: wrap;
   padding: 16px 20px;
   background: var(--surface-alt);
+  backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
 }
 
@@ -306,7 +311,7 @@ body {
   border-radius: var(--radius);
   font-size: 13px;
   color: var(--text);
-  background: var(--surface);
+  background: rgba(0, 0, 0, 0.2);
   outline: none;
   transition: border-color .15s, box-shadow .15s;
   min-width: 160px;
@@ -342,7 +347,7 @@ tbody tr {
   border-bottom: 1px solid var(--border);
   transition: background .1s;
 }
-tbody tr:hover { background: #FBF9F7; }
+tbody tr:hover { background: rgba(255, 255, 255, 0.05); }
 tbody tr:last-child { border-bottom: none; }
 
 tbody td {
@@ -414,21 +419,23 @@ tbody td {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(28,25,23,.55);
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 20px;
   animation: fadeIn .15s ease;
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(8px);
 }
 
 @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
 @keyframes slideUp { from { transform: translateY(20px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
 
 .modal {
-  background: var(--surface);
+  background: rgba(10, 10, 15, 0.95);
+  backdrop-filter: blur(32px);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   width: 100%;
@@ -484,7 +491,7 @@ tbody td {
   border-radius: var(--radius);
   font-size: 14px;
   color: var(--text);
-  background: var(--surface);
+  background: rgba(0, 0, 0, 0.2);
   outline: none;
   transition: border-color .15s, box-shadow .15s;
   font-family: inherit;

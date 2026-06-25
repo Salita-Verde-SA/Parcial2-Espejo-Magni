@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
 import { fetchPedidos, cancelarPedido } from '../api/pedidos'
-import { usePedidosWebSocket } from '../hooks/usePedidosWebSocket'
+import { confirmarPagoManual } from '../api/pagos'
+import { useMisPedidosFeed } from '../hooks/useOrderStatusWS'
+import WsConnectionBadge from '../features/ui/components/WsConnectionBadge'
 import ConfirmDialog from '../features/ui/components/ConfirmDialog'
 import type { PedidoPublic, PaginatedPedidos } from '../types'
 
 export default function MisPedidosPage() {
   const queryClient = useQueryClient()
-  usePedidosWebSocket()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const [page, setPage] = useState(1)
   const [selectedPedido, setSelectedPedido] = useState<PedidoPublic | null>(null)
@@ -17,10 +20,30 @@ export default function MisPedidosPage() {
 
   const { data: response, isLoading } = useQuery<PaginatedPedidos>({
     queryKey: ['pedidos', page],
-    queryFn: () => fetchPedidos('', page, 5),
+    queryFn: () => fetchPedidos('', page, 5, true),
     placeholderData: (prev) => prev,
     refetchInterval: 30_000,
   })
+
+  // WebSocket por pedido visible: refleja cambios de estado en tiempo real.
+  const activePedidoIds = response?.items.map((p) => p.id) ?? []
+  useMisPedidosFeed(activePedidoIds)
+
+  useEffect(() => {
+    const status = searchParams.get('status') || searchParams.get('collection_status')
+    const externalReference = searchParams.get('external_reference')
+    
+    if (status === 'approved' && externalReference) {
+      const pedidoId = parseInt(externalReference)
+      if (!isNaN(pedidoId)) {
+        confirmarPagoManual(pedidoId).then(() => {
+          queryClient.invalidateQueries({ queryKey: ['pedidos'] })
+          // Limpiar URL
+          setSearchParams({})
+        }).catch(err => console.error('Error al confirmar el pedido:', err))
+      }
+    }
+  }, [searchParams, setSearchParams, queryClient])
 
   useEffect(() => {
     if (response && selectedPedido) {
@@ -68,10 +91,10 @@ export default function MisPedidosPage() {
 
   const getBadgeClass = (estado: string) => {
     switch (estado) {
-      case 'PENDIENTE': return 'badge-secondary'
-      case 'CONFIRMADO': return 'badge-primary'
+      case 'PENDIENTE': return 'badge-neutral'
+      case 'CONFIRMADO': return 'badge-info'
       case 'EN_PREP': return 'badge-warning'
-      case 'EN_CAMINO': return 'badge-info'
+      case 'EN_CAMINO': return 'badge-primary'
       case 'ENTREGADO': return 'badge-success'
       case 'CANCELADO': return 'badge-danger'
       default: return 'badge-secondary'
@@ -80,8 +103,9 @@ export default function MisPedidosPage() {
 
   return (
     <>
-      <header className="topbar">
+      <header className="topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span className="topbar-title">Mis Pedidos</span>
+        <WsConnectionBadge />
       </header>
 
       <div className="page-wrapper" style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: 24, alignItems: 'start' }}>
@@ -131,6 +155,11 @@ export default function MisPedidosPage() {
                     <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
                       Fecha: {formatFecha(p.fecha)}
                     </div>
+                    {p.estado_codigo === 'CANCELADO' && p.historial?.find(h => h.estado_nuevo_codigo === 'CANCELADO')?.motivo && (
+                      <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: 4, fontWeight: 500 }}>
+                        Motivo: {p.historial.find(h => h.estado_nuevo_codigo === 'CANCELADO')?.motivo}
+                      </div>
+                    )}
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)', marginTop: 8 }}>
                       Total: {formatPrecio(p.total)}
                     </div>
@@ -169,6 +198,12 @@ export default function MisPedidosPage() {
                   {selectedPedido.estado_codigo}
                 </span>
               </div>
+
+              {selectedPedido.estado_codigo === 'CANCELADO' && selectedPedido.historial?.find(h => h.estado_nuevo_codigo === 'CANCELADO')?.motivo && (
+                <div className="badge badge-danger" style={{ padding: 12, borderRadius: 8, fontSize: 13, display: 'block', textAlign: 'left' }}>
+                  <strong>Motivo de cancelación:</strong> {selectedPedido.historial.find(h => h.estado_nuevo_codigo === 'CANCELADO')?.motivo}
+                </div>
+              )}
 
               <div>
                 <strong style={{ fontSize: 13, color: 'var(--text-muted)', display: 'block', marginBottom: 8 }}>PRODUCTOS</strong>
@@ -217,6 +252,11 @@ export default function MisPedidosPage() {
                   {selectedPedido.historial.map((h) => (
                     <div key={h.id} style={{ paddingLeft: 8, borderLeft: '2px solid var(--border)' }}>
                       <div style={{ fontWeight: 600 }}>{h.estado_nuevo_codigo}</div>
+                      {h.motivo && (
+                        <div style={{ fontSize: 11, color: 'var(--danger)', fontStyle: 'italic', marginTop: 2 }}>
+                          Motivo: {h.motivo}
+                        </div>
+                      )}
                       <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>
                         {formatFecha(h.fecha)} por {h.usuario_nombre}
                       </div>

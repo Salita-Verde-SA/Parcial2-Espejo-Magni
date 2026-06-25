@@ -11,3 +11,6 @@ httpx==0.28.1
 pytest==8.3.4
 pytest-asyncio==0.24.0
 openpyxl==3.1.5          # exportación a Excel
+mercadopago==3.2.0       # SDK de Mercado Pago
+cloudinary==1.41.0       # SDK de Cloudinary (gestión de imágenes)
+pytest-cov==6.0.0        # cobertura de tests

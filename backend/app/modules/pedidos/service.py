@@ -26,6 +26,9 @@ from app.modules.productos.service import calcular_stock_producto, validar_stock
 from app.modules.productos.model import Producto, ProductoIngrediente
 from app.modules.ingredientes.model import Ingrediente
 
+# Costo de envío fijo (v1 del dominio v7).
+COSTO_ENVIO = Decimal("50.00")
+
 
 def _to_direccion_public(d: DireccionEntrega) -> DireccionPublic:
     return DireccionPublic(
@@ -63,6 +66,10 @@ def _enrich_pedido(p: Pedido, uow: UnitOfWork) -> PedidoPublic:
             cantidad=d.cantidad,
             precio_unitario=d.precio_unitario,
             producto_nombre=d.producto_nombre,
+            nombre_snapshot=d.nombre_snapshot or d.producto_nombre,
+            precio_snapshot=d.precio_snapshot or d.precio_unitario,
+            subtotal_snap=d.subtotal_snap or (d.precio_unitario * d.cantidad),
+            personalizacion=d.personalizacion,
         )
         for d in detalles
     ]
@@ -78,6 +85,7 @@ def _enrich_pedido(p: Pedido, uow: UnitOfWork) -> PedidoPublic:
                 pedido_id=h.pedido_id,
                 estado_anterior_codigo=h.estado_anterior_codigo,
                 estado_nuevo_codigo=h.estado_nuevo_codigo,
+                motivo=h.motivo,
                 fecha=h.fecha,
                 usuario_id=h.usuario_id,
                 usuario_nombre=h_user_nombre,
@@ -93,8 +101,11 @@ def _enrich_pedido(p: Pedido, uow: UnitOfWork) -> PedidoPublic:
         forma_pago_codigo=p.forma_pago_codigo,
         direccion_id=p.direccion_id,
         direccion=direccion,
-        total=p.total,
+        subtotal=p.subtotal,
         descuento=p.descuento,
+        costo_envio=p.costo_envio,
+        total=p.total,
+        notas=p.notas,
         created_at=p.created_at,
         updated_at=p.updated_at,
         deleted_at=p.deleted_at,
@@ -263,10 +274,10 @@ def create_pedido(usuario_id: int, data: PedidoCreate, uow: UnitOfWork) -> Pedid
         if not fp:
             raise HTTPException(status_code=400, detail="Forma de pago inválida")
 
-        total = Decimal("0.00")
+        subtotal = Decimal("0.00")
         items_a_crear = []
         descuento = data.descuento if data.descuento and data.descuento > 0 else Decimal("0")
-        
+
         for item in data.items:
             prod = uow.productos.get_by_id_active(item.producto_id)
             if not prod:
@@ -274,10 +285,10 @@ def create_pedido(usuario_id: int, data: PedidoCreate, uow: UnitOfWork) -> Pedid
                     status_code=404,
                     detail=f"Producto con ID {item.producto_id} no encontrado o inactivo",
                 )
-            
+
             stmt = select(ProductoIngrediente).where(ProductoIngrediente.producto_id == prod.id)
             relaciones = uow.session.exec(stmt).all()
-            
+
             if not relaciones:
                 if prod.stock_cantidad < item.cantidad:
                     raise HTTPException(
@@ -296,33 +307,40 @@ def create_pedido(usuario_id: int, data: PedidoCreate, uow: UnitOfWork) -> Pedid
                     ],
                     uow,
                 )
-            
+
             item_total = prod.precio_base * item.cantidad
-            total += item_total
-            
+            subtotal += item_total
+
             items_a_crear.append(
                 {
                     "producto_id": prod.id,
                     "cantidad": item.cantidad,
                     "precio_unitario": prod.precio_base,
                     "producto_nombre": prod.nombre,
+                    "subtotal_snap": item_total,
+                    "personalizacion": item.personalizacion,
                 }
             )
 
-        if descuento > total:
+        if descuento > subtotal:
             raise HTTPException(
                 status_code=400,
-                detail=f"El descuento (${descuento}) no puede ser mayor al total (${total})",
+                detail=f"El descuento (${descuento}) no puede ser mayor al subtotal (${subtotal})",
             )
-        total_final = total - descuento
+        # v7: total = subtotal - descuento + costo_envio
+        costo_envio = COSTO_ENVIO
+        total_final = subtotal - descuento + costo_envio
 
         p = Pedido(
             usuario_id=usuario_id,
             estado_codigo="PENDIENTE",
             forma_pago_codigo=data.forma_pago_codigo,
             direccion_id=data.direccion_id,
-            total=total_final,
+            subtotal=subtotal,
             descuento=descuento,
+            costo_envio=costo_envio,
+            total=total_final,
+            notas=data.notas,
         )
         uow.pedidos.add(p)
 
@@ -333,6 +351,10 @@ def create_pedido(usuario_id: int, data: PedidoCreate, uow: UnitOfWork) -> Pedid
                 cantidad=item_data["cantidad"],
                 precio_unitario=item_data["precio_unitario"],
                 producto_nombre=item_data["producto_nombre"],
+                nombre_snapshot=item_data["producto_nombre"],
+                precio_snapshot=item_data["precio_unitario"],
+                subtotal_snap=item_data["subtotal_snap"],
+                personalizacion=item_data["personalizacion"],
             )
             uow.session.add(dp)
         uow.session.flush()
@@ -361,17 +383,54 @@ def get_pedido(pedido_id: int, usuario_id: int, roles: List[str], uow: UnitOfWor
         return _enrich_pedido(p, uow)
 
 
+def get_historial_pedido(
+    pedido_id: int, usuario_id: int, roles: List[str], uow: UnitOfWork
+) -> List[HistorialEstadoPedidoPublic]:
+    """Historial completo de transiciones, ORDER BY fecha ASC (append-only, RN-03)."""
+    with uow:
+        p = uow.pedidos.get_by_id_active(pedido_id)
+        if not p:
+            raise HTTPException(status_code=404, detail="Pedido no encontrado")
+        is_staff = any(r in ["ADMIN", "PEDIDOS"] for r in roles)
+        if not is_staff and p.usuario_id != usuario_id:
+            raise HTTPException(status_code=403, detail="Acceso denegado a este pedido")
+
+        historial = uow.pedidos.get_historial(p.id)
+        resultado = []
+        for h in historial:
+            h_user = uow.usuarios.get_by_id(h.usuario_id)
+            h_user_nombre = f"{h_user.nombre} {h_user.apellido}" if h_user else "Sistema"
+            resultado.append(
+                HistorialEstadoPedidoPublic(
+                    id=h.id,
+                    pedido_id=h.pedido_id,
+                    estado_anterior_codigo=h.estado_anterior_codigo,
+                    estado_nuevo_codigo=h.estado_nuevo_codigo,
+                    motivo=h.motivo,
+                    fecha=h.fecha,
+                    usuario_id=h.usuario_id,
+                    usuario_nombre=h_user_nombre,
+                )
+            )
+        return resultado
+
+
 def list_pedidos(
     usuario_id: int,
     roles: List[str],
     estado_codigo: str,
     page: int,
     page_size: int,
+    solo_mis_pedidos: bool,
     uow: UnitOfWork,
 ) -> PaginatedPedidos:
     with uow:
         is_staff = any(r in ["ADMIN", "PEDIDOS"] for r in roles)
-        user_filter = None if is_staff else usuario_id
+        
+        if solo_mis_pedidos:
+            user_filter = usuario_id
+        else:
+            user_filter = None if is_staff else usuario_id
         
         items, total = uow.pedidos.list_filtered(
             usuario_id=user_filter,
@@ -385,8 +444,23 @@ def list_pedidos(
         return PaginatedPedidos(items=enriched, total=total, page=page, page_size=page_size, pages=pages)
 
 
+# Máquina de estados v7 — 6 estados. Estados terminales sin salidas.
+TRANSICIONES_VALIDAS = {
+    "PENDIENTE":  ["CONFIRMADO", "CANCELADO"],
+    "CONFIRMADO": ["EN_PREP", "CANCELADO"],
+    "EN_PREP":    ["EN_CAMINO", "ENTREGADO", "CANCELADO"],
+    "EN_CAMINO":  ["ENTREGADO", "CANCELADO"],
+    "ENTREGADO":  [],
+    "CANCELADO":  [],
+}
+
+
 def update_pedido_estado(
-    pedido_id: int, nuevo_estado: str, actual_usuario_id: int, uow: UnitOfWork
+    pedido_id: int,
+    nuevo_estado: str,
+    actual_usuario_id: int,
+    uow: UnitOfWork,
+    motivo: str | None = None,
 ) -> PedidoPublic:
     with uow:
         p = uow.pedidos.get_by_id_active(pedido_id)
@@ -397,25 +471,31 @@ def update_pedido_estado(
         if estado_anterior == nuevo_estado:
             return _enrich_pedido(p, uow)
 
-        validas = {
-            "PENDIENTE": ["CONFIRMADO", "CANCELADO"],
-            "CONFIRMADO": ["EN_PREP", "CANCELADO"],
-            "EN_PREP": ["EN_CAMINO", "CANCELADO"],
-            "EN_CAMINO": ["ENTREGADO", "CANCELADO"],
-            "ENTREGADO": [],
-            "CANCELADO": [],
-        }
-
-        if nuevo_estado not in validas.get(estado_anterior, []):
+        # RN-01: un estado terminal no admite transiciones salientes.
+        estado_actual = uow.estados_pedido.get_by_id(estado_anterior)
+        if estado_actual and estado_actual.es_terminal:
             raise HTTPException(
-                status_code=400,
+                status_code=422,
+                detail=f"El estado '{estado_anterior}' es terminal y no admite cambios",
+            )
+
+        if nuevo_estado not in TRANSICIONES_VALIDAS.get(estado_anterior, []):
+            raise HTTPException(
+                status_code=422,
                 detail=f"Transición de estado inválida: no se puede pasar de {estado_anterior} a {nuevo_estado}",
+            )
+
+        # RN-05: el motivo es obligatorio al cancelar.
+        if nuevo_estado == "CANCELADO" and not (motivo and motivo.strip()):
+            raise HTTPException(
+                status_code=422,
+                detail="El motivo es obligatorio para cancelar un pedido (RN-05)",
             )
 
         if nuevo_estado == "CONFIRMADO":
             _deduct_stock_ingredientes(p.id, uow)
-        
-        if nuevo_estado == "CANCELADO" and estado_anterior in ["CONFIRMADO", "EN_PREP", "EN_CAMINO"]:
+
+        if nuevo_estado == "CANCELADO" and estado_anterior in ["CONFIRMADO", "EN_PREP"]:
             _restore_stock_ingredientes(p.id, uow)
 
         p.estado_codigo = nuevo_estado
@@ -426,6 +506,7 @@ def update_pedido_estado(
             pedido_id=p.id,
             estado_anterior_codigo=estado_anterior,
             estado_nuevo_codigo=nuevo_estado,
+            motivo=motivo,
             usuario_id=actual_usuario_id,
         )
         uow.session.add(hist)
@@ -447,5 +528,7 @@ def cancelar_pedido_cliente(pedido_id: int, usuario_id: int, uow: UnitOfWork) ->
                 status_code=400,
                 detail="Solo puedes cancelar pedidos que estén pendientes o confirmados",
             )
-        
-        return update_pedido_estado(pedido_id, "CANCELADO", usuario_id, uow)
+
+        return update_pedido_estado(
+            pedido_id, "CANCELADO", usuario_id, uow, motivo="Cancelado por el cliente"
+        )

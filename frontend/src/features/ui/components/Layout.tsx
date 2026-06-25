@@ -9,9 +9,7 @@ export default function Layout() {
   const { nombre, roles, isAdmin } = useAuthStore()
 
   const itemCount = useCartStore((s) => s.itemCount())
-
   const toggleCart = useUiStore((s) => s.toggleCart)
-
   const cartOpen = useUiStore((s) => s.cartOpen)
 
   const navigate = useNavigate()
@@ -24,13 +22,25 @@ export default function Layout() {
   const initial = (nombre ?? 'U')[0].toUpperCase()
 
   // La tienda (catálogo, carrito, mis pedidos) solo aplica a clientes.
-  // Los perfiles operadores (STOCK, PEDIDOS) no la ven.
-  const canShop = roles.includes('CLIENT') || isAdmin()
+  const canShop = roles.includes('CLIENT')
+
+  const showAdminMenu = isAdmin() || roles.includes('STOCK') || roles.includes('PEDIDOS')
+
+  function handleGoAdmin() {
+    if (isAdmin()) navigate('/admin/dashboard')
+    else if (roles.includes('STOCK')) navigate('/productos')
+    else if (roles.includes('PEDIDOS')) navigate('/admin/pedidos')
+  }
 
   return (
-    <div className="app-shell">
+    <div className="app-shell relative font-sans">
+      {/* Background image */}
+      <div
+        className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-20 pointer-events-none"
+        style={{ backgroundImage: "url('/bg-food.png')" }}
+      />
 
-      <nav className="navbar">
+      <nav className="navbar relative z-50">
 
         <div className="navbar-brand">
           <div className="navbar-logo-mark">FF</div>
@@ -56,53 +66,14 @@ export default function Layout() {
             </>
           )}
 
-          {(isAdmin() || roles.includes('STOCK')) && (
-            <>
-              <NavLink
-                to="/ingredientes"
-                className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}
-              >
-                Insumos
-              </NavLink>
-              <NavLink
-                to="/productos"
-                className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}
-              >
-                Productos
-              </NavLink>
-            </>
-          )}
-
-          {isAdmin() && (
-            <>
-              <NavLink
-                to="/admin/dashboard"
-                className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}
-              >
-                Dashboard
-              </NavLink>
-              <NavLink
-                to="/categorias"
-                className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}
-              >
-                Categorías
-              </NavLink>
-              <NavLink
-                to="/usuarios"
-                className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}
-              >
-                Usuarios
-              </NavLink>
-            </>
-          )}
-
-          {(roles.includes('ADMIN') || roles.includes('PEDIDOS')) && (
-            <NavLink
-              to="/admin/pedidos"
-              className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}
+          {showAdminMenu && (
+            <button
+              onClick={handleGoAdmin}
+              className="nav-link"
+              style={{ background: 'transparent', border: 'none', cursor: 'pointer', outline: 'none', fontFamily: 'inherit' }}
             >
-              Pedidos Admin
-            </NavLink>
+              Administración
+            </button>
           )}
         </div>
 
@@ -151,7 +122,7 @@ export default function Layout() {
         </div>
       </nav>
 
-      <div className="main-content">
+      <div className="main-content relative z-10">
         <Outlet />
       </div>
 

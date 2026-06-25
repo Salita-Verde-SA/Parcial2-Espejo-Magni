@@ -8,14 +8,20 @@ import ProductosPage from './pages/ProductosPage'
 import CategoriasPage from './pages/CategoriasPage'
 import CheckoutPage from './pages/CheckoutPage'
 import MisPedidosPage from './pages/MisPedidosPage'
+import PagoStatusPage from './pages/PagoStatusPage'
 import AdminPedidosPage from './pages/AdminPedidosPage'
 import AdminUsuariosPage from './pages/AdminUsuariosPage'
 import DashboardPage from './pages/DashboardPage'
 import { initUser } from './api/auth'
 import { useEffect, useState } from 'react'
 
+import { useStockFeed } from './hooks/useOrderStatusWS'
+import AdminLayout from './features/ui/components/AdminLayout'
+
 function AppInitializer({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
+
+  useStockFeed()
 
   useEffect(() => {
     initUser().finally(() => setLoading(false))
@@ -37,7 +43,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 function RequireRole({ roles, children }: { roles: string[]; children: React.ReactNode }) {
   const userRoles = useAuthStore((s) => s.roles)
   const hasAny = userRoles.some((r) => roles.includes(r))
-  if (!hasAny) return <Navigate to="/" replace />
+  if (!hasAny) return <Navigate to={landingPathFor(userRoles)} replace />
   return <>{children}</>
 }
 
@@ -63,6 +69,7 @@ export default function App() {
 
         <Route path="/login" element={<LoginPage />} />
 
+        {/* Tienda y layout general */}
         <Route
           path="/"
           element={
@@ -74,17 +81,31 @@ export default function App() {
           <Route index element={<HomeRedirect />} />
 
           <Route path="catalogo" element={
-            <RequireRole roles={['CLIENT', 'ADMIN']}><CatalogoPage /></RequireRole>
+            <RequireRole roles={['CLIENT']}><CatalogoPage /></RequireRole>
           } />
 
           <Route path="checkout" element={
-            <RequireRole roles={['CLIENT', 'ADMIN']}><CheckoutPage /></RequireRole>
+            <RequireRole roles={['CLIENT']}><CheckoutPage /></RequireRole>
           } />
 
           <Route path="mis-pedidos" element={
-            <RequireRole roles={['CLIENT', 'ADMIN']}><MisPedidosPage /></RequireRole>
+            <RequireRole roles={['CLIENT']}><MisPedidosPage /></RequireRole>
           } />
 
+          <Route path="pago/:status" element={
+            <RequireRole roles={['CLIENT']}><PagoStatusPage /></RequireRole>
+          } />
+        </Route>
+
+        {/* Administracion layout */}
+        <Route
+          path="/"
+          element={
+            <RequireAuth>
+              <AdminLayout />
+            </RequireAuth>
+          }
+        >
           <Route path="ingredientes" element={
             <RequireRole roles={['ADMIN', 'STOCK']}><IngredientesPage /></RequireRole>
           } />
