@@ -29,7 +29,6 @@ class ProductoIngrediente(SQLModel, table=True):
     producto_id: int = Field(foreign_key="producto.id", primary_key=True)
     ingrediente_id: int = Field(foreign_key="ingrediente.id", primary_key=True)
     cantidad: Decimal = Field(default=Decimal("1"), sa_column=Column(Numeric(10, 3), nullable=False))
-    unidad_medida_id: int = Field(foreign_key="unidad_medida.id")
     es_removible: bool = Field(default=False)
     created_at: datetime = Field(default_factory=_utcnow)
 
@@ -59,7 +58,6 @@ class Producto(SQLModel, table=True):
 class IngredienteCantidadInput(SQLModel):
     ingrediente_id: int
     cantidad: Decimal = Decimal("1")
-    unidad_medida_id: int
     es_removible: bool = False
 
 

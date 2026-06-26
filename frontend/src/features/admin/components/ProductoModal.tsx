@@ -214,7 +214,7 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
   }
 
   // Obtener símbolo de unidad por id
-  function getUnidadSimbolo(unidadId: number | null): string {
+  function getUnidadSimbolo(unidadId: number | null | undefined): string {
     if (!unidadId) return ''
     const unidad = unidades.find(u => u.id === unidadId)
     return unidad?.simbolo ?? ''
@@ -275,7 +275,6 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
       form.setFieldValue('ingredientes', producto.ingredientes.map(i => ({
         ingrediente_id: i.id,
         cantidad: i.cantidad,
-        unidad_medida_id: i.unidad_medida_id,
         es_removible: i.es_removible,
       })))
     } else {
@@ -356,7 +355,6 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
     const newIngrediente: IngredienteCantidadInput = {
       ingrediente_id: ingId,
       cantidad: 1,
-      unidad_medida_id: ing?.unidad_medida_id ?? 1,
       es_removible: false,
     }
     
@@ -690,7 +688,7 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
                         ) : (
                           selectedIngs.map((ing: any) => {
                             const ingInfo = ingredientes.find(i => i.id === ing.ingrediente_id)
-                            const simbolo = getUnidadSimbolo(ing.unidad_medida_id)
+                            const simbolo = getUnidadSimbolo(ingInfo?.unidad_medida_id)
                             const esContable = isUnidadContable(ingInfo?.unidad_medida_id)
                             const tieneStock = (ingInfo?.stock_cantidad ?? 0) >= ing.cantidad
                             return (

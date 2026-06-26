@@ -63,13 +63,14 @@ class UnidadMedidaRepository(BaseRepository[UnidadMedida]):
             is not None
         )
 
-    def is_used_in_recetas(self, unidad_id: int) -> bool:
-        from app.modules.productos.model import ProductoIngrediente
+    def is_used_in_ingredientes(self, unidad_id: int) -> bool:
+        from app.modules.ingredientes.model import Ingrediente
 
         return (
             self.session.exec(
-                select(ProductoIngrediente)
-                .where(ProductoIngrediente.unidad_medida_id == unidad_id)
+                select(Ingrediente)
+                .where(Ingrediente.unidad_medida_id == unidad_id)
+                .where(Ingrediente.deleted_at.is_(None))
             ).first()
             is not None
         )

@@ -122,7 +122,6 @@ export interface IngredienteResumen {
 export interface IngredienteCantidadInput {
   ingrediente_id: number
   cantidad: number
-  unidad_medida_id: number
   es_removible: boolean
 }
 

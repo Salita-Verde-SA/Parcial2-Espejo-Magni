@@ -212,8 +212,6 @@ def run() -> None:
                 unid_ids[u["simbolo"]] = existing.id
                 print(f"  [=] {u['nombre']} ({u['simbolo']})")
         
-        unidad_default_id = unid_ids.get("ud", 1)
-
         print("\n[Categorias]")
         cat_ids = {}
         for c in CATEGORIAS:
@@ -294,7 +292,6 @@ def run() -> None:
                             producto_id=prod.id,
                             ingrediente_id=ing_ids[ing_name],
                             cantidad=Decimal("1"),
-                            unidad_medida_id=unidad_default_id,
                             es_removible=True,
                         ))
                 session.flush()

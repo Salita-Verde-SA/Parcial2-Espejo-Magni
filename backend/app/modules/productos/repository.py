@@ -82,7 +82,7 @@ class ProductoRepository(BaseRepository[Producto]):
         ingredientes = {i.id: i for i in self.session.exec(ing_stmt).all()}
         
         from app.modules.unidades.model import UnidadMedida
-        unidad_ids = list(set(r.unidad_medida_id for r in relaciones if r.unidad_medida_id))
+        unidad_ids = list(set(i.unidad_medida_id for i in ingredientes.values() if i.unidad_medida_id))
         unidades = {}
         if unidad_ids:
             unid_stmt = select(UnidadMedida).where(UnidadMedida.id.in_(unidad_ids))
@@ -101,8 +101,8 @@ class ProductoRepository(BaseRepository[Producto]):
                     "es_alergeno": ing.es_alergeno,
                     "es_terminado": ing.es_terminado,
                     "cantidad": cantidad_val,
-                    "unidad_medida_id": rel.unidad_medida_id,
-                    "simbolo": unidades.get(rel.unidad_medida_id, ""),
+                    "unidad_medida_id": ing.unidad_medida_id,
+                    "simbolo": unidades.get(ing.unidad_medida_id, ""),
                     "es_removible": rel.es_removible,
                     "stock_insumo": ing.stock_cantidad or 0,
                     "costo_unitario": float(ing.costo_unitario) if ing.costo_unitario else 0.0,
@@ -142,7 +142,6 @@ class ProductoRepository(BaseRepository[Producto]):
                     producto_id=producto_id,
                     ingrediente_id=ing["ingrediente_id"],
                     cantidad=ing.get("cantidad", Decimal("1")),
-                    unidad_medida_id=ing["unidad_medida_id"],
                     es_removible=ing.get("es_removible", False),
                 )
             )

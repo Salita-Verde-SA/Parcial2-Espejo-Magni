@@ -131,11 +131,11 @@ def delete_unidad(unidad_id: int, uow: UnitOfWork) -> None:
                 detail="No se puede eliminar: la unidad está asignada a productos",
             )
         
-        if uow.unidades.is_used_in_recetas(unidad_id):
+        if uow.unidades.is_used_in_ingredientes(unidad_id):
             from fastapi import HTTPException, status
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No se puede eliminar: la unidad está en uso en recetas de productos",
+                detail="No se puede eliminar: la unidad está asignada a ingredientes activos",
             )
         
         uow.unidades.delete(unidad_id)

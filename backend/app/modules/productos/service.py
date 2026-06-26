@@ -167,7 +167,6 @@ def create_producto(data: ProductoCreate, uow: UnitOfWork) -> ProductoPublic:
                 {
                     "ingrediente_id": ing.ingrediente_id,
                     "cantidad": ing.cantidad,
-                    "unidad_medida_id": ing.unidad_medida_id,
                     "es_removible": ing.es_removible,
                 }
                 for ing in data.ingredientes
@@ -212,7 +211,6 @@ def update_producto(producto_id: int, data: ProductoUpdate, uow: UnitOfWork) -> 
                 {
                     "ingrediente_id": ing.ingrediente_id,
                     "cantidad": ing.cantidad,
-                    "unidad_medida_id": ing.unidad_medida_id,
                     "es_removible": ing.es_removible,
                 }
                 for ing in data.ingredientes
@@ -238,7 +236,6 @@ def update_composicion(producto_id: int, data: ComposicionUpdate, uow: UnitOfWor
             {
                 "ingrediente_id": ing.ingrediente_id,
                 "cantidad": ing.cantidad,
-                "unidad_medida_id": ing.unidad_medida_id,
                 "es_removible": ing.es_removible,
             }
             for ing in data.ingredientes
