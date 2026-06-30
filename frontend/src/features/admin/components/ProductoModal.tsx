@@ -20,11 +20,13 @@ interface Props {
   canEditComercial?: boolean
 }
 
+const MARGEN_SUGERIDO = 20
+
 const EMPTY: Omit<ProductoCreate, 'stock_cantidad'> = {
   nombre: '',
   descripcion: '',
   precio_base: 0,
-  margen_ganancia: 0,
+  margen_ganancia: MARGEN_SUGERIDO,
   unidad_venta_id: null,
   disponible: true,
   imagen_url: '',
@@ -520,6 +522,11 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
                   <div className="form-group">
                     <label className="form-label">
                       Margen de ganancia
+                      {!isEdit && (
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 400, marginLeft: 8 }}>
+                          Sugerido: {MARGEN_SUGERIDO}%
+                        </span>
+                      )}
                     </label>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <input
@@ -570,11 +577,19 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
             </div>
 
             <form.Subscribe
-              selector={(state) => ({ ings: state.values.ingredientes, margen: state.values.margen_ganancia })}
+              selector={(state) => ({ ings: state.values.ingredientes, margen: state.values.margen_ganancia, unidadVentaId: state.values.unidad_venta_id })}
             >
-              {({ ings: selectedIngs, margen }) => {
+              {({ ings: selectedIngs, margen, unidadVentaId }) => {
                 const stockCalc = calcularStockEnTiempoReal(selectedIngs)
                 const { costoTotal, precioSugerido } = calcularCostoYPrecioSugerido(selectedIngs, margen)
+                const unidadLabel = (() => {
+                  const unidad = unidades.find(u => u.id === unidadVentaId)
+                  if (!unidad) return stockCalc === 1 ? 'unidad' : 'unidades'
+                  const v = unidad.nombre
+                  if (stockCalc === 1) return v
+                  const ultima = v.slice(-1)
+                  return 'aeiouáéíóú'.includes(ultima) ? v + 's' : v + 'es'
+                })()
                 const availableIngs = ingredientes.filter(ing => !ing.es_terminado && !hasIngrediente(ing.id, selectedIngs))
                 const filteredAvail = ingSearch
                   ? availableIngs.filter(ing => ing.nombre.toLowerCase().includes(ingSearch.toLowerCase()))
@@ -600,7 +615,7 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
                           : stockCalc > 0 ? 'var(--success)' : 'var(--danger)',
                       }}>
                         {selectedIngs.length > 0
-                          ? `Stock: ${stockCalc} ${stockCalc === 1 ? 'unidad' : 'unidades'}`
+                          ? `Stock: ${stockCalc} ${unidadLabel}`
                           : 'Sin ingredientes'}
                       </div>
                       <div style={{
@@ -610,7 +625,7 @@ export default function ProductoModal({ producto, onClose, canEditComercial = tr
                       }}>
                         <span>Costo: <strong>${costoTotal.toFixed(2)}</strong></span>
                         <span style={{ color: 'var(--primary)' }}>
-                          Sugerido ({margen}%): <strong>${precioSugerido.toFixed(2)}</strong>
+                          Precio final (ganancia del {margen}%): <strong>${precioSugerido.toFixed(2)}</strong>
                         </span>
                       </div>
                     </div>
