@@ -61,20 +61,20 @@ UNIDADES = [
 ]
 
 INGREDIENTES = [
-    {"nombre": "Carne vacuna",       "descripcion": "Medallón 100% vacuna 120g",   "es_alergeno": False, "es_terminado": False, "costo_unitario": Decimal("350.00")},
-    {"nombre": "Pan de hamburguesa", "descripcion": "Pan brioche con sésamo",       "es_alergeno": True,  "es_terminado": False, "costo_unitario": Decimal("80.00")},
-    {"nombre": "Queso cheddar",      "descripcion": "Queso cheddar fundido",        "es_alergeno": True,  "es_terminado": False, "costo_unitario": Decimal("120.00")},
-    {"nombre": "Lechuga",            "descripcion": "Lechuga romana fresca",        "es_alergeno": False, "es_terminado": False, "costo_unitario": Decimal("25.00")},
-    {"nombre": "Tomate",             "descripcion": "Tomate perita en rodajas",     "es_alergeno": False, "es_terminado": False, "costo_unitario": Decimal("30.00")},
-    {"nombre": "Cebolla",            "descripcion": "Cebolla morada en aros",       "es_alergeno": False, "es_terminado": False, "costo_unitario": Decimal("20.00")},
-    {"nombre": "Pepino encurtido",   "descripcion": "Pickle de pepino",             "es_alergeno": False, "es_terminado": False, "costo_unitario": Decimal("40.00")},
-    {"nombre": "Salsa especial",     "descripcion": "Salsa de la casa",             "es_alergeno": True,  "es_terminado": False, "costo_unitario": Decimal("50.00")},
-    {"nombre": "Panceta ahumada",    "descripcion": "Panceta crocante en fetas",    "es_alergeno": False, "es_terminado": False, "costo_unitario": Decimal("200.00")},
-    {"nombre": "Papas fritas",       "descripcion": "Papas bastón fritas",          "es_alergeno": False, "es_terminado": False, "costo_unitario": Decimal("150.00")},
-    {"nombre": "Mayonesa",           "descripcion": "Mayonesa artesanal",           "es_alergeno": True,  "es_terminado": False, "costo_unitario": Decimal("45.00")},
-    {"nombre": "Mostaza",            "descripcion": "Mostaza Dijon",                "es_alergeno": False, "es_terminado": False, "costo_unitario": Decimal("35.00")},
-    {"nombre": "Coca-Cola 500ml",    "descripcion": "Bebida gaseosa 500ml",         "es_alergeno": False, "es_terminado": True,  "costo_unitario": Decimal("350.00")},
-    {"nombre": "Fanta 500ml",        "descripcion": "Bebida gaseosa sabor naranja", "es_alergeno": False, "es_terminado": True,  "costo_unitario": Decimal("340.00")},
+    {"nombre": "Medallón de carne vacuna", "descripcion": "Medallón 100% vacuna 120g",   "es_alergeno": False, "es_terminado": False, "costo_unitario": Decimal("350.00"), "stock_cantidad": 200, "unidad_medida_simbolo": "ud"},
+    {"nombre": "Pan brioche",              "descripcion": "Pan brioche con sésamo",       "es_alergeno": True,  "es_terminado": False, "costo_unitario": Decimal("80.00"),  "stock_cantidad": 150, "unidad_medida_simbolo": "ud"},
+    {"nombre": "Feta de queso cheddar",    "descripcion": "Queso cheddar fundido",        "es_alergeno": True,  "es_terminado": False, "costo_unitario": Decimal("120.00"), "stock_cantidad": 100, "unidad_medida_simbolo": "ud"},
+    {"nombre": "Hoja de lechuga romana",   "descripcion": "Lechuga romana fresca",        "es_alergeno": False, "es_terminado": False, "costo_unitario": Decimal("25.00"),  "stock_cantidad": 80,  "unidad_medida_simbolo": "ud"},
+    {"nombre": "Rodaja de tomate perita",  "descripcion": "Tomate perita en rodajas",     "es_alergeno": False, "es_terminado": False, "costo_unitario": Decimal("30.00"),  "stock_cantidad": 120, "unidad_medida_simbolo": "ud"},
+    {"nombre": "Aro de cebolla morada",    "descripcion": "Cebolla morada en aros",       "es_alergeno": False, "es_terminado": False, "costo_unitario": Decimal("20.00"),  "stock_cantidad": 100, "unidad_medida_simbolo": "ud"},
+    {"nombre": "Pepino encurtido",         "descripcion": "Pickle de pepino",             "es_alergeno": False, "es_terminado": False, "costo_unitario": Decimal("40.00"),  "stock_cantidad": 90,  "unidad_medida_simbolo": "ud"},
+    {"nombre": "Salsa especial",           "descripcion": "Salsa de la casa",             "es_alergeno": True,  "es_terminado": False, "costo_unitario": Decimal("50.00"),  "stock_cantidad": 5000, "unidad_medida_simbolo": "ml"},
+    {"nombre": "Feta de panceta ahumada",  "descripcion": "Panceta crocante en fetas",    "es_alergeno": False, "es_terminado": False, "costo_unitario": Decimal("200.00"), "stock_cantidad": 80,  "unidad_medida_simbolo": "ud"},
+    {"nombre": "Papas fritas",             "descripcion": "Papas bastón fritas",          "es_alergeno": False, "es_terminado": False, "costo_unitario": Decimal("150.00"), "stock_cantidad": 20000, "unidad_medida_simbolo": "g"},
+    {"nombre": "Mayonesa",                 "descripcion": "Mayonesa artesanal",           "es_alergeno": True,  "es_terminado": False, "costo_unitario": Decimal("45.00"),  "stock_cantidad": 3000, "unidad_medida_simbolo": "ml"},
+    {"nombre": "Mostaza",                  "descripcion": "Mostaza Dijon",                "es_alergeno": False, "es_terminado": False, "costo_unitario": Decimal("35.00"),  "stock_cantidad": 2000, "unidad_medida_simbolo": "ml"},
+    {"nombre": "Coca-Cola 500ml",          "descripcion": "Bebida gaseosa 500ml",         "es_alergeno": False, "es_terminado": True,  "costo_unitario": Decimal("350.00"), "stock_cantidad": 100, "unidad_medida_simbolo": "ud"},
+    {"nombre": "Fanta 500ml",              "descripcion": "Bebida gaseosa sabor naranja", "es_alergeno": False, "es_terminado": True,  "costo_unitario": Decimal("340.00"), "stock_cantidad": 80,  "unidad_medida_simbolo": "ud"},
 ]
 
 PRODUCTOS = [
@@ -87,7 +87,7 @@ PRODUCTOS = [
         "disponible": True,
         "imagen_url": None,
         "categorias": ["Hamburguesas"],
-        "ingredientes": ["Carne vacuna", "Pan de hamburguesa", "Lechuga", "Tomate", "Salsa especial"],
+        "ingredientes": ["Medallón de carne vacuna", "Pan brioche", "Hoja de lechuga romana", "Rodaja de tomate perita", "Salsa especial"],
     },
     {
         "nombre": "Cheese Burger",
@@ -98,7 +98,7 @@ PRODUCTOS = [
         "disponible": True,
         "imagen_url": None,
         "categorias": ["Hamburguesas"],
-        "ingredientes": ["Carne vacuna", "Pan de hamburguesa", "Queso cheddar", "Lechuga", "Tomate"],
+        "ingredientes": ["Medallón de carne vacuna", "Pan brioche", "Feta de queso cheddar", "Hoja de lechuga romana", "Rodaja de tomate perita"],
     },
     {
         "nombre": "Bacon Burger",
@@ -109,7 +109,7 @@ PRODUCTOS = [
         "disponible": True,
         "imagen_url": None,
         "categorias": ["Hamburguesas"],
-        "ingredientes": ["Carne vacuna", "Pan de hamburguesa", "Panceta ahumada", "Queso cheddar"],
+        "ingredientes": ["Medallón de carne vacuna", "Pan brioche", "Feta de panceta ahumada", "Feta de queso cheddar"],
     },
     {
         "nombre": "Papas Fritas",
@@ -235,7 +235,9 @@ def run() -> None:
                 select(Ingrediente).where(Ingrediente.nombre == i["nombre"])
             ).first()
             if not existing:
-                ing = Ingrediente(**i)
+                ing_data = {k: v for k, v in i.items() if k != "unidad_medida_simbolo"}
+                ing_data["unidad_medida_id"] = unid_ids.get(i["unidad_medida_simbolo"])
+                ing = Ingrediente(**ing_data)
                 session.add(ing)
                 session.flush()
                 ing_ids[i["nombre"]] = ing.id
