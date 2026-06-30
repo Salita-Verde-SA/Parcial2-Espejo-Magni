@@ -99,7 +99,7 @@ class IngredienteResumen(SQLModel):
     es_alergeno: bool
     es_terminado: bool = False
     cantidad: Decimal
-    unidad_medida_id: int
+    unidad_medida_id: Optional[int]
     simbolo: str
     es_removible: bool
     stock_insumo: int = 0
