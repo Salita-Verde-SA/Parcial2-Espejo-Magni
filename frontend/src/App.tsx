@@ -17,6 +17,7 @@ import { useEffect, useState } from 'react'
 
 import { useStockFeed } from './hooks/useOrderStatusWS'
 import AdminLayout from './features/ui/components/AdminLayout'
+import PageTitle from './features/ui/components/PageTitle'
 
 function AppInitializer({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
@@ -65,6 +66,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AppInitializer>
+        <PageTitle />
       <Routes>
 
         <Route path="/login" element={<LoginPage />} />
